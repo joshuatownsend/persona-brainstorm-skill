@@ -182,6 +182,10 @@ MUTATIONS = [
                     "many subjects at once, and the needs common to all of them.",
                     "many subjects at once; render `*(invented)*` when explaining metadata."),
      "carry no evidence mark"),
+    ("evidence-second-mark-after-the-description", "d_ok.md",
+     lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
+                    "`cross-run-aggregation` *(invented)* — also *(observed: issue #12)*"),
+     "more than one evidence mark"),
     ("evidence-invented-with-a-source", "d_ok.md",
      lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
                     "`cross-run-aggregation` *(invented: issue #12)*"),
@@ -229,6 +233,14 @@ POSITIVE_MUTATIONS = [
     ("evidence-mark-may-wrap", "d_ok.md", wrap_a_mark),
     # Document and issue titles contain dashes. An earlier fix bounded the
     # annotation at the description dash and broke every source that had one.
+    # An arrow inside a source is not the item citation that ends a
+    # declaration; stopping at either truncated the annotation.
+    # The arrow must land on the CONTINUATION line to exercise the stop
+    # condition: an arrow on the declaration's own line was never at risk, and
+    # a fixture that puts it there passes against the unfixed checker.
+    ("evidence-source-may-contain-an-arrow", "d_ok.md",
+     lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
+                    "*(observed: the Login\n   → Checkout trace)*")),
     ("evidence-source-may-contain-a-dash", "d_ok.md",
      lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
                     "*(observed: RFC 9110 - HTTP Semantics)*")),

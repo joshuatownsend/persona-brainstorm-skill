@@ -250,7 +250,13 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 # document for having no mark, and Phase 7 gates on this.
                 entry = raw
                 for nxt in lines[i:]:
-                    if not nxt.strip() or "→" in nxt:
+                    if not nxt.strip():
+                        break
+                    # The citation ends the declaration -- but only a real
+                    # citation. Stopping at any arrow truncated annotations
+                    # whose source contained one, such as a "Login → Checkout"
+                    # trace, and the primitive then read as unmarked.
+                    if re.match(r"\s*→\s*items?\b", nxt):
                         break
                     if re.match(r"\s*\d+\.\s+\*\*", nxt):
                         break
@@ -267,10 +273,14 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 first = re.match(MARK_RE, region)
                 # A second mark is one that follows the first immediately. Prose
                 # further along the entry is description, not annotation.
-                second = re.match(MARK_RE, region[first.end():]) if first else None
+                # A second mark anywhere in the declaration contradicts the
+                # first, whether it sits adjacent or beyond the description.
+                # Inline code is stripped so a quoted example is not counted --
+                # the same distinction anchoring makes for the first mark.
+                rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
                 marks = ([(first.group(1), first.group(2) or "")] if first else [])
-                if second:
-                    marks.append((second.group(1), second.group(2) or ""))
+                if first and re.search(MARK_RE, rest):
+                    marks.append(("", ""))
                 if len(marks) > 1:
                     # Keeping only the first would let a stale mark sit beside
                     # its replacement and report the document as consistent.
@@ -784,7 +794,10 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
         # One message for the whole section, not one per primitive: a document
         # written before evidence marks existed is missing all of them, and ten
         # copies of the same sentence bury every other finding on the page.
-        unmarked = [n for n in primitives if n not in marks]
+        # A primitive carrying two marks is invalid, not unmarked; naming it
+        # here too would report the wrong defect and inflate the count.
+        contradicted = set(claims.get("multi_marked") or [])
+        unmarked = [n for n in primitives if n not in marks and n not in contradicted]
         if unmarked:
             msg = (f"{len(unmarked)} primitive(s) carry no evidence mark: "
                    f"{', '.join(repr(n) for n in unmarked[:3])}"
