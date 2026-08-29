@@ -51,6 +51,10 @@ class Item:
     frontier: bool
     coverage: str
     line: int
+    # Whether the table this row came from declared a Today column. Per row, not
+    # per document: a document can mix schemas, and one legacy section at the end
+    # must not excuse an earlier section that declared the column and left it empty.
+    in_today_table: bool = False
 
 
 @dataclass
@@ -241,11 +245,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 today, freq, rest = "", cells[3], cells[4:]
             frontier = any("⚡" in c for c in rest)
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
-            items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i))
+            items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i, has_today))
 
-    claims["has_today_column"] = (
-        item_has_today if item_has_today is not None else any(it.today for it in items)
-    )
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
@@ -369,8 +370,16 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             rep.note(f"frontier unserved: {f_unserved} of {len(frontier)}")
 
     # 5b. The demand-side measure, the frequency basis, and the roster axis.
-    missing_today = [it.n for it in items if not is_substantive(it.today)]
-    if not claims.get("has_today_column"):
+    declared = [it for it in items if it.in_today_table]
+    legacy = [it for it in items if not it.in_today_table]
+    missing_today = [it.n for it in declared if not is_substantive(it.today)]
+    if declared and legacy:
+        rep.warn(
+            f"mixed table schemas: {len(declared)} item(s) come from a table declaring a Today "
+            f"column and {len(legacy)} from one without. The declared rows are still required to "
+            "carry values; a legacy section later in the document does not excuse them."
+        )
+    if not declared:
         # No column at all: a document written before the field existed. Warn, so
         # old runs stay readable, and say plainly that new ones must carry it.
         rep.warn(
