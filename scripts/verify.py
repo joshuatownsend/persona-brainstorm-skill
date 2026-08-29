@@ -24,6 +24,12 @@ FREQ_VOCAB = {
     "per-incident", "per-release", "per-run", "onboarding",
 }
 COVERAGE_MARKS = {"✅", "◐", "○"}
+# A declaration has to declare something. Length is not evidence of substance:
+# "TBD" clears a three-character bar while asserting nothing at all.
+PLACEHOLDERS = {
+    "tbd", "tba", "tbc", "todo", "fixme", "na", "n/a", "none", "null", "nil",
+    "unknown", "unspecified", "pending", "xxx", "placeholder", "?", "???", "-", "--",
+}
 # An ask is speech, so it opens and closes with matching delimiters. Testing for a
 # quote character anywhere lets "I've got twenty minutes" pass on its apostrophe.
 OPENERS = "\"'“‘«„"
@@ -158,7 +164,15 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 m = re.match(rf"\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)", raw.strip())
                 if m and in_header:
                     value = m.group(1).strip().strip("*").strip()
-                    if len(value) >= 3 and not value.startswith("<"):
+                    claims[key + "_count"] = claims.get(key + "_count", 0) + 1
+                    bare = re.sub(r"[^a-z0-9/?-]+", "", value.lower())
+                    substantive = (
+                        len(value) >= 3
+                        and not value.startswith("<")
+                        and bare not in PLACEHOLDERS
+                        and bool(re.search(r"[A-Za-z]{3,}", value))
+                    )
+                    if substantive:
                         claims[key] = value
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
@@ -337,6 +351,13 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
     elif missing_today:
         rep.warn(f"items with no Today value: {missing_today[:8]}")
 
+    for key, label in (("freq_basis", "Frequencies"), ("axis", "Roster axis")):
+        if claims.get(key + "_count", 0) > 1:
+            rep.fail(
+                f"{claims[key + '_count']} **{label}:** declarations in the header. Only the last "
+                "is read, so a contradictory earlier one leaves the document asserting two "
+                "different things while this check reports one."
+            )
     if not claims.get("freq_basis"):
         rep.fail(
             "no **Frequencies:** line with a stated basis, in the header before the persona "
