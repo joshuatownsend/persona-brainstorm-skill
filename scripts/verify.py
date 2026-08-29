@@ -179,6 +179,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     claims: dict = {}
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
+    multi_marked: list[str] = []
     dupe_pids: list[str] = []
     malformed: list[tuple] = []
 
@@ -240,9 +241,25 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 primitives[name] = []
                 slugs["primitive"][name] = m.group(2)
                 # "*(observed: issue #12)*" or "*(invented)*", after the slug.
-                em = re.search(r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", raw)
-                if em:
-                    evidence[name] = (em.group(1).lower(), (em.group(2) or "").strip())
+                # Read the whole entry, not the first physical line: an
+                # annotation naming its source is long, and the template's own
+                # layout wraps it. Reading one line would reject an ordinary
+                # document for having no mark, and Phase 7 gates on this.
+                entry = raw
+                for nxt in lines[i:]:
+                    if not nxt.strip() or "→" in nxt:
+                        break
+                    if re.match(r"\s*\d+\.\s+\*\*", nxt):
+                        break
+                    entry += " " + nxt.strip()
+                marks = re.findall(
+                    r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", entry)
+                if len(marks) > 1:
+                    # Keeping only the first would let a stale mark sit beside
+                    # its replacement and report the document as consistent.
+                    multi_marked.append(name)
+                elif marks:
+                    evidence[name] = (marks[0][0].lower(), marks[0][1].strip())
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -339,6 +356,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     claims["malformed_rows"] = malformed
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["evidence"] = evidence
+    claims["multi_marked"] = multi_marked
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
 
@@ -738,6 +756,12 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
     # the frontier is invented by construction and holds the best findings on
     # most pages -- but a claim of `observed` with no source is worse than an
     # honest `invented`, because it cannot be audited and reads as stronger.
+    for name in claims.get("multi_marked") or []:
+        rep.fail(
+            f"primitive {name!r} carries more than one evidence mark. Two provenance claims on "
+            "one primitive contradict each other, and reading only the first would let a stale "
+            "mark sit beside its replacement and pass."
+        )
     if primitives:
         marks = claims.get("evidence") or {}
         # One message for the whole section, not one per primitive: a document

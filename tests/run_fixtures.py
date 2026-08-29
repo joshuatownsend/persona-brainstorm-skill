@@ -177,6 +177,10 @@ MUTATIONS = [
      lambda t: swap(t, "`self-assessment` *(observed: Caveat 1 in this document's appendix)*",
                     "`self-assessment` *(observed)*"),
      "names no source"),
+    ("evidence-two-marks-on-one-primitive", "d_ok.md",
+     lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
+                    "`cross-run-aggregation` *(invented)* *(observed: an old note)*"),
+     "more than one evidence mark"),
     ("evidence-inferred-without-source", "d_ok.md",
      lambda t: swap(t, "`run-identity` *(inferred: the frontier miscount recorded in the "
                        "disclosures)*", "`run-identity` *(inferred: TBD)*"),
@@ -189,10 +193,31 @@ MUTATIONS = [
 # invented by construction, and a gate on kind would quietly delete it. That
 # property is the one most worth asserting, so it is asserted.
 # ---------------------------------------------------------------------------
+def all_invented(text):
+    """Every mark in the document reduced to `invented`.
+
+    Written as a sweep rather than a list of swaps: the earlier version named
+    the two `observed` marks and silently left `inferred` in place, so the
+    fixture passed while asserting something weaker than its name. Replacing
+    every mark cannot drift as the base document changes.
+    """
+    out = re.sub(r"\*\(\s*(?:observed|inferred)\b[^)]*\)\*", "*(invented)*", text)
+    require(out != text, "no observed/inferred marks in the base to invert")
+    require(not re.search(r"\*\(\s*(?:observed|inferred)\b", out),
+            "an observed/inferred mark survived the sweep")
+    return out
+
+
+def wrap_a_mark(text):
+    """Break one annotation across a line, the way the template's own layout does."""
+    old = "`self-assessment` *(observed: Caveat 1 in this document's appendix)*"
+    new = "`self-assessment` *(observed: Caveat 1 in this\n   document's appendix)*"
+    return swap(text, old, new)
+
+
 POSITIVE_MUTATIONS = [
-    ("evidence-all-invented-passes", "d_ok.md",
-     lambda t: swap(swap(t, "*(observed: Caveat 1 in this document's appendix)*", "*(invented)*"),
-                    "*(observed: Caveat 3 in this document's appendix)*", "*(invented)*")),
+    ("evidence-all-invented-passes", "d_ok.md", all_invented),
+    ("evidence-mark-may-wrap", "d_ok.md", wrap_a_mark),
 ]
 
 # ---------------------------------------------------------------------------
