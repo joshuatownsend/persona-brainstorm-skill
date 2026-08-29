@@ -182,6 +182,10 @@ MUTATIONS = [
                     "many subjects at once, and the needs common to all of them.",
                     "many subjects at once; render `*(invented)*` when explaining metadata."),
      "carry no evidence mark"),
+    ("evidence-invented-with-a-source", "d_ok.md",
+     lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
+                    "`cross-run-aggregation` *(invented: issue #12)*"),
+     "marked 'invented' but names a source"),
     ("evidence-two-marks-on-one-primitive", "d_ok.md",
      lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
                     "`cross-run-aggregation` *(invented)* *(observed: an old note)*"),
@@ -223,6 +227,11 @@ def wrap_a_mark(text):
 POSITIVE_MUTATIONS = [
     ("evidence-all-invented-passes", "d_ok.md", all_invented),
     ("evidence-mark-may-wrap", "d_ok.md", wrap_a_mark),
+    # Document and issue titles contain dashes. An earlier fix bounded the
+    # annotation at the description dash and broke every source that had one.
+    ("evidence-source-may-contain-a-dash", "d_ok.md",
+     lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
+                    "*(observed: RFC 9110 - HTTP Semantics)*")),
 ]
 
 # ---------------------------------------------------------------------------
@@ -402,7 +411,7 @@ def main():
         for name, base, mutate in POSITIVE_MUTATIONS:
             try:
                 text = mutate(load(base))
-            except AssertionError as exc:
+            except (BrokenFixture, ValueError) as exc:
                 report(False, name, f"mutation no longer applies to {base}: {exc}")
                 continue
             path = os.path.join(tmp, name + ".md")

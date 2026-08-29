@@ -78,6 +78,9 @@ class Report:
 # failure the frequency vocabulary already exists to prevent.
 EVIDENCE = ("observed", "inferred", "invented")
 
+# The annotation, anchored: leading space, then *(kind)* or *(kind: source)*.
+MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*"
+
 
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
     """Pull the checkable figures out of a Pre-registered or Reckoning line.
@@ -252,16 +255,22 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     if re.match(r"\s*\d+\.\s+\*\*", nxt):
                         break
                     entry += " " + nxt.strip()
-                # Only the annotation in its prescribed position counts: after
-                # the slug, before the em dash that opens the description.
-                # Searching the whole entry let a literal example in the prose
-                # -- `*(invented)*` quoted while explaining the notation --
-                # stand in for a mark that was never written.
-                region = re.split(r"\s[—–-]\s", entry[m.end():], maxsplit=1)[0]
-                # and not one quoted as code inside that region either.
-                region = re.sub(r"`[^`]*`", "", region)
-                marks = re.findall(
-                    r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", region)
+                # Only the annotation in its prescribed position counts: the
+                # template puts it immediately after the slug, so anchor there
+                # rather than searching. Searching the entry let a literal
+                # example in the prose -- `*(invented)*` quoted while
+                # explaining the notation -- stand in for a mark that was never
+                # written; bounding the search at the description dash then
+                # broke sources that legitimately contain one, such as
+                # "RFC 9110 - HTTP Semantics". Anchoring needs neither.
+                region = entry[m.end():]
+                first = re.match(MARK_RE, region)
+                # A second mark is one that follows the first immediately. Prose
+                # further along the entry is description, not annotation.
+                second = re.match(MARK_RE, region[first.end():]) if first else None
+                marks = ([(first.group(1), first.group(2) or "")] if first else [])
+                if second:
+                    marks.append((second.group(1), second.group(2) or ""))
                 if len(marks) > 1:
                     # Keeping only the first would let a stale mark sit beside
                     # its replacement and report the document as consistent.
@@ -800,6 +809,13 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                     f"primitive {name!r} is marked {mark!r} but names no source. Evidence that "
                     "cannot be looked up is a stronger claim than 'invented' with none of the "
                     "backing; write the issue, transcript or document it came from."
+                )
+            elif mark == "invented" and source:
+                rep.fail(
+                    f"primitive {name!r} is marked 'invented' but names a source "
+                    f"({source!r}). The mark says there is no artifact behind it, so a source "
+                    "contradicts it: choose 'observed' or 'inferred' if the artifact is real, "
+                    "and drop the suffix if it is not."
                 )
 
     if primitives:
