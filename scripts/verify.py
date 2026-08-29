@@ -243,6 +243,9 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
             items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i))
 
+    claims["has_today_column"] = (
+        item_has_today if item_has_today is not None else any(it.today for it in items)
+    )
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
@@ -367,14 +370,22 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
     # 5b. The demand-side measure, the frequency basis, and the roster axis.
     missing_today = [it.n for it in items if not is_substantive(it.today)]
-    if len(missing_today) == len(items):
+    if not claims.get("has_today_column"):
+        # No column at all: a document written before the field existed. Warn, so
+        # old runs stay readable, and say plainly that new ones must carry it.
         rep.warn(
             "no Today column — what each persona does instead, right now. Coverage says whether "
             "you serve an ask; Today says whether anyone needs it served, and without it an "
             "unserved item cannot be told apart from a non-problem. Required for new documents."
         )
     elif missing_today:
-        rep.warn(f"items with no Today value: {missing_today[:8]}")
+        # The column is declared, so the field is required here and a warning would
+        # pass the standard Phase 7 invocation, which does not use --strict.
+        rep.fail(
+            f"{len(missing_today)} item(s) in a declared Today column have no value: "
+            f"{missing_today[:8]}. A declared column that is empty is not back-compatibility, "
+            "it is the demand-side measure missing from a document that claims to carry it."
+        )
 
     for key, label in (("freq_basis", "Frequencies"), ("axis", "Roster axis")):
         if claims.get(key + "_count", 0) > 1:
