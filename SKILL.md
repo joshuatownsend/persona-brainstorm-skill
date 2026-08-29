@@ -52,6 +52,66 @@ discovery of what exists. That ordering is deliberate: an inventory read first i
 impossible to un-see, and every item afterward bends toward it. Resist the urge to "just quickly
 check what it does today" before Phase 3.
 
+**When you already know the implementation, the phase order cannot protect you.** The most likely
+operator of this skill is someone who built the subject, and cannot un-see what they already know.
+This is the common case, not the edge case. Don't pretend otherwise and don't skip the exercise;
+do one of these, and say in the document which:
+
+- **Derive the roster and the items in separate agents — two calls, not one.** A roster you derived
+  yourself carries the contamination at its most consequential point: personas that mirror the
+  surface you already know, and no trace of the people it doesn't serve. Handing that roster to a
+  blind generator locks the omission in, because a generator only writes for the roles it is given.
+  Blinding Phase 2 while Phase 1 stays contaminated protects the cheap half.
+
+  Both calls need the same **context block**. Assemble it once and pass it verbatim to each:
+
+  > the subject · the frame, with its scope constraint · the archetype, its frontier class, and its
+  > reach-further axes · the total item budget · any seed personas the *user* supplied
+
+  Every line of that is Phase 0 output — things the operator and user *decided*, not things read
+  off the artifact — which is why passing it costs nothing in contamination. Assemble it once
+  rather than listing inputs per call: an enumerated list maintained in two places loses an entry
+  eventually, and a blind agent cannot notice what it was never given.
+
+  **Call one — the roster.** Context block, plus Phase 1's derivation checklist. Ask it to derive
+  the roster, to say what the seed list was missing, and to divide the total budget unevenly across
+  the personas it derived. Then run Phase 1's approval gate unchanged: put that roster in front of
+  the user, who is the one participant with real domain knowledge and no stake in the
+  implementation.
+
+  **Call two — the items.** Context block, plus the approved roster with its per-persona budgets,
+  plus **the whole of Phase 2 restated in the prompt** — item schema, frequency vocabulary, the ⚡
+  rule, continuous numbering, the no-padding rule. Say explicitly that **the approved roster
+  supersedes the seed personas** carried in the block. Phase 1 merges duplicates and the user cuts
+  entries at the gate, so a seed list left standing beside the roster can resurrect a persona the
+  user removed, or split items across two the roster deliberately merged into one.
+
+  Forbid both calls from reading any file.
+
+  **Passing the method is not contamination; passing the inventory is.** That distinction is what
+  makes this work, and it matters most where the two live in one document: when the subject *is*
+  the method, "don't read the implementation" and "read the protocol" point at the same file, so
+  the protocol has to travel in the prompt rather than by reference. An agent handed a few inputs
+  and a prohibition cannot produce a conforming roster or item set — it will hand back something
+  shaped like an answer.
+
+  Phase 3 can still run *concurrently* with Phases 1–2, because a blind generator cannot be
+  contaminated by an inventory built beside it — **provided nothing from Phase 3 reaches either
+  prompt**. Its findings must never enter the context block, the roster call, or the items call.
+  Pasting an inventory into a blind agent restores exactly the anchoring this whole arrangement
+  exists to prevent, and does it silently, because the output still looks blind.
+
+  **This pushes the contamination back; it does not remove it.** You still wrote the frame, and the
+  frame shapes everything downstream. Say that in the document rather than claiming the run was
+  clean.
+- **Disclose the contamination** at the top of the document, and treat every item that maps neatly
+  onto an existing capability as suspect rather than as confirmation.
+
+Prefer the first wherever you can make **two model calls that do not share your context** — a
+subagent, a separate session, another person handed the prompt. Isolation is the requirement;
+no particular tooling is. The second option is honest but weak — knowing to distrust your own
+anchoring does not undo it.
+
 The corollary: **the unserved items are the deliverable.** A document where everything is already
 covered has failed. Expect half to two-thirds of items to be partly served or impossible.
 
@@ -189,11 +249,31 @@ Start from the user's seed list and do three things to it:
 - **Merge duplicates.** Seed lists routinely name the same human twice under two job titles. Say
   in the document that you merged them, and why.
 - **Add what's missing, each with a stated reason.** The added personas are usually where the
-  document earns its keep, because they're the ones the subject's own framing doesn't see. Look
-  for: the highest-volume/lowest-expertise user (they benefit most from a natural-language
-  interface); the security/compliance reader (their data is usually sitting there unqueried); the
-  automation or pipeline consumer; the rare-but-high-stakes user (migrations, acquisitions,
-  audits); and the non-hands-on decision maker.
+  document earns its keep, because they're the ones the subject's own framing doesn't see. Work
+  the list below; most subjects are missing at least three of them.
+
+  - **The highest-volume, lowest-expertise user** — most contact with the subject, least ability
+    to work around it when it doesn't fit.
+  - **The security, compliance, or audit reader** — their questions are usually answerable from
+    what already exists, and nobody has ever asked them.
+  - **The automation or pipeline consumer** — asks in a different shape entirely: determinism,
+    freshness guarantees, machine-readable output.
+  - **The rare-but-high-stakes user** — migrations, acquisitions, audits, incidents. A handful of
+    enormous questions a year, each expensive to get wrong.
+  - **The non-hands-on decision maker** — never touches the subject, only its output, and has to
+    defend it to people who weren't there.
+
+  The three below are the ones a roster almost never contains, because **every evidence source you
+  have is blind to them**. Name them deliberately or they will not appear at all:
+
+  - **The user who tried it and left.** They file no tickets and answer no surveys. A roadmap
+    built from the people who stayed is optimizing for survivors and calling it demand.
+  - **The user forced in by someone else's decision** — a migration, a mandate, a vendor change.
+    They never chose the subject, and their asks look nothing like a volunteer's.
+  - **The classes nobody represented** — on a screen reader, on a bad connection, in a language
+    this was not written in, on hardware two generations old. They are absent from the material
+    that shaped your priors, so they will never surface on their own. Ask explicitly, and if you
+    conclude none belong on the page, say why rather than leaving it silent.
 - **Include the agent itself as a persona** whenever the subject might be driven by an AI agent.
   This is the single most productive addition when planning any surface an agent will drive,
   because it generates asks no human persona will — what must I read before I'm allowed to act,
