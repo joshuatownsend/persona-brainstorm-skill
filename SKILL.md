@@ -301,11 +301,10 @@ nowhere else: a claim mentioned in passing further down is not a declaration, an
 accepts one cannot tell a document that declared its axis from one that merely discussed it. Where a persona genuinely belongs to a different axis and still earns its place — the
 executing agent usually does — say so explicitly rather than letting it pass unremarked.
 
-**Then apply the distinctness test, which is the one Phase 1 has always implied and never
-supplied.** Cover the persona names and read only the asks each one owns. If you cannot tell two
-personas apart that way, they are one persona wearing two job titles, and the merge instruction
-above applies no matter how different their justifications sound. Two people with the same
-questions are the same persona for this document's purposes, whatever their business cards say.
+**You cannot fully test distinctness yet, and should not pretend to.** The real test needs the asks,
+which do not exist until Phase 2. What you can do here is weaker and still worth doing: read the
+justifications side by side and merge any two that differ only in job title. Then carry the
+question forward — the binding test runs at the end of Phase 2, and it can send you back here.
 
 **Then stop and put the roster in front of the user** (AskUserQuestion, or a plain list if it's
 long). Show each persona, its justification, and your rough item budget. Ask what's missing, what's
@@ -365,6 +364,27 @@ surface, for instance, gets all the value of a change proposal with none of the 
 
 If your list has no ⚡ items, you have under-reached. If your ⚡ items are all comfortable, you
 named the frontier too conservatively — go back to Phase 0 and find the class you flinched at.
+
+### Before leaving Phase 2 — the distinctness test
+
+Now that the asks exist, run the test Phase 1 could only gesture at. **Cover the persona names and
+read only the asks each one owns.** If you cannot tell two personas apart that way, they are one
+persona wearing two job titles, however different their justifications sounded — two people with
+the same questions are the same persona for this document's purposes, whatever their business cards
+say.
+
+This is a gate, not an observation. When it fires:
+
+1. Merge the pair, keeping the asks from both and cutting the duplicates.
+2. Redistribute the freed budget — the merged persona does not simply inherit the sum, or you have
+   traded a duplicate persona for an overweighted one.
+3. Put the corrected roster back in front of the user, exactly as Phase 1 does. They approved a
+   roster you have now changed.
+4. Generate items for any persona whose budget moved.
+
+Doing this late is not a failure of sequencing; it is the earliest point the test can run at all.
+Phase 7b asks the same question again with fresh eyes, but it only *records* findings — by then the
+document is written, and a duplicate found there costs a regeneration rather than an edit.
 
 ## Phase 3 — Inventory what exists today
 
