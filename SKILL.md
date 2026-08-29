@@ -96,7 +96,10 @@ do one of these, and say in the document which:
   shaped like an answer.
 
   Phase 3 can still run *concurrently* with Phases 1–2, because a blind generator cannot be
-  contaminated by an inventory built beside it.
+  contaminated by an inventory built beside it — **provided nothing from Phase 3 reaches either
+  prompt**. Its findings must never enter the context block, the roster call, or the items call.
+  Pasting an inventory into a blind agent restores exactly the anchoring this whole arrangement
+  exists to prevent, and does it silently, because the output still looks blind.
 
   **This pushes the contamination back; it does not remove it.** You still wrote the frame, and the
   frame shapes everything downstream. Say that in the document rather than claiming the run was
@@ -104,8 +107,10 @@ do one of these, and say in the document which:
 - **Disclose the contamination** at the top of the document, and treat every item that maps neatly
   onto an existing capability as suspect rather than as confirmation.
 
-Prefer the first wherever subagents are available. The second is honest but weak — knowing to
-distrust your own anchoring does not undo it.
+Prefer the first wherever you can make **two model calls that do not share your context** — a
+subagent, a separate session, another person handed the prompt. Isolation is the requirement;
+no particular tooling is. The second option is honest but weak — knowing to distrust your own
+anchoring does not undo it.
 
 The corollary: **the unserved items are the deliverable.** A document where everything is already
 covered has failed. Expect half to two-thirds of items to be partly served or impossible.
