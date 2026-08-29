@@ -78,11 +78,13 @@ def is_substantive(value: str) -> bool:
     held to this, not just the ones a reviewer happened to name.
     """
     v = value.strip().strip("*").strip()
-    if len(v) < 3 or v.startswith("<"):
+    if len(v) < 2 or v.startswith("<"):
         return False
     if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
         return False
-    return bool(re.search(r"[A-Za-z]{3,}", v))
+    # Alphabetic, not ASCII: a Today value of "何もしない" declares as much as
+    # "does nothing by hand", and this skill is meant to run on any subject.
+    return sum(1 for ch in v if ch.isalpha()) >= 2
 
 
 def split_row(line: str) -> list[str]:
@@ -113,6 +115,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     citing = None
     in_primitives = False
     in_header = True   # until the first roster or item row
+    item_has_today = None   # set from the item-table header, not guessed
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -200,6 +203,11 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         if is_divider(cells):
             continue
 
+        # Item-table header row: records the column layout for the rows beneath it.
+        if cells[0] == "#" and any("ask" in c.lower() for c in cells):
+            item_has_today = any(c.strip().lower() == "today" for c in cells)
+            continue
+
         # Roster row: | **P1** | `slug` | Role | Why | 13 |
         m = re.match(r"\*{0,2}(P\d+)\*{0,2}$", cells[0])
         if m and len(cells) >= 4 and cells[-1].isdigit():
@@ -217,12 +225,20 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             in_header = False
             n = int(cells[0])
             ask, why = cells[1], cells[2]
-            # The Today column sits between Why and Freq. Documents written before
-            # it existed have Freq there instead, so detect rather than assume.
-            if cells[3].lower().lstrip("~") in FREQ_VOCAB:
-                today, freq, rest = "", cells[3], cells[4:]
+            # The Today column sits between Why and Freq, and documents written
+            # before it existed have Freq there instead. Read the layout from the
+            # table header: sniffing the cell's content misreads any frequency
+            # outside the vocabulary as a Today value and shifts every column
+            # after it, so an unrecognised word silently deletes the frontier
+            # mark instead of warning about the word.
+            if item_has_today is None:
+                has_today = cells[3].lower().lstrip("~") not in FREQ_VOCAB
             else:
+                has_today = item_has_today
+            if has_today:
                 today, freq, rest = cells[3], cells[4], cells[5:]
+            else:
+                today, freq, rest = "", cells[3], cells[4:]
             frontier = any("⚡" in c for c in rest)
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
             items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i))
