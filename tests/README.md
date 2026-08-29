@@ -1,4 +1,4 @@
-# Fixtures for `scripts/verify.py`
+# Fixtures for the Phase 7 checker
 
 ```
 python tests/run_fixtures.py

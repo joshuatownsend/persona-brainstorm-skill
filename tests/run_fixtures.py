@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixture suite for scripts/verify.py.
+"""Fixture suite for skills/persona-brainstorm/scripts/verify.py.
 
 Run: python tests/run_fixtures.py
 
