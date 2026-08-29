@@ -1,1 +1,4 @@
 INSIGHTS.md
+__pycache__/
+*.pyc
+bam-mcp-60-ideas.pdf
