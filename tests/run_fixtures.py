@@ -241,6 +241,15 @@ POSITIVE_MUTATIONS = [
     ("evidence-source-may-contain-an-arrow", "d_ok.md",
      lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
                     "*(observed: the Login\n   → Checkout trace)*")),
+    # Ordinary lookup references. is_substantive rejects both -- "#12" has no
+    # letters, and an autolink opens with the bracket that marks a template
+    # slot -- yet each names an artifact a reader can go and check.
+    ("evidence-source-may-be-an-issue-id", "d_ok.md",
+     lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
+                    "*(observed: #12)*")),
+    ("evidence-source-may-be-an-autolink", "d_ok.md",
+     lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
+                    "*(observed: <https://example.test/issues/12>)*")),
     ("evidence-source-may-contain-a-dash", "d_ok.md",
      lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
                     "*(observed: RFC 9110 - HTTP Semantics)*")),

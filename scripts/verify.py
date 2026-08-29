@@ -159,6 +159,30 @@ def is_substantive(value: str) -> bool:
     return True
 
 
+def is_source(value: str) -> bool:
+    """True when an evidence source identifies something lookup-able.
+
+    Deliberately not `is_substantive`, which is tuned for prose fields and
+    rejects two of the most ordinary references there are: "#12" carries no
+    letters, and "<https://example.test/issues/12>" opens with the angle
+    bracket that marks an unedited template slot. Both name a real artifact.
+
+    The angle-bracket rule is the only subtle part. A Markdown autolink is a
+    source; "<where it was seen>" is the template asking to be filled in, and
+    the difference is whether the brackets hold a URI rather than a phrase.
+    """
+    v = value.strip().strip("*").strip()
+    if not v:
+        return False
+    if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
+        return False
+    if v.startswith("<"):
+        return bool(re.fullmatch(r"<[A-Za-z][A-Za-z0-9+.-]*:[^>\s]+>", v)
+                    or re.fullmatch(r"<[^>\s@]+@[^>\s]+>", v))
+    # An identifier is enough: a bare "#5" is a reference someone can follow.
+    return len([ch for ch in v if ch.isalnum()]) >= 2 or any(ch.isdigit() for ch in v)
+
+
 def split_row(line: str) -> list[str]:
     # A shell pipeline or a regex in an ask is written `foo \| bar`. Splitting on
     # every pipe shifts every field after it and invents failures.
@@ -271,10 +295,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 # "RFC 9110 - HTTP Semantics". Anchoring needs neither.
                 region = entry[m.end():]
                 first = re.match(MARK_RE, region)
-                # A second mark is one that follows the first immediately. Prose
-                # further along the entry is description, not annotation.
-                # A second mark anywhere in the declaration contradicts the
-                # first, whether it sits adjacent or beyond the description.
+                # Any further mark in the declaration contradicts the first --
+                # adjacent to it or beyond the description, both count.
                 # Inline code is stripped so a quoted example is not counted --
                 # the same distinction anchoring makes for the first mark.
                 rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
@@ -817,7 +839,7 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                     f"{', '.join(EVIDENCE)}. An open vocabulary of confidence words sorts "
                     "nothing once it has grown."
                 )
-            elif mark in ("observed", "inferred") and not is_substantive(source):
+            elif mark in ("observed", "inferred") and not is_source(source):
                 rep.fail(
                     f"primitive {name!r} is marked {mark!r} but names no source. Evidence that "
                     "cannot be looked up is a stronger claim than 'invented' with none of the "
