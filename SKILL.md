@@ -215,11 +215,17 @@ Establish seven things. Ask the user directly; don't guess.
 
    Record it in the document header on one line, beside the coverage key:
 
-     `**Pre-registered:** predicted 20/40/40 · surprise above 50% served · cut: no named decision`
+     `**Pre-registered:** predicted 12/24/24 of 60 · surprise above 30 served · cut: no named decision`
+
+     Those are **item counts, not percentages** — you set the budget in step 3, so you know the
+     total you are splitting. Counts can be checked exactly against the finished tables;
+     percentages invite a rounding argument at precisely the moment you least want one.
 
    ...or, for a run with no coverage pass:
 
      `**Pre-registered:** predicted 18 ⚡ of 60 · surprise below 8 · cut: no named decision`
+
+   Predict the kind of figure your run can produce, and predict it as a count.
 
    Phase 5 has to reckon against this, and cannot quietly not.
 
@@ -487,14 +493,16 @@ decides how much the recurrence counts.
 **Reckon against the pre-registration.** Put the predicted figure beside the actual one on a line
 of exactly this form, in this section:
 
-  `**Reckoning:** predicted 20/40/40, actual 12/43/45 — <what the gap means>`
+  `**Reckoning:** predicted 12/24/24, actual 7/26/27 — <what the gap means>`
 
   ...or, where no coverage pass ran:
 
   `**Reckoning:** predicted 18 ⚡, actual 26 ⚡ — <what the gap means>`
 
-Both figures are checked: the predicted one against your Phase 0 line, the actual one against the
-tables. A reckoning is the one place in this document where a number is claimed *about* the
+**Both halves are required and both are checked** — the predicted one against your Phase 0 line,
+the actual one against the tables, and the actual split against the number of graded items. A
+reckoning that states a prediction and then only characterises the outcome in words ("prediction
+held") is the half that costs nothing. A reckoning is the one place in this document where a number is claimed *about* the
 document, so it is the last place to take one on trust.
 
 Then say which of three things happened, in words:

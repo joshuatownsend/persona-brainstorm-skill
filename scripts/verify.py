@@ -530,12 +530,54 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
         )
         actual_front = sum(1 for it in items if it.frontier)
 
-        if not (rec.keys() & {"predicted_split", "predicted_frontier",
-                              "actual_split", "actual_frontier"}):
+        # Which figure this run owes depends on whether it graded coverage.
+        kind = "split" if graded_now else "frontier"
+        want_pred, want_act = f"predicted_{kind}", f"actual_{kind}"
+        missing = [k for k in (want_pred, want_act) if k not in rec]
+        if missing:
+            other = "frontier" if kind == "split" else "split"
+            if rec.get(f"predicted_{other}") or rec.get(f"actual_{other}") or rec.get(other):
+                rep.fail(
+                    f"the reckoning reports a {other} figure, but this run "
+                    f"{'graded coverage' if kind == 'split' else 'graded no coverage'}, so the "
+                    f"figure to reckon is the {kind}."
+                )
+            elif rec.get(kind):
+                rep.fail(
+                    "the **Reckoning:** line carries figures but not in the form "
+                    "'predicted X, actual Y', so the two cannot be told apart. Both halves are "
+                    "required and both are compared."
+                )
+            else:
+                rep.fail(
+                    f"the **Reckoning:** line is missing "
+                    f"{' and '.join(m.replace('_', ' ') for m in missing)}. Both halves are "
+                    "required: a line that states a prediction and then characterises the outcome "
+                    "in words is the half that costs nothing."
+                )
+        # A pre-registration with no figure in it cannot be reckoned against, and
+        # leaves the reckoning free to report a prediction nobody made.
+        if not (pre.get("split") or pre.get("frontier")):
             rep.fail(
-                "the **Reckoning:** line states no figures. It has to carry 'predicted X, actual "
-                "Y' so both halves can be checked; prose alone reports that a reckoning happened "
-                "rather than what it found."
+                "the **Pre-registered:** line states no prediction — substantive prose is not a "
+                "figure. Without one, the reckoning below can report any prediction it likes, "
+                "which is precisely the failure pre-registering was meant to prevent."
+            )
+        elif kind == "split" and "split" not in pre:
+            rep.fail(
+                "this run graded coverage but pre-registered only a frontier figure. Predict the "
+                "kind of result the run produces."
+            )
+        elif kind == "frontier" and "frontier" not in pre:
+            rep.fail(
+                "this run graded no coverage but pre-registered a coverage split, which can never "
+                "be reckoned against. Predict the kind of result the run produces."
+            )
+        # Counts, so the actual split must account for every graded item.
+        if "actual_split" in rec and graded_now and sum(rec["actual_split"]) != len(graded_now):
+            rep.fail(
+                f"the reckoning's actual split sums to {sum(rec['actual_split'])} across "
+                f"{len(graded_now)} graded items. These are counts, not percentages."
             )
         pre_val = pre.get("split") or pre.get("frontier")
         rec_pred = rec.get("predicted_split") or rec.get("predicted_frontier")
@@ -555,11 +597,7 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                 f"the reckoning reports {rec['actual_frontier']} frontier items; the table has "
                 f"{actual_front}."
             )
-        if graded_now and "actual_split" not in rec and "actual_frontier" in rec:
-            rep.warn(
-                "this run graded coverage but reckoned only against the frontier count. The "
-                "coverage split is the figure the prediction was for."
-            )
+
 
     if not claims.get("freq_basis"):
         rep.fail(
