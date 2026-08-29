@@ -42,17 +42,25 @@ This file ships with the skill. It is a **seed, and it is read-only** — it
 travels to every subject the skill is run against, so it cannot accumulate the
 slugs any one of them mints.
 
-A set of subjects that will be compared keeps its own vocabulary, in the
-repository holding their documents:
+A set of subjects that will be compared keeps its own vocabulary, as
+`PRIMITIVES.md` **beside the set's documents** — wherever those are agreed to
+live:
 
 ```
-PRIMITIVES.md        beside the generated documents, in the target repo
+<documents dir>/PRIMITIVES.md      alongside the documents it describes
 ```
+
+The scope is the **comparison set, not the subject.** Deriving the location
+from each subject's own repository fails in the two cases the method most needs
+it: a set spanning several repositories writes each minted slug into a
+different one, so no later run can read it — and a subject that is not a
+repository at all, which Phase 0 explicitly supports, has no such location to
+derive. Ask once where the set's documents live, and keep the vocabulary there.
 
 Create it on the first run of a set by copying the table below, then append to
-it. Phase 5 reads the project vocabulary when one exists and this file when
-none does, and writes newly minted slugs to the project vocabulary — never
-back to this one, which would silently change the seed for unrelated subjects.
+it. Phase 5 reads the set vocabulary when one exists and this file when none
+does, and writes newly minted slugs to the set vocabulary — never back to this
+one, which would silently change the seed for unrelated subjects.
 
 Without that file the growth rule has nowhere to put anything: a slug minted
 in run A is recorded only in run A's own document, and run B reads the seed,

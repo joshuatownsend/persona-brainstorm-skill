@@ -490,17 +490,23 @@ invisible from inside any single document. `references/cross-run.md` covers it: 
 key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
 decides how much the recurrence counts.
 
-**Name primitives from the shared vocabulary where one fits.** Read `PRIMITIVES.md` in the target
-repo if one exists, and `references/primitives.md` otherwise — the bundled file is a read-only seed
-that travels to every subject, so it cannot hold what any one of them minted. Both carry the rule
-for when to reuse a slug and when to mint one. Two runs that name the same capability differently
-will never group, and nothing in either document reveals it — so the reuse happens here, at naming
-time, or not at all.
+**Name primitives from the shared vocabulary where one fits.** Read `PRIMITIVES.md` from wherever
+this comparison set's documents live if one exists, and `references/primitives.md` otherwise — the
+bundled file is a read-only seed that travels to every subject, so it cannot hold what any one of
+them minted. Both carry the rule for when to reuse a slug and when to mint one. Two runs that name
+the same capability differently will never group, and nothing in either document reveals it — so
+the reuse happens here, at naming time, or not at all.
 
-**Write any newly minted slug into the target repo's `PRIMITIVES.md`**, creating it from the
-bundled table on the first run of a comparison set. A slug minted and left unrecorded is recorded
-only in this run's own document; the next subject reads the vocabulary, misses it, and mints a
-synonym — the exact false negative the vocabulary exists to prevent, arriving one run later.
+**Write any newly minted slug into that same `PRIMITIVES.md`**, creating it from the bundled table
+on the first run of a set. A slug minted and left unrecorded lives only in this run's own document;
+the next subject reads the vocabulary, misses it, and mints a synonym — the exact false negative
+the vocabulary exists to prevent, arriving one run later.
+
+The vocabulary belongs to the **comparison set, not the subject.** Do not derive its location from
+the subject's repository: a set spanning several repositories would scatter one slug per repo, and
+a subject that is no repository at all — which Phase 0 supports — has nowhere to put it. If the set
+has no agreed home yet, ask for one before naming primitives; if this is a single-subject run with
+no comparison intended, the bundled seed is enough and nothing needs writing.
 
 **Reckon against the pre-registration.** Put the predicted figure beside the actual one on a line
 of exactly this form, in this section:

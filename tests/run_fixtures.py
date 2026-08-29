@@ -367,7 +367,7 @@ def main():
     # A vocabulary that has drifted from the run it describes is worse than no
     # vocabulary: it invites reuse of a slug that no longer means what it says.
     #
-    # Subset, not equality. The vocabulary is meant to grow: primitives.md tells
+    # Subset, not equality. The vocabulary is meant to grow: the seed tells
     # a later run to mint a new slug when nothing fits, and equality here would
     # make doing so fail the suite -- or force the historical document to be
     # rewritten to match, which is the one thing slug discipline forbids. What

@@ -144,8 +144,10 @@ Group by primitive slug across documents and count how many subjects demand each
 - **Slug discipline is the whole game.** If two teams name the same idea `provenance` and
   `data-lineage`, they will not group, and you will conclude there is no shared need. Keep a
   written slug vocabulary for a set of subjects that will be compared, and reconcile before
-  aggregating rather than after. `primitives.md` is that vocabulary for this repo, and carries
-  the reconciliation rule.
+  aggregating rather than after. That vocabulary is `PRIMITIVES.md`, kept beside the set's
+  documents; `references/primitives.md` is the read-only seed it starts from, and carries the
+  reconciliation rule. The two are different files — on a case-sensitive filesystem, writing to
+  the wrong one produces a vocabulary no later run reads.
 
 Aggregation reads finished documents only. It never merges two subjects into one run.
 
