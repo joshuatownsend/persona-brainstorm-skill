@@ -19,7 +19,7 @@ an inventory of what ships.
 
 That unconstrained framing is not only what makes the document good — it is what makes this skill
 portable. Because the demand side is derived from a **domain and its practitioners** rather than
-from an implementation, nothing in Phases 0–2 or 5 needs to know what the subject is built from.
+from an implementation, nothing in Phases 0–2, 5, 6 or 7 needs to know what the subject is built from.
 A DDI platform, a payments API, an internal data warehouse, a design system, a hiring process —
 all have practitioners with jobs to do, and that is the only input the imaginative half requires.
 
@@ -404,6 +404,68 @@ Preserve any Phase 3 inventory as an appendix, clearly labelled as describing to
 If the full coverage pass turned up a real defect, write it up properly — its own file under the
 repo's issue-docs convention — and offer to file it upstream. Link it from the appendix. Those
 findings are a genuine byproduct of this workflow and get lost if they live only in a table cell.
+
+## Phase 7 — Verify
+
+Every quality gate before this point is advice addressed to you, and you are the one being graded.
+That is not a wording problem, it is a structural one: the model that under-reached is the model
+being asked to notice it under-reached. This phase exists because a run of this skill once
+self-reported "⚡ count: 21" for a document carrying 26, a 24% error on the single number it was
+asked to compute about its own output, and nothing in the method caught it.
+
+**The rule that makes this phase work: you never count anything.**
+
+### 7a — Run the checker
+
+```bash
+# <skill-dir> is the directory this SKILL.md lives in — the path you were given when the
+# skill loaded. It is NOT the working directory: this skill runs against a target repo.
+python "<skill-dir>/scripts/verify.py" <output-path>      # --strict fails on warnings too
+```
+
+Resolve that path against the skill's own directory every time. A bare `scripts/verify.py` is
+wrong in every repo but this one: usually it does not exist, and occasionally it is some other
+project's script that will run happily and tell you nothing about your document.
+
+It parses the tables and computes what the document actually contains, then compares that against
+what the document claims. It checks continuous numbering, per-persona counts against the roster's
+promised budgets, budget flatness, the frontier count, the coverage tally, frequency values against
+the vocabulary, whether a *Why* merely restates its *Ask*, whether asks are quoted, and whether the
+primitives cite item numbers that exist.
+
+Fix what it reports and run it again. Do not talk yourself out of a FAIL — every rule in it exists
+because that failure actually happened.
+
+**Run it a second time after 7b, with `--final`.** That pass additionally requires the Verification
+section to exist. Nothing else would catch its absence: 7a runs before 7b by definition, so the
+first invocation cannot check for a section that has not been written yet, and an executor who
+simply skips the adversarial read leaves a document that passes and reads as though it was
+reviewed.
+
+The checker reads claimed figures **only** from the canonical tally line. That is deliberate: a
+good document discusses numbers in prose — quoting a figure that turned out wrong, citing an
+earlier pass — and a checker that scans everywhere will read that discussion as a claim. If your
+tally line is missing, it says so rather than guessing.
+
+### 7b — Have a fresh agent read it adversarially
+
+The checker cannot tell you whether the document is any good, only whether it is internally
+consistent. The judgments that matter are exactly the ones you cannot make about your own output,
+so hand the finished document to a **separate agent that has not seen this run** and ask it, in
+these words:
+
+- Which items would apply unchanged to any other subject in this category? Name them.
+- Which personas are indistinguishable from one another by their asks alone?
+- Which coverage marks read as inferred rather than verified?
+- Which items state no real decision, only a restatement of the ask?
+- What would a practitioner in this domain immediately know is wrong?
+
+Its answers go in the document, under the tally, as a short **Verification** section — including
+the ones you disagree with, marked as disagreed and why. A finding you argued down is more useful
+to the next reader than a finding you deleted.
+
+If no second agent is available, say so in that section rather than omitting it. An absent
+verification section reads as a passed one.
 
 ## Re-running with a corrected frame
 
