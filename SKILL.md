@@ -53,15 +53,25 @@ impossible to un-see, and every item afterward bends toward it. Resist the urge 
 check what it does today" before Phase 3.
 
 **When you already know the implementation, the phase order cannot protect you.** The most likely
-operator of this skill is someone who built the subject — for whom the inventory was never un-seen
-and cannot be. This is the common case, not the edge case. Don't pretend otherwise and don't skip
-the exercise; do one of these, and say in the document which:
+operator of this skill is someone who built the subject, and cannot un-see what they already know.
+This is the common case, not the edge case. Don't pretend otherwise and don't skip the exercise;
+do one of these, and say in the document which:
 
-- **Generate the items in a separate agent** that receives only the subject, frame, archetype, and
-  persona roster, and is forbidden from reading any file. This restores the protection properly for
-  the cost of one subagent call, and has a side benefit: Phase 3 can then run *concurrently* with
-  Phase 2 instead of after it, because a blind generator cannot be contaminated by an inventory
-  built beside it.
+- **Generate the items in a separate agent.** Give it the subject, the frame, the archetype with
+  its frontier class and reach axes, the roster with per-persona budgets, and **the whole of Phase
+  2 restated in the prompt** — item schema, frequency vocabulary, the ⚡ rule, continuous
+  numbering, the no-padding rule. Then forbid it from reading any file.
+
+  **Passing the method is not contamination; passing the inventory is.** That distinction is what
+  makes this work, and it matters most where the two live in one document: when the subject *is*
+  the method, "don't read the implementation" and "read the protocol" point at the same file, so
+  the protocol has to travel in the prompt rather than by reference. An agent handed four inputs
+  and a prohibition cannot produce a conforming item set — it will hand back something shaped like
+  an answer.
+
+  This restores the protection for the cost of one subagent call, and has a side benefit: Phase 3
+  can then run *concurrently* with Phase 2 instead of after it, because a blind generator cannot be
+  contaminated by an inventory built beside it.
 - **Disclose the contamination** at the top of the document, and treat every item that maps neatly
   onto an existing capability as suspect rather than as confirmation.
 
@@ -219,11 +229,11 @@ Start from the user's seed list and do three things to it:
   - **The non-hands-on decision maker** — never touches the subject, only its output, and has to
     defend it to people who weren't there.
 
-  The last three are the ones a roster almost never contains, because **every evidence source you
+  The three below are the ones a roster almost never contains, because **every evidence source you
   have is blind to them**. Name them deliberately or they will not appear at all:
 
   - **The user who tried it and left.** They file no tickets and answer no surveys. A roadmap
-    built from the people who stayed is optimising for survivors and calling it demand.
+    built from the people who stayed is optimizing for survivors and calling it demand.
   - **The user forced in by someone else's decision** — a migration, a mandate, a vendor change.
     They never chose the subject, and their asks look nothing like a volunteer's.
   - **The classes nobody represented** — on a screen reader, on a bad connection, in a language
