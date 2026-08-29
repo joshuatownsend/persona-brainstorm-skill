@@ -81,7 +81,10 @@ do one of these, and say in the document which:
 
   **Call two — the items.** Context block, plus the approved roster with its per-persona budgets,
   plus **the whole of Phase 2 restated in the prompt** — item schema, frequency vocabulary, the ⚡
-  rule, continuous numbering, the no-padding rule.
+  rule, continuous numbering, the no-padding rule. Say explicitly that **the approved roster
+  supersedes the seed personas** carried in the block. Phase 1 merges duplicates and the user cuts
+  entries at the gate, so a seed list left standing beside the roster can resurrect a persona the
+  user removed, or split items across two the roster deliberately merged into one.
 
   Forbid both calls from reading any file.
 
