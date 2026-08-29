@@ -33,6 +33,17 @@ before I trust it."
 **Coverage key:** ✅ served well today · ◐ partially served, or served by a primitive that doesn't
 quite fit · ○ not possible today.
 
+**Frequencies:** estimated from the personas, not measured. No interviews, tickets, logs or
+analytics sit behind any value in that column; treat every one as a hypothesis about cadence rather
+than an observation of it. The same holds for the asks themselves — they are what these personas
+would plausibly say, not transcripts of anyone saying it.
+
+**Roster axis:** mixed, which is a known defect recorded in Verification below. P1 and P3–P5 are job
+roles, P6 is a team function, P2 is a piece of software, and P7 is a review function. A set built on
+three axes has no "rest of the set" to reason about, which undercuts exactly the completeness
+question P7 was added to ask. P2 earns its place off-axis — the subject is agent-executed by
+definition — but P7 should have been a Phase 7b question rather than a persona.
+
 ### Two disclosures about how this run was conducted
 
 **The items were generated blind.** The operator of this run wrote most of the subject under study
@@ -206,6 +217,7 @@ to the skill that produced it. Its findings, and what was done about each:
 
 | Finding | Verdict |
 |---|---|
+| **The roster mixes three axes and lexical checks cannot catch the duplicate pair.** Recorded here because a later attempt to automate the distinctness test measured this document: P2/P5, the true duplicates, scored the *lowest* ask-vocabulary overlap of any pair (0.031 against 0.123 for unrelated ones). | **Accepted.** The axis is now declared in the header. The distinctness test stays a Phase 1 and Phase 7b judgement; no automated version ships, because the measured one was anti-correlated with the defect. |
 | **The "strongest signal" is circular.** Primitive 1 claims the demand-side items and the supply-side inventory converged "from opposite directions." They did not: the generating agent was handed the archetype *and* its frontier class ("show me this method's blind spot before I trust it"), so blind-spot items were seeded, not discovered. Same defect in "the archetype predicted this shape before a single item was graded." | **Accepted.** Primitive 1's independent-corroboration claim is withdrawn — see the note under it. This is the most serious finding on the page and it invalidates the document's headline argument for its own top recommendation. |
 | **Items 11, 33 and 56 were graded ✅ against the document's own text.** 56 claims a process for knowing who is missing, while the disclosure says there is no way to know. 33 claims merged-duplicate detection is served, and this document failed exactly that (P2/P5). 11's ask is comparative, and one-subject-per-run forbids the comparison. | **Accepted.** Re-graded ○, ◐, ◐. Tally corrected from 10/24/26 to 7/26/27. |
 | **P2 and P5 are near-duplicates** — 44≈27, 47≈17, 46≈22/28, 45≈15 — while the document defends *not* merging P1 and P5 at length. P7 is also three-fifths P2. Strip the labels and there are roughly four askers, not seven. | **Accepted, not fixed.** Correcting it means re-running Phases 1–2, not editing. Recorded as the roster's principal defect. The persona table's own phrase "the closest human analogue to P2's predicament" was the tell. |
@@ -217,6 +229,12 @@ to the skill that produced it. Its findings, and what was done about each:
 | **Personas mix three incompatible axes** — five job roles, one piece of software (P2), one governance function (P7) — so the set cannot be checked for completeness, which is the job P7 was added to do. | **Accepted.** Real and unaddressed. |
 | **Missing the genre's most useful column: the current alternative** — what the person does *today* instead. Coverage is supply-side introspection; the existing workaround is the demand-side measure, and it distinguishes an opportunity from a non-problem. | **Accepted.** The single most actionable suggestion in the review. |
 | **Nothing was falsifiable.** Every result was pre-interpreted as confirmation, including the disclosed miscount. No statement, before the run, of what would have counted as the frame being wrong. | **Accepted.** The strongest of the six answers and the hardest to fix. |
+
+**Not retrofitted:** this run predates the **Today** column — what each persona does *instead*,
+right now — which is the demand-side measure the 7b read named as the most actionable thing missing.
+Filling sixty values after the fact would mean inventing sixty more unsourced claims, which is the
+defect the Frequencies note above exists to flag. The column is required for new documents; this one
+is left honestly short of it.
 
 **Disputed:** the reviewer marks items 14, 15, 36, 48 as generic "any-deliverable" asks. They are
 general, but the frame explicitly constrains to an agent-executed method with no domain expertise,

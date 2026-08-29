@@ -40,6 +40,7 @@ class Item:
     persona: str
     ask: str
     why: str
+    today: str
     freq: str
     frontier: bool
     coverage: str
@@ -147,6 +148,10 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             # lets that prose masquerade as the document's own claim. One home.
             #
             #   **Tally:** 10 ✅ · 24 ◐ · 26 ○ · 26 ⚡
+            if re.match(r"\*{0,2}Frequencies\*{0,2}:", raw.strip()):
+                claims["freq_basis"] = raw.strip()
+            if re.match(r"\*{0,2}Roster axis\*{0,2}:", raw.strip()):
+                claims["axis"] = raw.strip()
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
@@ -178,11 +183,16 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         # Item row: | 12 | "ask" | why | freq | ⚡ | cov |
         if cells[0].isdigit() and len(cells) >= 5 and current_persona:
             n = int(cells[0])
-            ask, why, freq = cells[1], cells[2], cells[3]
-            rest = cells[4:]
+            ask, why = cells[1], cells[2]
+            # The Today column sits between Why and Freq. Documents written before
+            # it existed have Freq there instead, so detect rather than assume.
+            if cells[3].lower().lstrip("~") in FREQ_VOCAB:
+                today, freq, rest = "", cells[3], cells[4:]
+            else:
+                today, freq, rest = cells[3], cells[4], cells[5:]
             frontier = any("⚡" in c for c in rest)
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
-            items.append(Item(n, current_persona, ask, why, freq, frontier, cov, i))
+            items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i))
 
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["duplicate_personas"] = sorted(set(dupe_pids))
@@ -306,11 +316,44 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             f_unserved = sum(1 for it in frontier if it.coverage == "○")
             rep.note(f"frontier unserved: {f_unserved} of {len(frontier)}")
 
+    # 5b. The demand-side measure, the frequency basis, and the roster axis.
+    missing_today = [it.n for it in items if not it.today]
+    if len(missing_today) == len(items):
+        rep.warn(
+            "no Today column — what each persona does instead, right now. Coverage says whether "
+            "you serve an ask; Today says whether anyone needs it served, and without it an "
+            "unserved item cannot be told apart from a non-problem. Required for new documents."
+        )
+    elif missing_today:
+        rep.warn(f"items with no Today value: {missing_today[:8]}")
+
+    if not claims.get("freq_basis"):
+        rep.fail(
+            "no **Frequencies:** line. Values like 'weekly' read as measurement and are usually "
+            "estimates; the document has to say which, near the coverage key."
+        )
+    if not claims.get("axis"):
+        rep.fail(
+            "no **Roster axis:** line. A roster mixing job roles, software and review functions "
+            "cannot be checked for completeness, which is the whole point of asking who is missing."
+        )
+
+    # 5c. Persona distinctness is deliberately NOT checked here, and should not be
+    #     added. A lexical version was written and measured against a document with a
+    #     known duplicate pair: the true duplicates scored 0.031 ask-vocabulary overlap,
+    #     the LOWEST of any pair, while unrelated personas reached 0.123. Real duplicates
+    #     ask the same question in different words — "what would a domain expert know is
+    #     wrong" and "which claims get me caught by a twenty-year veteran" share almost no
+    #     vocabulary — so the score is anti-correlated with the thing it would claim to
+    #     detect, and a passing run would be false reassurance. The distinctness test lives
+    #     in Phase 1 (cover the names, read only the asks) and in the Phase 7b question
+    #     list, where a reader who understands the questions can answer it.
+
     # 6. Frequency vocabulary.
     for it in items:
         if not it.freq:
             rep.fail(f"item {it.n} (line {it.line}) has no frequency")
-        elif it.freq not in FREQ_VOCAB:
+        elif it.freq.lstrip("~") not in FREQ_VOCAB:
             rep.warn(f"item {it.n}: frequency {it.freq!r} outside the vocabulary")
 
     # 7. A Why that restates the Ask is a feature request in costume.

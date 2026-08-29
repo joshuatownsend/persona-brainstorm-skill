@@ -288,6 +288,19 @@ Start from the user's seed list and do three things to it:
 
 Give each persona a one-line justification for being on the page. If you can't write one, cut it.
 
+**Build the roster on one axis, and name it.** Job roles, or jobs-to-be-done, or relationships to
+the subject — pick one and hold it. A roster mixing axes cannot be checked for completeness, which
+defeats the point of asking who is missing: a set containing four job titles, one piece of
+software, and one review function has no "rest of the set" to reason about. State the axis in the
+document. Where a persona genuinely belongs to a different axis and still earns its place — the
+executing agent usually does — say so explicitly rather than letting it pass unremarked.
+
+**Then apply the distinctness test, which is the one Phase 1 has always implied and never
+supplied.** Cover the persona names and read only the asks each one owns. If you cannot tell two
+personas apart that way, they are one persona wearing two job titles, and the merge instruction
+above applies no matter how different their justifications sound. Two people with the same
+questions are the same persona for this document's purposes, whatever their business cards say.
+
 **Then stop and put the roster in front of the user** (AskUserQuestion, or a plain list if it's
 long). Show each persona, its justification, and your rough item budget. Ask what's missing, what's
 really one person, and who doesn't belong. A wrong roster silently wastes every row generated after
@@ -312,12 +325,21 @@ below. Those are reliably the best items on the page.
 Number items continuously across the whole document (not per persona) so the synthesis can cite
 them.
 
+**Say where the frequencies came from.** `weekly` and `quarterly` are empirical claims, and a
+reader takes that column at face value — it is often the first thing they read. Unless you measured
+them, they are estimates, and the document has to say so in one line near the coverage key:
+*Frequencies are estimated from the personas, not measured.* Never let an invented number stand
+where a reader will take it for a finding. The same honesty applies to the asks themselves: unless
+they came from real users, they are hypotheses about what people would say, and the document is a
+set of hypotheses worth testing rather than a report of what was found.
+
 Each item is a row with four things:
 
 | Field | What good looks like |
 |---|---|
 | **The ask, in their words** | A quoted sentence the persona would actually say out loud — a question (`"Who was on 10.20.5.66 at 14:20 yesterday?"`) or a want (`"I want to restyle this component without forking it."`). Not `Historical lease attribution query`; not `Themeable component API`. If it reads like a Jira title, rewrite it. |
-| **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
+| **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. Watch for asks already phrased *as* a decision — `"do I pad, or hand back eight and say so?"` — where the Why has nowhere left to go and becomes an inversion of the question. When that happens, name the **consequence** instead: what goes wrong, and to whom, if the answer is unavailable. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
+| **Today** | What they do *instead*, right now. `"Greps four spreadsheets and guesses"` · `"Asks Dave"` · `"Gives up"` · `"Nothing — they don't know it's answerable"`. This is the demand-side measure and the coverage column is not: coverage says whether *you* serve the ask, while this says whether anyone needs it served. A `○` somebody already pays a person to work around is an opportunity; a `○` nobody has ever attempted is usually a non-problem. `"Gives up"` and `"Doesn't know to ask"` are the two most valuable answers here. |
 | **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `per-release`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
 | **Coverage** | Phase 4. Leave blank. |
 
