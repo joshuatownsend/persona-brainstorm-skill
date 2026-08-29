@@ -18,6 +18,7 @@ base rather than one edit per fixture. Static files are kept only where a
 mutation cannot express the defect.
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -362,6 +363,57 @@ def main():
     rc, out = run(os.path.join(REPO, "PERSONAS.md"), "--final")
     report(rc == 0, "PERSONAS.md", "" if rc == 0
            else (failures_in(out).splitlines() or [""])[0].strip()[:90])
+
+    # A vocabulary that has drifted from the run it describes is worse than no
+    # vocabulary: it invites reuse of a slug that no longer means what it says.
+    #
+    # Equality, in both directions. This was briefly a one-way subset, on the
+    # reasoning that the vocabulary has to be able to grow -- but growth now
+    # belongs to the per-set PRIMITIVES.md, and references/primitives.md is a
+    # read-only seed describing exactly one run. Each direction catches a real
+    # and different mistake:
+    #
+    #   used but not recorded   a slug the document uses that the seed lacks;
+    #                           the next run cannot reuse a name it cannot see
+    #   recorded but not used   an entry appended to the seed by hand, which
+    #                           travels to every unrelated subject the skill is
+    #                           run against -- the contamination this file's
+    #                           own read-only rule exists to prevent
+    print("\nprimitive vocabulary:")
+    with open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8") as fh:
+        doc = fh.read()
+    with open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8") as fh:
+        vocab = fh.read()
+    # Anchors are asserted, not assumed. Splitting on a missing marker yields
+    # the whole document rather than an error, so a renamed heading would leave
+    # this scanning the wrong text -- and most likely still reporting green,
+    # which is the failure this suite exists to make impossible.
+    start = re.search(r"^##\s+What the \d+ imply\b.*$", doc, re.M)
+    report(start is not None, "the synthesis heading is where the check expects it",
+           "" if start else "no '## What the <N> imply' heading in PERSONAS.md")
+    end = re.search(r"^###\s+If you only ask\b.*$", doc, re.M)
+    report(end is not None, "the synthesis section has a recognised end",
+           "" if end else "no '### If you only ask' heading in PERSONAS.md")
+    section = doc[start.end():end.start()] if start and end else ""
+    # Only the slug in a numbered primitive entry, not every backticked token:
+    # the prose in that section cites other things in backticks too.
+    in_doc = set(re.findall(r"^\s*\d+\.\s+\*\*.+?\*\*\s+`([a-z0-9-]+)`", section, re.M))
+    # Whitespace around the cell is formatting, not meaning; a reflowed table
+    # must not read as a changed vocabulary.
+    in_vocab = set(re.findall(r"\|\s*`([a-z0-9-]+)`\s*\|", vocab))
+    # An empty slice would satisfy the subset test vacuously, so the check has
+    # to know it found something before it can claim the comparison held.
+    report(bool(in_doc), "the synthesis section yields primitive slugs",
+           "no numbered primitive entries matched; the check compared nothing"
+           if not in_doc else "")
+    unrecorded = sorted(in_doc - in_vocab)
+    report(not unrecorded, "every slug PERSONAS.md uses is in references/primitives.md",
+           f"used but not recorded: {unrecorded}" if unrecorded else "")
+    stray = sorted(in_vocab - in_doc)
+    report(not stray, "the seed records nothing PERSONAS.md does not use",
+           f"recorded but not used: {stray}. The seed is read-only and travels to "
+           f"every subject; per-set slugs belong in that set's PRIMITIVES.md."
+           if stray else "")
 
     # No fixture may sit on disk unaccounted for. Without this, a case can be
     # orphaned by a rename and nobody notices it stopped running.
