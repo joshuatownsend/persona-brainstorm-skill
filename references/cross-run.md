@@ -92,10 +92,29 @@ Then report movement in these terms:
 
 **To measure whether shipping served demand, hold the cohort fixed.** Take the *previous*
 document's items unchanged and run Phases 3–4 against today's artifact — a re-grade, not a
-brainstorm. Same asks, same wording, new coverage marks, so every difference is attributable to the
-subject rather than to the sampling. That is the only comparison in this method that measures
-against something other than its own judgement, and it is worth doing separately from a fresh run
-rather than conflated with one.
+brainstorm. Same asks, same wording, new coverage marks. Hold the discovery pass and the coverage
+depth constant too, and note in the report which agent graded each pass. This is the closest thing
+here to a measurement against something other than the method's own judgement, and it is worth
+doing separately from a fresh run rather than conflated with one.
+
+### What a comparison cannot tell you
+
+Three things vary between any two runs, and each one confounds attribution on its own:
+
+| Confound | Controlled by | Left uncontrolled |
+|---|---|---|
+| **Framing** — subject, frame, budget, archetype | holding Phase 0 constant | every difference downstream |
+| **Sampling** — which asks got written | re-grading a fixed cohort | coverage moves when nothing ships |
+| **Evaluator** — Phase 4 is a judgement | same grader, same depth, same discovery pass | marks move when nothing ships |
+
+Controlling one does not license attribution; it only removes one alternative explanation. A
+fixed-cohort re-grade rules out sampling and leaves evaluator drift entirely intact — a different
+agent, or a deeper discovery pass, can move a mark from ◐ to ✅ with nothing shipped at all.
+
+So report movement as **evidence, qualified by what was held fixed**, and never as proof that the
+work served the demand. Where a mark changed and you cannot point at a corresponding change in the
+artifact, say the mark changed and the cause is unestablished. That sentence is more useful than a
+confident number, and it is the honest form of the only measurement this method has.
 - **What the method did, versus what the world did.** If the skill itself changed between the runs,
   some movement is method drift and some is real. Say which is which, or the reader will assume all
   of it is real. When you cannot tell, say that.
