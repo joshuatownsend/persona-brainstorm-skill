@@ -52,8 +52,12 @@ Then report movement in these terms:
 - **Personas gained or lost**, by reconciled slug. A persona that disappears without the subject
   changing is usually a roster error in one of the two runs, not a real departure — say which you
   think it is.
-- **Primitives gained, lost, or renamed.** A rename with the same citations is not a change; a slug
-  reused for a different idea is a mistake and will make every future comparison wrong.
+- **Primitives gained, lost, or renamed.** Decide renames from the reconciliation mapping and from
+  what the cited asks actually *say* — never from the citation numbers. Those are item numbers, and
+  this file has already said they are positional: two unrelated primitives can both cite items 4
+  and 12, and a genuine rename can cite entirely different numbers because the fresh run sampled
+  different asks. A slug reused for a different idea is a mistake and will make every future
+  comparison wrong.
 - **Coverage movement per primitive — with a caveat that limits what it can mean.** Two fresh runs
   sample different asks for the same primitive, so a coverage figure can move because the cohort
   changed and not because anything shipped. Movement between two independent runs tells you the
