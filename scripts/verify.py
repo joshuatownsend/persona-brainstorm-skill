@@ -73,6 +73,15 @@ class Report:
         self.notes.append(m)
 
 
+# Evidence marks are a closed set. An open one lets "probably", "strong" and
+# "high-confidence" accumulate until the column sorts nothing, which is the
+# failure the frequency vocabulary already exists to prevent.
+EVIDENCE = ("observed", "inferred", "invented")
+
+# The annotation, anchored: leading space, then *(kind)* or *(kind: source)*.
+MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*"
+
+
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
     """Pull the checkable figures out of a Pre-registered or Reckoning line.
 
@@ -150,6 +159,30 @@ def is_substantive(value: str) -> bool:
     return True
 
 
+def is_source(value: str) -> bool:
+    """True when an evidence source identifies something lookup-able.
+
+    Deliberately not `is_substantive`, which is tuned for prose fields and
+    rejects two of the most ordinary references there are: "#12" carries no
+    letters, and "<https://example.test/issues/12>" opens with the angle
+    bracket that marks an unedited template slot. Both name a real artifact.
+
+    The angle-bracket rule is the only subtle part. A Markdown autolink is a
+    source; "<where it was seen>" is the template asking to be filled in, and
+    the difference is whether the brackets hold a URI rather than a phrase.
+    """
+    v = value.strip().strip("*").strip()
+    if not v:
+        return False
+    if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
+        return False
+    if v.startswith("<"):
+        return bool(re.fullmatch(r"<[A-Za-z][A-Za-z0-9+.-]*:[^>\s]+>", v)
+                    or re.fullmatch(r"<[^>\s@]+@[^>\s]+>", v))
+    # An identifier is enough: a bare "#5" is a reference someone can follow.
+    return len([ch for ch in v if ch.isalnum()]) >= 2 or any(ch.isdigit() for ch in v)
+
+
 def split_row(line: str) -> list[str]:
     # A shell pipeline or a regex in an ask is written `foo \| bar`. Splitting on
     # every pipe shifts every field after it and invents failures.
@@ -169,9 +202,11 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     roster: dict[str, int] = {}
     items: list[Item] = []
     primitives: dict[str, list[int]] = {}
+    evidence: dict[str, tuple] = {}
     claims: dict = {}
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
+    multi_marked: list[str] = []
     dupe_pids: list[str] = []
     malformed: list[tuple] = []
 
@@ -232,6 +267,48 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     name = f"{name} (duplicate #{dupes_seen.count(name) + 1})"
                 primitives[name] = []
                 slugs["primitive"][name] = m.group(2)
+                # "*(observed: issue #12)*" or "*(invented)*", after the slug.
+                # Read the whole entry, not the first physical line: an
+                # annotation naming its source is long, and the template's own
+                # layout wraps it. Reading one line would reject an ordinary
+                # document for having no mark, and Phase 7 gates on this.
+                entry = raw
+                for nxt in lines[i:]:
+                    if not nxt.strip():
+                        break
+                    # The citation ends the declaration -- but only a real
+                    # citation. Stopping at any arrow truncated annotations
+                    # whose source contained one, such as a "Login → Checkout"
+                    # trace, and the primitive then read as unmarked.
+                    if re.match(r"\s*→\s*items?\b", nxt):
+                        break
+                    if re.match(r"\s*\d+\.\s+\*\*", nxt):
+                        break
+                    entry += " " + nxt.strip()
+                # Only the annotation in its prescribed position counts: the
+                # template puts it immediately after the slug, so anchor there
+                # rather than searching. Searching the entry let a literal
+                # example in the prose -- `*(invented)*` quoted while
+                # explaining the notation -- stand in for a mark that was never
+                # written; bounding the search at the description dash then
+                # broke sources that legitimately contain one, such as
+                # "RFC 9110 - HTTP Semantics". Anchoring needs neither.
+                region = entry[m.end():]
+                first = re.match(MARK_RE, region)
+                # Any further mark in the declaration contradicts the first --
+                # adjacent to it or beyond the description, both count.
+                # Inline code is stripped so a quoted example is not counted --
+                # the same distinction anchoring makes for the first mark.
+                rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
+                marks = ([(first.group(1), first.group(2) or "")] if first else [])
+                if first and re.search(MARK_RE, rest):
+                    marks.append(("", ""))
+                if len(marks) > 1:
+                    # Keeping only the first would let a stale mark sit beside
+                    # its replacement and report the document as consistent.
+                    multi_marked.append(name)
+                elif marks:
+                    evidence[name] = (marks[0][0].lower(), marks[0][1].strip())
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -327,6 +404,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
 
     claims["malformed_rows"] = malformed
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
+    claims["evidence"] = evidence
+    claims["multi_marked"] = multi_marked
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
 
@@ -721,6 +800,59 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "no capability primitives parsed — the synthesis is the deliverable, and a document "
             "without it is a list of asks rather than a finding"
         )
+    # Evidence annotation. The rule that makes this safe to add: it gates
+    # well-formedness, never kind. An `invented` primitive is never penalised --
+    # the frontier is invented by construction and holds the best findings on
+    # most pages -- but a claim of `observed` with no source is worse than an
+    # honest `invented`, because it cannot be audited and reads as stronger.
+    for name in claims.get("multi_marked") or []:
+        rep.fail(
+            f"primitive {name!r} carries more than one evidence mark. Two provenance claims on "
+            "one primitive contradict each other, and reading only the first would let a stale "
+            "mark sit beside its replacement and pass."
+        )
+    if primitives:
+        marks = claims.get("evidence") or {}
+        # One message for the whole section, not one per primitive: a document
+        # written before evidence marks existed is missing all of them, and ten
+        # copies of the same sentence bury every other finding on the page.
+        # A primitive carrying two marks is invalid, not unmarked; naming it
+        # here too would report the wrong defect and inflate the count.
+        contradicted = set(claims.get("multi_marked") or [])
+        unmarked = [n for n in primitives if n not in marks and n not in contradicted]
+        if unmarked:
+            msg = (f"{len(unmarked)} primitive(s) carry no evidence mark: "
+                   f"{', '.join(repr(n) for n in unmarked[:3])}"
+                   f"{', ...' if len(unmarked) > 3 else ''}. One of "
+                   f"{', '.join(EVIDENCE)} after the slug says whether the demand behind it was "
+                   "seen, reasoned to, or imagined; without it the reader cannot tell an "
+                   "issue-tracker finding from a plausible guess.")
+            rep.fail(msg) if modern else rep.warn(msg)
+        for name in primitives:
+            got = marks.get(name)
+            if not got:
+                continue
+            mark, source = got
+            if mark not in EVIDENCE:
+                rep.fail(
+                    f"primitive {name!r} is marked {mark!r}, which is not one of "
+                    f"{', '.join(EVIDENCE)}. An open vocabulary of confidence words sorts "
+                    "nothing once it has grown."
+                )
+            elif mark in ("observed", "inferred") and not is_source(source):
+                rep.fail(
+                    f"primitive {name!r} is marked {mark!r} but names no source. Evidence that "
+                    "cannot be looked up is a stronger claim than 'invented' with none of the "
+                    "backing; write the issue, transcript or document it came from."
+                )
+            elif mark == "invented" and source:
+                rep.fail(
+                    f"primitive {name!r} is marked 'invented' but names a source "
+                    f"({source!r}). The mark says there is no artifact behind it, so a source "
+                    "contradicts it: choose 'observed' or 'inferred' if the artifact is real, "
+                    "and drop the suffix if it is not."
+                )
+
     if primitives:
         uncited = [p for p, ns in primitives.items() if not ns]
         if uncited:
