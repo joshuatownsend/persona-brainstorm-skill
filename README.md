@@ -61,7 +61,9 @@ Phase 7     Verify — a checker that counts, then a fresh adversarial read
 Invoke it by name, or just describe the goal — "who would use this and what would they want", "what are we missing", "what should this MCP server be able to answer":
 
 ```
-/persona-brainstorm
+/persona-brainstorm:persona-brainstorm   # installed as a plugin — Claude Code
+                                         # namespaces a bundled skill by its plugin
+/persona-brainstorm                      # copied into ~/.claude/skills/
 ```
 
 Phase 0 asks you seven questions and won't guess at the answers. The two that matter most:
