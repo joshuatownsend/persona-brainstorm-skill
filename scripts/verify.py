@@ -59,7 +59,12 @@ class Report:
 
 
 def split_row(line: str) -> list[str]:
-    return [c.strip() for c in line.strip().strip("|").split("|")]
+    # A shell pipeline or a regex in an ask is written `foo \| bar`. Splitting on
+    # every pipe shifts every field after it and invents failures.
+    body = line.strip()
+    body = body[1:] if body.startswith("|") else body
+    body = body[:-1] if body.endswith("|") and not body.endswith(r"\|") else body
+    return [c.strip().replace(r"\|", "|") for c in re.split(r"(?<!\\)\|", body)]
 
 
 def is_divider(cells: list[str]) -> bool:
@@ -91,6 +96,11 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         if m:
             current_persona = m.group(1)
             continue
+        # Any other heading closes the persona section. Without this, a numbered
+        # table in the appendix is parsed as more items and charged to whichever
+        # persona happened to be last.
+        if re.match(r"#{1,3}\s", raw) :
+            current_persona = None
 
         if not raw.lstrip().startswith("|"):
             # Primitive citation: "→ items 3, 7, 12" / "→ items **3, 7, 12**"
@@ -165,10 +175,19 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
     if dupes:
         rep.fail(f"duplicate item numbers: {dupes}")
     expected = list(range(1, len(items) + 1))
-    if sorted(nums) != expected:
+    if nums != expected:
         missing = sorted(set(expected) - set(nums))
         extra = sorted(set(nums) - set(expected))
-        rep.fail(f"numbering not continuous 1..{len(items)} — missing {missing}, unexpected {extra}")
+        if missing or extra:
+            rep.fail(
+                f"numbering not continuous 1..{len(items)} — missing {missing}, unexpected {extra}"
+            )
+        else:
+            first = next(i for i, (a, b) in enumerate(zip(nums, expected)) if a != b)
+            rep.fail(
+                f"item numbers are complete but out of document order — position {first + 1} "
+                f"holds item {nums[first]}, expected {expected[first]}"
+            )
 
     # 2. Per-persona budgets against the roster table.
     for pid, budget in sorted(roster.items()):
@@ -256,6 +275,11 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             rep.warn(f"item {it.n}: ask is not quoted — is it written as a Jira title?")
 
     # 9. Primitives must cite real items.
+    if not primitives:
+        rep.fail(
+            "no capability primitives parsed — the synthesis is the deliverable, and a document "
+            "without it is a list of asks rather than a finding"
+        )
     if primitives:
         uncited = [p for p, ns in primitives.items() if not ns]
         if uncited:
