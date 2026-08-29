@@ -344,7 +344,7 @@ long). Show each persona, its justification, and your rough item budget. Ask wha
 really one person, and who doesn't belong. A wrong roster silently wastes every row generated after
 it, and the user usually knows their field far better than any artifact does.
 
-**Name the load-bearing persona.** Once the roster is approved, ask which one — if it turned out
+**Name the load-bearing persona by number.** Once the roster is approved, ask which one — if it turned out
 not to exist, or to be two people, or to have been invented by the framing — would take the most
 items down with it. Write that name in the document. It is the assumption the whole run rests on,
 and naming it now costs a sentence; discovering it later costs the document.

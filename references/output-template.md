@@ -44,7 +44,7 @@ deliberately off that axis, and why>.
 **Pre-registered:** <predicted a/b/c as item counts, not percentages — or, with no coverage
 pass, predicted N ⚡ · surprise
 threshold · cut: the rule you set in Phase 0>.
-**Load-bearing persona:** <the one whose non-existence would take the most items with it>.
+**Load-bearing persona:** <P-number and name — the one whose non-existence would take the most items with it>.
 
 ---
 

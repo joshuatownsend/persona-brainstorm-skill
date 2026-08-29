@@ -97,7 +97,12 @@ def parse_prediction(text: str, mode: str = "prereg") -> dict:
         return got
 
     if mode == "prereg":
-        return figures(text)
+        # The figure has to be marked as a prediction. A header that merely
+        # mentions a number — "historical baseline 7/26/27" — is not an advance
+        # guess, and a reckoning that later calls it one is precisely the
+        # retrofit pre-registration exists to prevent.
+        head = re.split(r"\bpredicted\b", text, maxsplit=1, flags=re.I)
+        return figures(head[1]) if len(head) > 1 else {}
 
     # Reckoning: everything before "actual" is the prediction, everything after
     # is the result. Splitting on the word rather than on punctuation means
@@ -527,6 +532,25 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                     "Legacy documents only warn; this one is written to today's template."
                 )
 
+    # Naming a persona the roster does not contain leaves the assumption
+    # unrevisitable, which is the only thing this declaration is for. Ids are
+    # checked when present; a declaration naming nobody the roster knows fails
+    # too, because "the on-call responder" resolves only if the roster says so.
+    lb = claims.get("loadbearing", "")
+    if lb and roster:
+        unknown = sorted(set(re.findall(r"\bP\d+\b", lb)) - set(roster))
+        known_slugs = [v for v in slugs["persona"].values() if v]
+        if unknown:
+            rep.fail(
+                f"the load-bearing persona names {', '.join(unknown)}, which the roster does "
+                f"not contain (it has {', '.join(sorted(roster))})."
+            )
+        elif not re.search(r"\bP\d+\b", lb) and not any(g in lb for g in known_slugs):
+            rep.fail(
+                "the load-bearing persona names nobody on the roster. Identify them by id "
+                "(P2) or by slug, so synthesis can revisit the assumption."
+            )
+
     # The reckoning is the one place a number is claimed *about* this document,
     # which makes it the last place to accept one on trust.
     if claims.get("reckoning"):
@@ -603,6 +627,13 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                 f"the pre-registered split {pre['split']} sums to {sum(pre['split'])}, but the "
                 f"run is budgeted for {target} items. These are counts against a total you set "
                 "in Phase 0."
+            )
+        # Frontier items are a subset of the roster's items, so a prediction
+        # larger than the whole run is not a bold guess, it is unreadable.
+        if "frontier" in pre and target and pre["frontier"] > target:
+            rep.fail(
+                f"the pre-registration predicts {pre['frontier']} frontier items in a run "
+                f"budgeted for {target}. Frontier items are a subset of the roster's items."
             )
         # Counts, so the actual split must account for every graded item.
         if "actual_split" in rec and graded_now and sum(rec["actual_split"]) != len(graded_now):
@@ -722,6 +753,15 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
 
 def main() -> int:
+    # This method's vocabulary is not ASCII -- the frontier mark is in almost
+    # every message -- and a console that cannot encode it must still get the
+    # findings. Without this the checker raises UnicodeEncodeError instead of
+    # reporting, which reads as a crash rather than as a verdict.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
