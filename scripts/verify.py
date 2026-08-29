@@ -73,36 +73,44 @@ class Report:
         self.notes.append(m)
 
 
-def parse_prediction(text: str) -> dict:
+def parse_prediction(text: str, mode: str = "prereg") -> dict:
     """Pull the checkable figures out of a Pre-registered or Reckoning line.
 
-    Returns any of: split (a, b, c), frontier N, and for a reckoning both a
-    predicted and an actual reading. Prose around them is ignored; the numbers
-    are the part that can be wrong.
+    The two lines have different shapes and are parsed differently on purpose.
+    A pre-registration carries one prediction plus required prose — a surprise
+    threshold and a cut rule, either of which may legitimately contain a comma.
+    A reckoning carries two figures separated by the word "actual". One regex
+    guessing between them let a comma in "cut: vague, unsupported, or duplicate"
+    reclassify a prediction and fail a valid document.
     """
+    SPLIT = r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)"
+    FRONT = r"(\d+)\s*⚡"
+
+    def figures(chunk):
+        got = {}
+        m = re.search(SPLIT, chunk)
+        if m:
+            got["split"] = tuple(int(x) for x in m.groups())
+        m = re.search(FRONT, chunk)
+        if m:
+            got["frontier"] = int(m.group(1))
+        return got
+
+    if mode == "prereg":
+        return figures(text)
+
+    # Reckoning: everything before "actual" is the prediction, everything after
+    # is the result. Splitting on the word rather than on punctuation means
+    # prose commas on either side are harmless.
+    parts = re.split(r"\bactual\b", text, maxsplit=1, flags=re.I)
     out = {}
-    splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", text)
-    fronts = re.findall(r"(\d+)\s*⚡", text)
-    m = re.search(r"predicted\b(.*?)(?:,|\bactual\b)", text, re.I | re.S)
-    if m:
-        p_splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", m.group(1))
-        p_fronts = re.findall(r"(\d+)\s*⚡", m.group(1))
-        if p_splits:
-            out["predicted_split"] = tuple(int(x) for x in p_splits[0])
-        if p_fronts:
-            out["predicted_frontier"] = int(p_fronts[0])
-    m = re.search(r"\bactual\b(.*)", text, re.I | re.S)
-    if m:
-        a_splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", m.group(1))
-        a_fronts = re.findall(r"(\d+)\s*⚡", m.group(1))
-        if a_splits:
-            out["actual_split"] = tuple(int(x) for x in a_splits[0])
-        if a_fronts:
-            out["actual_frontier"] = int(a_fronts[0])
-    if splits and "predicted_split" not in out and "actual_split" not in out:
-        out["split"] = tuple(int(x) for x in splits[0])
-    if fronts and "predicted_frontier" not in out and "actual_frontier" not in out:
-        out["frontier"] = int(fronts[0])
+    head = re.split(r"\bpredicted\b", parts[0], maxsplit=1, flags=re.I)
+    if len(head) > 1:
+        for k, v in figures(head[1]).items():
+            out["predicted_" + k] = v
+    if len(parts) > 1:
+        for k, v in figures(parts[1]).items():
+            out["actual_" + k] = v
     return out
 
 
@@ -522,8 +530,8 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
     # The reckoning is the one place a number is claimed *about* this document,
     # which makes it the last place to accept one on trust.
     if claims.get("reckoning"):
-        pre = parse_prediction(claims.get("prereg", ""))
-        rec = parse_prediction(claims["reckoning"])
+        pre = parse_prediction(claims.get("prereg", ""), "prereg")
+        rec = parse_prediction(claims["reckoning"], "reckoning")
         graded_now = [it for it in items if it.coverage]
         actual_tally = tuple(
             sum(1 for it in items if it.coverage == mk) for mk in ("✅", "◐", "○")
@@ -583,7 +591,13 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
         #     split that does not add up to it was never a plan for this run.
         budget = sum(roster.values()) if roster else None
         declared = re.search(r"\bof\s+(\d+)", claims.get("prereg", ""))
-        target = int(declared.group(1)) if declared else budget
+        if declared and budget and int(declared.group(1)) != budget:
+            rep.fail(
+                f"the pre-registration is written against {declared.group(1)} items but the "
+                f"roster budgets {budget}. A denominator that disagrees with the roster describes "
+                "a different run."
+            )
+        target = budget or (int(declared.group(1)) if declared else None)
         if "split" in pre and target and sum(pre["split"]) != target:
             rep.fail(
                 f"the pre-registered split {pre['split']} sums to {sum(pre['split'])}, but the "
