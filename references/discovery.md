@@ -171,7 +171,8 @@ in exactly those terms.
 
 ## When the subject doesn't exist yet
 
-A capability being scoped before anyone builds it has nothing to inspect. Run Phases 0–2, 5, and
-**6** — Phase 6 is what writes the document to the agreed path, so skipping it means producing no
-deliverable at all. Drop the coverage column entirely, and the result is still the useful half:
+A capability being scoped before anyone builds it has nothing to inspect. Run Phases 0–2, 5, 6,
+and **7** — Phase 6 writes the document to the agreed path, so skipping it means producing no
+deliverable at all, and Phase 7 verifies it, which matters more here than anywhere else: with no
+artifact to grade against, the internal consistency of the document is the only check there is. Drop the coverage column entirely, and the result is still the useful half:
 the items and the synthesis were never the part that needed an artifact.

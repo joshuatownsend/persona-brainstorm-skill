@@ -38,9 +38,9 @@ possible today. **⚡ marks the frontier** — <one line on what the frontier cl
 were added and why. Then:> Item counts are deliberately uneven — they track <what drives volume and
 value for this subject>, not fairness.
 
-| # | Persona | Why they're here | Items |
-|---|---|---|---|
-| **P1** | <Role> | <One line. The justification for being on the page — not a job description.> | <n> |
+| # | Slug | Persona | Why they're here | Items |
+|---|---|---|---|---|
+| **P1** | `<kebab-slug>` | <Role> | <One line. The justification for being on the page — not a job description.> | <n> |
 
 ---
 
@@ -48,13 +48,15 @@ value for this subject>, not fairness.
 
 ### P1 — <Role>
 
-| # | The ask, in their words | Why — the decision it feeds | Freq | Cov |
-|---|---|---|---|---|
-| 1 | "<A sentence they'd say out loud.>" | <The job the answer does.> | <many/day> | <✅> |
+| # | The ask, in their words | Why — the decision it feeds | Freq | ⚡ | Cov |
+|---|---|---|---|---|---|
+| 1 | "<A sentence they'd say out loud.>" | <The job the answer does.> | <many/day> | <⚡ or blank> | <✅> |
 
 <Repeat per persona. Number items continuously across the whole document.>
 
-**Tally:** <a> ✅ · <b> ◐ · <c> ○. <One sentence naming the ratio as the finding.>
+**Tally:** <a> ✅ · <b> ◐ · <c> ○ · <d> ⚡
+
+<One sentence naming the ratio as the finding.>
 
 ---
 
@@ -63,7 +65,7 @@ value for this subject>, not fairness.
 The items are evidence; these are the deliverable. Each primitive is a capability <the subject>
 would need, derived from the items that demand it.
 
-1. **<Primitive name>** — <one line on what it is, in plain terms>.
+1. **<Primitive name>** `<kebab-slug>` — <one line on what it is, in plain terms>.
    → items <n, n, n>. <Why it matters; note if several unrelated personas demand it.>
 
 ### If you only ask for three
@@ -112,6 +114,16 @@ full writeup if you filed one.>
   Phase 0. The `⚡ marks the frontier` line is not boilerplate — it says which class of ask this
   particular subject makes hard and valuable, and a reader who doesn't know it will misread every
   ⚡ row as wishful thinking.
+- **The tally line is the only place a claimed figure may live.** `scripts/verify.py` reads counts
+  from there and nowhere else, deliberately: a document legitimately discusses numbers — quoting a
+  figure that turned out wrong, citing a prior run — and a checker that scans prose will read that
+  discussion as the document's own claim. One home, one address.
+- **Slugs are for comparing runs, not for reading.** Give each persona and each primitive a stable
+  kebab-case slug and keep it identical across re-runs of the same subject. Item numbers are
+  positional and change freely; slugs are what let two runs be compared when every sentence has
+  been reworded.
+- **The ⚡ column is structural, not decorative.** Marking the frontier inside the ask sentence
+  makes it uncountable, which is exactly how a wrong frontier count once went unnoticed.
 - **Say which coverage marks were proven and which were inferred** if you ran a scoped Full pass.
   A column that silently mixes verified and best-effort marks is worse than one that admits it.
 - **Bold the item numbers you cite** in the primitives section only if the document is long enough
