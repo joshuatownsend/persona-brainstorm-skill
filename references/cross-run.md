@@ -33,6 +33,14 @@ So a comparison is over three things:
 
 ## Re-running one subject
 
+**Snapshot the existing document before you regenerate anything.** A re-run follows Phase 6, which
+writes to the agreed output path — `PERSONAS.md` by default — so the second run overwrites the
+first, and the first is what the comparison needs. Either copy it to a dated name
+(`PERSONAS.2026-08-29.md`, or a `personas/` directory keyed by date) or give the new run a distinct
+output path in Phase 0. Do this even in a repository: `git show` will recover a committed file, but
+it will not recover one that was never committed, and the skill explicitly supports subjects with
+no repository at all, where nothing recovers it.
+
 Two different things get called a re-run, and only one of them is comparable.
 
 **A comparison re-run holds Phase 0 constant** — same subject, same frame and scope constraint,
