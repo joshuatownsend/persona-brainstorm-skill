@@ -60,6 +60,18 @@ live:
 <documents dir>/PRIMITIVES.md      alongside the documents it describes
 ```
 
+It opens with a marker line, directly under its title, so a run can tell its
+own vocabulary from an unrelated file that happens to share the name:
+
+```markdown
+# Primitive vocabulary
+<!-- persona-brainstorm slug vocabulary -->
+```
+
+A `PRIMITIVES.md` without that line belongs to someone else. Ask where the
+vocabulary should live rather than appending to it: damaging a real document to
+record a slug is the wrong trade in every case.
+
 The scope is the **comparison set, not the subject.** Deriving the location
 from each subject's own repository fails in the two cases the method most needs
 it: a set spanning several repositories writes each minted slug into a

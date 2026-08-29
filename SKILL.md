@@ -515,6 +515,19 @@ on the first run of a set. A slug minted and left unrecorded lives only in this 
 the next subject reads the vocabulary, misses it, and mints a synonym — the exact false negative
 the vocabulary exists to prevent, arriving one run later.
 
+**Read the file before writing to it, and never assume it is yours.** `PRIMITIVES.md` is an
+ordinary name that a repository may already use for something else. A set vocabulary opens with
+this line, directly under its title:
+
+```
+<!-- persona-brainstorm slug vocabulary -->
+```
+
+Write the marker when you create the file. If a `PRIMITIVES.md` already exists without it, stop and
+ask where the vocabulary should live — do not append. Appending to somebody's own document to
+record a slug damages a real file to protect a naming convention, which is the wrong trade in every
+case.
+
 The vocabulary belongs to the **comparison set, not the subject.** Do not derive its location from
 the subject's repository: a set spanning several repositories would scatter one slug per repo, and
 a subject that is no repository at all — which Phase 0 supports — has nowhere to put it. If the set
