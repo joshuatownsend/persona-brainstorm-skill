@@ -35,8 +35,13 @@ and say in the document why it is not the existing one.
 Minting without recording is the same failure one step later. The new slug
 lives only in that run's output; the next subject reads the vocabulary, does
 not find it, and mints a synonym — and the two never group, which is precisely
-what this file exists to prevent. Write the slug and its meaning into the
-project vocabulary described below, in the same pass that names it.
+what this file exists to prevent.
+
+Record it in the set vocabulary described below — but in Phase 7c, after
+verification passes, never at the moment of naming. Verification renames
+primitives and removes them, and an abandoned run should leave no trace at all;
+a slug written early can outlive the finding it named, and a later subject has
+no way to tell a live entry from a stale one.
 
 **Never reuse a slug for a different idea.** This is the one unrecoverable
 mistake. A slug that means one thing in run A and another in run B makes every

@@ -510,10 +510,20 @@ or widen a definition to fit the entry: if the fit requires changing what you fo
 signal to mint instead. Reconciling the *names* of a fixed set is safe; letting the names decide
 the set is the anchoring this ordering exists to prevent.
 
-**Write any newly minted slug into that same `PRIMITIVES.md`**, creating it from the bundled table
-on the first run of a set. A slug minted and left unrecorded lives only in this run's own document;
-the next subject reads the vocabulary, misses it, and mints a synonym — the exact false negative
-the vocabulary exists to prevent, arriving one run later.
+**Bootstrapping a set that already has documents: seed the vocabulary from them, not from this
+file.** When a comparison set has finished documents but no `PRIMITIVES.md` yet, collect the slugs
+those documents already use and record them first. Starting from the bundled table alone discards
+every name the set has already established, and the next run mints a synonym for a capability that
+was named two runs ago — the break this file exists to prevent, introduced by the act of creating
+it.
+
+**List any newly minted slug at the end of Phase 5, but do not write it to `PRIMITIVES.md` yet.**
+Note them in this run's own document, and record them in the shared vocabulary in Phase 7, once
+verification has passed. Phase 7 routinely renames a primitive or removes one outright, and an
+aborted run writes nothing at all — so a slug persisted here can outlive the finding it named. The
+shared file is read by later subjects that have no way to tell a live slug from a stale one, and a
+name recorded for a primitive no document uses is worse than an unrecorded one: it invites reuse of
+something that never shipped.
 
 **Read the file before writing to it, and never assume it is yours.** `PRIMITIVES.md` is an
 ordinary name that a repository may already use for something else. A set vocabulary opens with
@@ -642,6 +652,20 @@ to the next reader than a finding you deleted.
 
 If no second agent is available, say so in that section rather than omitting it. An absent
 verification section reads as a passed one.
+
+### 7c — Record the minted slugs
+
+Only now, with the document final and `--final` passing, write the slugs minted in Phase 5 into the
+comparison set's `PRIMITIVES.md`. Take them from the finished document rather than from the Phase 5
+notes: 7a and 7b rename primitives and remove them, and the names that survived verification are
+the only ones a later run should ever see.
+
+Check the marker line first — a `PRIMITIVES.md` without it is someone else's file, and the answer
+is to ask, not to append.
+
+If the run was abandoned before this point, nothing is written, which is the correct outcome. A
+vocabulary entry for a primitive that never shipped invites a later subject to reuse a name that
+was never real.
 
 ## Re-running with a corrected frame
 
