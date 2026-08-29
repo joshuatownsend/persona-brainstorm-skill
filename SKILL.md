@@ -490,12 +490,25 @@ invisible from inside any single document. `references/cross-run.md` covers it: 
 key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
 decides how much the recurrence counts.
 
-**Name primitives from the shared vocabulary where one fits.** Read `PRIMITIVES.md` from wherever
-this comparison set's documents live if one exists, and `references/primitives.md` otherwise — the
-bundled file is a read-only seed that travels to every subject, so it cannot hold what any one of
-them minted. Both carry the rule for when to reuse a slug and when to mint one. Two runs that name
-the same capability differently will never group, and nothing in either document reveals it — so
-the reuse happens here, at naming time, or not at all.
+**Derive the primitives before you read the vocabulary.** Cluster the items into primitives with
+the vocabulary unopened. A set vocabulary holds the previous run's meanings, and reading it first
+anchors this synthesis to the findings it is supposed to re-derive — the same contamination
+`references/cross-run.md` guards against when it keeps the previous document away from the
+generating agents. Anchored, a genuinely changed primitive gets quietly filed under the old
+category and the two runs appear to agree.
+
+**Then name them from the shared vocabulary where one fits.** With the primitive set already
+fixed, read `PRIMITIVES.md` from wherever this comparison set's documents live, or
+`references/primitives.md` when there is none — the bundled file is a read-only seed that travels
+to every subject, so it cannot hold what any one of them minted. Both carry the rule for when to
+reuse a slug and when to mint one. Two runs that name the same capability differently will never
+group, and nothing in either document reveals it — so the reuse happens here, at naming time, or
+not at all.
+
+Naming is not deriving. Taking an existing slug must never merge two of your primitives, drop one,
+or widen a definition to fit the entry: if the fit requires changing what you found, that is the
+signal to mint instead. Reconciling the *names* of a fixed set is safe; letting the names decide
+the set is the anchoring this ordering exists to prevent.
 
 **Write any newly minted slug into that same `PRIMITIVES.md`**, creating it from the bundled table
 on the first run of a set. A slug minted and left unrecorded lives only in this run's own document;

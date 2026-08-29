@@ -11,10 +11,20 @@ existing name before minting a new one.
 
 ## How to use it
 
-**Reuse before you mint.** Read this list before naming a primitive. If a
-proposed primitive means what an entry here means, take the slug — even when
-the phrasing you had in mind was better. Consistency across runs is worth more
-than the best name for one of them.
+**Derive first, then read this.** Cluster the items into primitives with this
+file unopened, and only then consult it to name them. A set vocabulary carries
+the previous run's meanings, so reading it during clustering anchors the new
+synthesis to the old one — the contamination `cross-run.md` guards against
+between runs, arriving through the vocabulary instead of the document.
+
+**Reuse before you mint.** Once the primitive set is fixed, read this list. If
+a primitive you already derived means what an entry here means, take the slug —
+even when the phrasing you had in mind was better. Consistency across runs is
+worth more than the best name for one of them.
+
+Reuse the name, never the finding. If taking a slug would merge two of your
+primitives, drop one, or stretch its meaning to fit, mint instead: a name bent
+to fit the vocabulary reports agreement that the run did not find.
 
 **Mint freely when nothing fits — then record it.** A vocabulary that forces
 every finding into an existing name produces false agreement, which is worse
