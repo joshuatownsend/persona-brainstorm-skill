@@ -490,6 +490,11 @@ invisible from inside any single document. `references/cross-run.md` covers it: 
 key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
 decides how much the recurrence counts.
 
+**Name primitives from the shared vocabulary where one fits.** `references/primitives.md` carries
+the slugs already in use and the rule for when to reuse one and when to mint a new one. Two runs
+that name the same capability differently will never group, and nothing in either document reveals
+it — so the reuse happens here, at naming time, or not at all.
+
 **Reckon against the pre-registration.** Put the predicted figure beside the actual one on a line
 of exactly this form, in this section:
 

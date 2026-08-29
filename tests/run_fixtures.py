@@ -363,6 +363,19 @@ def main():
     report(rc == 0, "PERSONAS.md", "" if rc == 0
            else (failures_in(out).splitlines() or [""])[0].strip()[:90])
 
+    # A vocabulary that has drifted from the run it describes is worse than no
+    # vocabulary: it invites reuse of a slug that no longer means what it says.
+    print("\nprimitive vocabulary:")
+    import re
+    doc = open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8").read()
+    vocab = open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8").read()
+    section = doc.split("## What the 60 imply", 1)[-1].split("### If you only ask", 1)[0]
+    in_doc = set(re.findall(r"`([a-z0-9-]+)`", section))
+    in_vocab = set(re.findall(r"\| `([a-z0-9-]+)` \|", vocab))
+    report(in_doc == in_vocab, "references/primitives.md matches PERSONAS.md",
+           f"only in document: {sorted(in_doc - in_vocab)}; "
+           f"only in vocabulary: {sorted(in_vocab - in_doc)}" if in_doc != in_vocab else "")
+
     # No fixture may sit on disk unaccounted for. Without this, a case can be
     # orphaned by a rename and nobody notices it stopped running.
     print("\ninventory:")
