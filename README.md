@@ -110,6 +110,7 @@ Or copy the skill directly:
 
 ```
 git clone https://github.com/joshuatownsend/persona-brainstorm-skill
+mkdir -p ~/.claude/skills
 cp -r persona-brainstorm-skill/skills/persona-brainstorm ~/.claude/skills/
 ```
 

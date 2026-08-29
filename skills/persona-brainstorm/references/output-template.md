@@ -148,7 +148,7 @@ full writeup if you filed one.>
   Phase 0. The `⚡ marks the frontier` line is not boilerplate — it says which class of ask this
   particular subject makes hard and valuable, and a reader who doesn't know it will misread every
   ⚡ row as wishful thinking.
-- **The tally line is the only place a claimed figure may live.** `scripts/verify.py` reads counts
+- **The tally line is the only place a claimed figure may live.** `<skill-dir>/scripts/verify.py` reads counts
   from there and nowhere else, deliberately: a document legitimately discusses numbers — quoting a
   figure that turned out wrong, citing a prior run — and a checker that scans prose will read that
   discussion as the document's own claim. One home, one address.
