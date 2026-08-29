@@ -208,8 +208,8 @@ problem. If you're short, don't pad with variations on what you have — reach a
 **reach-further axes for your archetype**, chosen in Phase 0. Those axes exist because the obvious
 asks all hold some dimension constant, and varying it is where the good items are: for a read
 surface, time and joins and entitlement; for a library, version skew and error paths; for a
-process, the exception nobody wrote down. Add to whichever axes you picked the two that pay off in
-every archetype: what the **rare high-stakes persona** asks once a year, and the frontier class
+process, the exception nobody wrote down. Two more pay off in every archetype regardless of which
+axes you picked: what the **rare high-stakes persona** asks once a year, and the frontier class
 below. Those are reliably the best items on the page.
 
 Number items continuously across the whole document (not per persona) so the synthesis can cite
@@ -221,7 +221,7 @@ Each item is a row with four things:
 |---|---|
 | **The ask, in their words** | A quoted sentence the persona would actually say out loud — a question (`"Who was on 10.20.5.66 at 14:20 yesterday?"`) or a want (`"I want to restyle this component without forking it."`). Not `Historical lease attribution query`; not `Themeable component API`. If it reads like a Jira title, rewrite it. |
 | **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
-| **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
+| **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `per-release`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
 | **Coverage** | Phase 4. Leave blank. |
 
 Mark with **⚡** the items in the **frontier class you named in Phase 0** — the class of ask that is
