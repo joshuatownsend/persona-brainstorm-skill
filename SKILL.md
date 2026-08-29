@@ -63,15 +63,27 @@ do one of these, and say in the document which:
   blind generator locks the omission in, because a generator only writes for the roles it is given.
   Blinding Phase 2 while Phase 1 stays contaminated protects the cheap half.
 
-  **Call one — the roster.** Give it the subject, the frame, the archetype, any seed personas the
-  *user* supplied, and Phase 1's derivation checklist. Ask it both to derive the roster and to say
-  what the seed list was missing. Then run Phase 1's approval gate unchanged: put that roster in
-  front of the user, who is the one participant with real domain knowledge and no stake in the
+  Both calls need the same **context block**. Assemble it once and pass it verbatim to each:
+
+  > the subject · the frame, with its scope constraint · the archetype, its frontier class, and its
+  > reach-further axes · the total item budget · any seed personas the *user* supplied
+
+  Every line of that is Phase 0 output — things the operator and user *decided*, not things read
+  off the artifact — which is why passing it costs nothing in contamination. Assemble it once
+  rather than listing inputs per call: an enumerated list maintained in two places loses an entry
+  eventually, and a blind agent cannot notice what it was never given.
+
+  **Call one — the roster.** Context block, plus Phase 1's derivation checklist. Ask it to derive
+  the roster, to say what the seed list was missing, and to divide the total budget unevenly across
+  the personas it derived. Then run Phase 1's approval gate unchanged: put that roster in front of
+  the user, who is the one participant with real domain knowledge and no stake in the
   implementation.
 
-  **Call two — the items.** Give it the approved roster with budgets, plus **the whole of Phase 2
-  restated in the prompt** — item schema, frequency vocabulary, the ⚡ rule, continuous numbering,
-  the no-padding rule. Forbid both calls from reading any file.
+  **Call two — the items.** Context block, plus the approved roster with its per-persona budgets,
+  plus **the whole of Phase 2 restated in the prompt** — item schema, frequency vocabulary, the ⚡
+  rule, continuous numbering, the no-padding rule.
+
+  Forbid both calls from reading any file.
 
   **Passing the method is not contamination; passing the inventory is.** That distinction is what
   makes this work, and it matters most where the two live in one document: when the subject *is*
