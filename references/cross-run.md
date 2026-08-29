@@ -33,9 +33,21 @@ So a comparison is over three things:
 
 ## Re-running one subject
 
-Run the whole method again — Phase 0 through 7, a genuinely fresh pass. Do **not** hand the previous
-document to the generating agents; it anchors exactly as an inventory does, and the point of a
-second run is to shed the first one's framing. Compare the finished documents, not the drafts.
+Two different things get called a re-run, and only one of them is comparable.
+
+**A comparison re-run holds Phase 0 constant** — same subject, same frame and scope constraint,
+same item budget, same archetype, same coverage depth. Regenerate the roster and the items fresh,
+and keep the previous *document* out of the generating agents' prompts, because it anchors exactly
+as an inventory does. But carry the *inputs* over deliberately. Change the frame and every
+difference downstream is confounded by that change: a primitive present in one pass and missing
+from the other may say nothing whatever about the subject.
+
+**A reframe is not a comparison.** If the frame itself was wrong, that is the corrected-frame
+workflow in `SKILL.md`, and its output is not comparable with what came before. Say plainly that
+the frames differ and compare nothing — a movement report across two frames measures your own
+wording, not the world.
+
+Compare the finished documents, not the drafts.
 
 **Reconcile the slugs before comparing anything.** A blind agent cannot know what the previous run
 called things, so the same idea will often arrive under a synonym — `provenance-per-claim` one time,
@@ -75,7 +87,9 @@ rather than conflated with one.
 
 **Do not average the two runs.** They are two independent judgements, and the disagreement between
 them is information — a primitive that appears in one pass and not the other is a weak primitive,
-and the honest report says so rather than quietly keeping it.
+and the honest report says so rather than quietly keeping it. That reading holds **only** for a
+comparison re-run with Phase 0 held constant. Across changed inputs, a one-run-only primitive tells
+you the inputs changed.
 
 ---
 
