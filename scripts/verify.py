@@ -82,13 +82,21 @@ def is_substantive(value: str) -> bool:
     held to this, not just the ones a reviewer happened to name.
     """
     v = value.strip().strip("*").strip()
-    if len(v) < 2 or v.startswith("<"):
+    if not v or v.startswith("<"):
         return False
     if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
         return False
     # Alphabetic, not ASCII: a Today value of "何もしない" declares as much as
     # "does nothing by hand", and this skill is meant to run on any subject.
-    return sum(1 for ch in v if ch.isalpha()) >= 2
+    alpha = [ch for ch in v if ch.isalpha()]
+    if not alpha:
+        return False
+    # A lone ideograph is a whole word — 等 is "wait", 问 is "ask" — while a lone
+    # Latin letter is a stray keystroke. Length minimums are an English habit and
+    # must not be applied to scripts that do not share it.
+    if len(alpha) < 2 and all(ch.isascii() for ch in alpha):
+        return False
+    return True
 
 
 def split_row(line: str) -> list[str]:
