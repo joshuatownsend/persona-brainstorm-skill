@@ -90,6 +90,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     current_persona = None
     citing = None
     in_primitives = False
+    in_header = True   # until the first roster or item row
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -148,10 +149,17 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             # lets that prose masquerade as the document's own claim. One home.
             #
             #   **Tally:** 10 ✅ · 24 ◐ · 26 ○ · 26 ⚡
-            if re.match(r"\*{0,2}Frequencies\*{0,2}:", raw.strip()):
-                claims["freq_basis"] = raw.strip()
-            if re.match(r"\*{0,2}Roster axis\*{0,2}:", raw.strip()):
-                claims["axis"] = raw.strip()
+            # Frequencies and Roster axis are canonical header claims, held to the
+            # same rule as the tally: one address, read nowhere else. Parsed only
+            # before the first data table, so a passing mention in later prose —
+            # a Verification section discussing the roster axis, say — cannot
+            # satisfy a requirement it was never making.
+            for label, key in (("Frequencies", "freq_basis"), ("Roster axis", "axis")):
+                m = re.match(rf"\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)", raw.strip())
+                if m and in_header:
+                    value = m.group(1).strip().strip("*").strip()
+                    if len(value) >= 3 and not value.startswith("<"):
+                        claims[key] = value
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
@@ -172,6 +180,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         # Roster row: | **P1** | `slug` | Role | Why | 13 |
         m = re.match(r"\*{0,2}(P\d+)\*{0,2}$", cells[0])
         if m and len(cells) >= 4 and cells[-1].isdigit():
+            in_header = False
             pid = m.group(1)
             if pid in roster:
                 dupe_pids.append(pid)
@@ -182,6 +191,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
 
         # Item row: | 12 | "ask" | why | freq | ⚡ | cov |
         if cells[0].isdigit() and len(cells) >= 5 and current_persona:
+            in_header = False
             n = int(cells[0])
             ask, why = cells[1], cells[2]
             # The Today column sits between Why and Freq. Documents written before
@@ -329,13 +339,15 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
     if not claims.get("freq_basis"):
         rep.fail(
-            "no **Frequencies:** line. Values like 'weekly' read as measurement and are usually "
-            "estimates; the document has to say which, near the coverage key."
+            "no **Frequencies:** line with a stated basis, in the header before the persona "
+            "table. Values like 'weekly' read as measurement and are usually estimates; the "
+            "document has to say which, and a bare label declares nothing."
         )
     if not claims.get("axis"):
         rep.fail(
-            "no **Roster axis:** line. A roster mixing job roles, software and review functions "
-            "cannot be checked for completeness, which is the whole point of asking who is missing."
+            "no **Roster axis:** line with a stated axis, in the header before the persona "
+            "table. A roster mixing job roles, software and review functions cannot be checked "
+            "for completeness, which is the whole point of asking who is missing."
         )
 
     # 5c. Persona distinctness is deliberately NOT checked here, and should not be

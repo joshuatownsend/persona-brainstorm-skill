@@ -327,8 +327,13 @@ them.
 
 **Say where the frequencies came from.** `weekly` and `quarterly` are empirical claims, and a
 reader takes that column at face value — it is often the first thing they read. Unless you measured
-them, they are estimates, and the document has to say so in one line near the coverage key:
-*Frequencies are estimated from the personas, not measured.* Never let an invented number stand
+them, they are estimates, and the document has to say so in the header beside the coverage key, on
+a line of exactly this form:
+
+  `**Frequencies:** estimated from the personas, not measured` — or `observed from <source>`.
+
+Same rule as the axis and the tally: that line is the only place the claim is read from, and a bare
+`**Frequencies:**` with nothing after it declares nothing. Never let an invented number stand
 where a reader will take it for a finding. The same honesty applies to the asks themselves: unless
 they came from real users, they are hypotheses about what people would say, and the document is a
 set of hypotheses worth testing rather than a report of what was found.
