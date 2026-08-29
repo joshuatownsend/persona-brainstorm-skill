@@ -244,7 +244,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     if is_substantive(value):
                         claims[key] = value
             m = re.match(r"\*{0,2}Reckoning\*{0,2}:\*{0,2}(.*)", raw.strip())
-            if m:
+            if m and in_primitives:
                 claims["reckoning_count"] = claims.get("reckoning_count", 0) + 1
                 if is_substantive(m.group(1)):
                     claims["reckoning"] = m.group(1).strip()
@@ -557,7 +557,7 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                 )
         # A pre-registration with no figure in it cannot be reckoned against, and
         # leaves the reckoning free to report a prediction nobody made.
-        if not (pre.get("split") or pre.get("frontier")):
+        if not (pre.keys() & {"split", "frontier"}):
             rep.fail(
                 "the **Pre-registered:** line states no prediction — substantive prose is not a "
                 "figure. Without one, the reckoning below can report any prediction it likes, "
@@ -568,10 +568,27 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                 "this run graded coverage but pre-registered only a frontier figure. Predict the "
                 "kind of result the run produces."
             )
+        elif not all(w in claims.get("prereg", "").lower() for w in ("surprise", "cut")):
+            rep.fail(
+                "the **Pre-registered:** line carries a prediction but not the surprise threshold "
+                "or the cut rule. All three are required: without a threshold no result can come "
+                "out surprising, and without a cut rule every item generated survives."
+            )
         elif kind == "frontier" and "frontier" not in pre:
             rep.fail(
                 "this run graded no coverage but pre-registered a coverage split, which can never "
                 "be reckoned against. Predict the kind of result the run produces."
+            )
+        # (2) The prediction is made against a budget set in Phase 0, so a predicted
+        #     split that does not add up to it was never a plan for this run.
+        budget = sum(roster.values()) if roster else None
+        declared = re.search(r"\bof\s+(\d+)", claims.get("prereg", ""))
+        target = int(declared.group(1)) if declared else budget
+        if "split" in pre and target and sum(pre["split"]) != target:
+            rep.fail(
+                f"the pre-registered split {pre['split']} sums to {sum(pre['split'])}, but the "
+                f"run is budgeted for {target} items. These are counts against a total you set "
+                "in Phase 0."
             )
         # Counts, so the actual split must account for every graded item.
         if "actual_split" in rec and graded_now and sum(rec["actual_split"]) != len(graded_now):
@@ -579,8 +596,9 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
                 f"the reckoning's actual split sums to {sum(rec['actual_split'])} across "
                 f"{len(graded_now)} graded items. These are counts, not percentages."
             )
-        pre_val = pre.get("split") or pre.get("frontier")
-        rec_pred = rec.get("predicted_split") or rec.get("predicted_frontier")
+        pre_val = pre["split"] if "split" in pre else pre.get("frontier")
+        rec_pred = (rec["predicted_split"] if "predicted_split" in rec
+                    else rec.get("predicted_frontier"))
         if pre_val is not None and rec_pred is not None and pre_val != rec_pred:
             rep.fail(
                 f"the reckoning says it predicted {rec_pred}, but the pre-registration says "
