@@ -46,8 +46,12 @@ mirrored copy (the only lane that joins and aggregates, and the only one that go
 composites with real semantics · and often a fourth nobody documents, like an export or a support
 escalation.
 
-**Count GET vs. non-GET endpoints.** That ratio frames the entire read-only conversation and takes
-one command.
+**Count the read operations against the write ones.** That ratio frames the entire read-only
+conversation and takes one command — but count the right thing. For REST/OpenAPI it is GET vs.
+non-GET. For GraphQL it is **not**: queries and mutations travel through the same POST endpoint, so
+an HTTP-verb count reads a query-only API as entirely write-heavy. Count `query` vs. `mutation`
+operation types in the schema instead. For anything else, find the surface's own read/write
+distinction before assuming the transport carries one.
 
 **Caveats to check:**
 - **Staleness** — is there anything that *enforces* freshness, or does it merely report it? A
@@ -149,9 +153,12 @@ telemetry and dashboards · the audit log · and the break-glass path.
 
 ## § Process / non-software
 
-There is no artifact, so there is no discovery phase in the usual sense. Either skip Phase 3 —
-which is legitimate and loses only the gap-list half — or spend one short pass on the human
-equivalents.
+There is no artifact, so there is no discovery phase in the usual sense — but there is almost
+always something to inventory, and "process" does not mean "undocumented". **If the user asked for
+Full or Light coverage, run this pass**; skipping it silently drops the coverage map and the gap
+list they asked for. Skip Phase 3 only when the process genuinely has nothing to inspect — one
+being designed from scratch, or one that exists solely in people's heads — in which case say so in
+the document rather than leaving the coverage column blank without explanation.
 
 **Lanes are:** the documents that exist · the meetings where things get decided · the reports
 someone can run · the person you have to ask · and the tribal knowledge with no owner.
