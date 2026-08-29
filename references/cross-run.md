@@ -146,8 +146,9 @@ Group by primitive slug across documents and count how many subjects demand each
   written slug vocabulary for a set of subjects that will be compared, and reconcile before
   aggregating rather than after. That vocabulary is `PRIMITIVES.md`, kept beside the set's
   documents; `references/primitives.md` is the read-only seed it starts from, and carries the
-  reconciliation rule. The two are different files — on a case-sensitive filesystem, writing to
-  the wrong one produces a vocabulary no later run reads.
+  reconciliation rule. Two distinct files, and only the first one grows. Spell the set file's
+  name in capitals: on a case-sensitive filesystem a stray `primitives.md` beside the documents
+  is a different file again, and slugs written there are read by nothing.
 
 Aggregation reads finished documents only. It never merges two subjects into one run.
 
