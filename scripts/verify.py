@@ -24,6 +24,8 @@ FREQ_VOCAB = {
     "per-incident", "per-release", "per-run", "onboarding",
 }
 COVERAGE_MARKS = {"✅", "◐", "○"}
+# Generated prose uses curly quotes; an ASCII-only test fails valid documents.
+QUOTE_CHARS = "\"'“”‘’«»„‚"
 # Why-restates-Ask above this ratio is a feature request in costume.
 RESTATEMENT_RATIO = 0.62
 # Budgets flatter than this look like fairness, which the method names as a tell.
@@ -80,6 +82,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     claims: dict = {}
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
+    dupe_pids: list[str] = []
 
     current_persona = None
     citing = None
@@ -143,6 +146,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             #
             #   **Tally:** 10 ✅ · 24 ◐ · 26 ○ · 26 ⚡
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
+                claims["tally_seen"] = True
                 m = re.search(r"(\d+)\s*✅.*?(\d+)\s*◐.*?(\d+)\s*○", raw)
                 if m:
                     claims["tally"] = tuple(int(g) for g in m.groups())
@@ -161,6 +165,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         m = re.match(r"\*{0,2}(P\d+)\*{0,2}$", cells[0])
         if m and len(cells) >= 4 and cells[-1].isdigit():
             pid = m.group(1)
+            if pid in roster:
+                dupe_pids.append(pid)
             roster[pid] = int(cells[-1])
             sm = re.match(r"`([^`]+)`$", cells[1]) if len(cells) >= 5 else None
             slugs["persona"][pid] = sm.group(1) if sm else None
@@ -176,13 +182,31 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             items.append(Item(n, current_persona, ask, why, freq, frontier, cov, i))
 
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
+    claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
 
 
 def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
+    # Structural preconditions. Every check below is a guard of the shape
+    # "if <thing> parsed: compare it" — which silently reports PASS when the
+    # thing is missing entirely. Absence of a required part is a failure here,
+    # once, so the individual checks can assume presence.
     if not items:
         rep.fail("no item rows parsed — is this a persona-brainstorm document?")
         return
+    if not roster:
+        rep.fail("no persona roster table parsed — item budgets cannot be checked against anything")
+    if not claims.get("tally_seen"):
+        rep.fail(
+            "no canonical tally line found. It is the only place a claimed figure may live, so "
+            "without it there is nothing to check a self-reported count against — which is the "
+            "gate this whole script exists to hold."
+        )
+    if claims.get("duplicate_personas"):
+        rep.fail(
+            f"roster rows sharing a persona id: {claims['duplicate_personas']}. The later row "
+            "overwrites the earlier budget and slug, making two personas indistinguishable."
+        )
 
     # 1. Continuous, unique numbering across the whole document.
     nums = [it.n for it in items]
@@ -286,7 +310,7 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
     # 8. Every ask should read as speech.
     for it in items:
-        if '"' not in it.ask and "'" not in it.ask:
+        if not any(q in it.ask for q in QUOTE_CHARS):
             rep.warn(f"item {it.n}: ask is not quoted — is it written as a Jira title?")
 
     # 9. Primitives must cite real items.
