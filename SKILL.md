@@ -117,7 +117,7 @@ covered has failed. Expect half to two-thirds of items to be partly served or im
 
 ## Phase 0 — Frame and scope
 
-Establish six things. Ask the user directly; don't guess.
+Establish seven things. Ask the user directly; don't guess.
 
 1. **The subject — and it is not the repo.** The subject is the *system the personas work
    against*, named generically. A repo, if there is one, is only where evidence lives and where
@@ -195,6 +195,39 @@ Establish six things. Ask the user directly; don't guess.
 
 6. **The subject archetype** — one row of the table below. It sets the vocabulary for the whole
    run, and it is the only thing in this skill that varies by subject.
+
+7. **Pre-register what would count as being wrong.** Write these down now, before a single item
+   exists. A prediction made after seeing the result is not a prediction, and this is the only
+   phase where these can honestly be answered.
+
+   - **Predict the ratio your run can actually produce.** With a coverage pass, that is the
+     ✅/◐/○ split. At coverage depth **None** there are no marks to reckon against, so predict the
+     **frontier share** instead — how many of your items you expect to be ⚡. Either way, guess
+     even if you feel unqualified: an inaccurate prediction recorded in advance is worth more than
+     an accurate one recalled afterwards. Predicting a number the run cannot produce is the same
+     as not predicting.
+   - **The surprise threshold.** What result would make you doubt the *frame* rather than conclude
+     something about the subject? A run that cannot come out surprising has nothing to report but
+     your priors.
+   - **The cut rule.** What will make you delete an item rather than keep it? Decide before you are
+     attached to any of them. Without this, everything generated survives and the item count
+     measures your budget rather than the demand.
+
+   Record it in the document header on one line, beside the coverage key:
+
+     `**Pre-registered:** predicted 12/24/24 of 60 · surprise above 30 served · cut: no named decision`
+
+     Those are **item counts, not percentages** — you set the budget in step 3, so you know the
+     total you are splitting. Counts can be checked exactly against the finished tables;
+     percentages invite a rounding argument at precisely the moment you least want one.
+
+   ...or, for a run with no coverage pass:
+
+     `**Pre-registered:** predicted 18 ⚡ of 60 · surprise below 8 · cut: no named decision`
+
+   Predict the kind of figure your run can produce, and predict it as a count.
+
+   Phase 5 has to reckon against this, and cannot quietly not.
 
 ### Subject archetypes
 
@@ -310,6 +343,11 @@ question forward — the binding test runs at the end of Phase 2, and it can sen
 long). Show each persona, its justification, and your rough item budget. Ask what's missing, what's
 really one person, and who doesn't belong. A wrong roster silently wastes every row generated after
 it, and the user usually knows their field far better than any artifact does.
+
+**Name the load-bearing persona by number.** Once the roster is approved, ask which one — if it turned out
+not to exist, or to be two people, or to have been invented by the framing — would take the most
+items down with it. Write that name in the document. It is the assumption the whole run rests on,
+and naming it now costs a sentence; discovering it later costs the document.
 
 Set item budgets **deliberately uneven** — they should track volume and value, not fairness. A
 persona who asks three enormous questions a year and one who asks eight small ones a day should not
@@ -451,6 +489,35 @@ several *unrelated* subjects is a platform capability rather than N copies of a 
 invisible from inside any single document. `references/cross-run.md` covers it: slugs are the join
 key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
 decides how much the recurrence counts.
+
+**Reckon against the pre-registration.** Put the predicted figure beside the actual one on a line
+of exactly this form, in this section:
+
+  `**Reckoning:** predicted 12/24/24, actual 7/26/27 — <what the gap means>`
+
+  ...or, where no coverage pass ran:
+
+  `**Reckoning:** predicted 18 ⚡, actual 26 ⚡ — <what the gap means>`
+
+**Both halves are required and both are checked** — the predicted one against your Phase 0 line,
+the actual one against the tables, and the actual split against the number of graded items. A
+reckoning that states a prediction and then only characterises the outcome in words ("prediction
+held") is the half that costs nothing. A reckoning is the one place in this document where a number is claimed *about* the
+document, so it is the last place to take one on trust.
+
+Then say which of three things happened, in words:
+
+- **The prediction held.** Then the ratio taught you nothing about the subject; you confirmed a
+  prior. Say so rather than presenting a confirmed guess as a finding.
+- **The result crossed your surprise threshold.** Then something is wrong with the frame, the
+  archetype, or the roster — not with the subject. Say which you now doubt.
+- **It moved but stayed inside the threshold.** The ordinary case. Report the direction and resist
+  explaining it; a gap this size is as likely to be sampling as signal.
+
+Then **name the falsifier for your top primitive** — the single observation that would show it is
+wrong. If you cannot name one, the primitive is a preference rather than a finding, and it should
+not be first. And restate the load-bearing persona from Phase 1: if that persona is fictional, say
+here how many items and which primitives go with it.
 
 **Write two or three observations worth carrying.** The things visible only from the whole page:
 which persona the current framing under-serves, where the clearest whitespace is, which cluster has

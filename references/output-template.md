@@ -41,6 +41,10 @@ possible today. **⚡ marks the frontier** — <one line on what the frontier cl
 **Frequencies:** <estimated from the personas, not measured — or: observed from SOURCE>.
 **Roster axis:** <job role / job-to-be-done / relationship to the subject — plus any persona
 deliberately off that axis, and why>.
+**Pre-registered:** <predicted a/b/c as item counts, not percentages — or, with no coverage
+pass, predicted N ⚡ · surprise
+threshold · cut: the rule you set in Phase 0>.
+**Load-bearing persona:** <P-number and name — the one whose non-existence would take the most items with it>.
 
 ---
 
@@ -85,6 +89,14 @@ would need, derived from the items that demand it.
 **<A>**, **<B>**, and **<C>** — in that order. <The reasoning for the ranking: unique value,
 size of evidence cluster, cheapness of unlock. Name any primitive cheap enough to ride along
 with whatever ships first.>
+
+**Reckoning:** <predicted a/b/c, actual x/y/z as counts — or predicted N ⚡, actual M ⚡ — what the gap
+means, and which of the three cases
+this is: the prediction held and taught you nothing, the surprise threshold was crossed and the
+frame is in doubt, or it moved within the threshold and the direction is all you should claim.>
+
+<Name the falsifier for the top primitive — the one observation that would show it is wrong. Then
+restate the load-bearing persona and what goes with it if that persona is fictional.>
 
 ### Two observations worth carrying
 
@@ -141,6 +153,10 @@ full writeup if you filed one.>
   already pays a person to work around is an opportunity, and one nobody has ever attempted is
   usually a non-problem. Fill it in even when the answer is "nothing" or "doesn't know to ask",
   because those two are the most informative values it takes.
+- **A pre-registration written afterwards is not one.** The predicted split has to be recorded
+  before any item exists, and the Reckoning line has to sit in the synthesis whether or not the
+  news is good. A run where the prediction held is a run that confirmed a prior, and saying so is
+  the finding.
 - **Declare the frequencies and the roster axis in the header, not in prose further down.** Both
   are claims a reader will otherwise take on trust: the frequency column reads as measurement, and
   a roster mixing axes cannot be checked for completeness.

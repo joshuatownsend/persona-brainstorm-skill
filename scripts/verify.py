@@ -73,6 +73,52 @@ class Report:
         self.notes.append(m)
 
 
+def parse_prediction(text: str, mode: str = "prereg") -> dict:
+    """Pull the checkable figures out of a Pre-registered or Reckoning line.
+
+    The two lines have different shapes and are parsed differently on purpose.
+    A pre-registration carries one prediction plus required prose — a surprise
+    threshold and a cut rule, either of which may legitimately contain a comma.
+    A reckoning carries two figures separated by the word "actual". One regex
+    guessing between them let a comma in "cut: vague, unsupported, or duplicate"
+    reclassify a prediction and fail a valid document.
+    """
+    SPLIT = r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)"
+    FRONT = r"(\d+)\s*⚡"
+
+    def figures(chunk):
+        got = {}
+        m = re.search(SPLIT, chunk)
+        if m:
+            got["split"] = tuple(int(x) for x in m.groups())
+        m = re.search(FRONT, chunk)
+        if m:
+            got["frontier"] = int(m.group(1))
+        return got
+
+    if mode == "prereg":
+        # The figure has to be marked as a prediction. A header that merely
+        # mentions a number — "historical baseline 7/26/27" — is not an advance
+        # guess, and a reckoning that later calls it one is precisely the
+        # retrofit pre-registration exists to prevent.
+        head = re.split(r"\bpredicted\b", text, maxsplit=1, flags=re.I)
+        return figures(head[1]) if len(head) > 1 else {}
+
+    # Reckoning: everything before "actual" is the prediction, everything after
+    # is the result. Splitting on the word rather than on punctuation means
+    # prose commas on either side are harmless.
+    parts = re.split(r"\bactual\b", text, maxsplit=1, flags=re.I)
+    out = {}
+    head = re.split(r"\bpredicted\b", parts[0], maxsplit=1, flags=re.I)
+    if len(head) > 1:
+        for k, v in figures(head[1]).items():
+            out["predicted_" + k] = v
+    if len(parts) > 1:
+        for k, v in figures(parts[1]).items():
+            out["actual_" + k] = v
+    return out
+
+
 def is_substantive(value: str) -> bool:
     """True when a field actually declares something.
 
@@ -94,7 +140,12 @@ def is_substantive(value: str) -> bool:
     # A lone ideograph is a whole word — 等 is "wait", 问 is "ask" — while a lone
     # Latin letter is a stray keystroke. Length minimums are an English habit and
     # must not be applied to scripts that do not share it.
-    if len(alpha) < 2 and all(ch.isascii() for ch in alpha):
+    #
+    # Count alphanumerics, not letters: "P2" is how a load-bearing persona is
+    # actually named, and a rule that rejects it is rejecting the answer people
+    # will write.
+    alnum = [ch for ch in v if ch.isalnum()]
+    if len(alnum) < 2 and all(ch.isascii() for ch in alpha):
         return False
     return True
 
@@ -193,13 +244,23 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             # before the first data table, so a passing mention in later prose —
             # a Verification section discussing the roster axis, say — cannot
             # satisfy a requirement it was never making.
-            for label, key in (("Frequencies", "freq_basis"), ("Roster axis", "axis")):
+            for label, key in (
+                ("Frequencies", "freq_basis"),
+                ("Roster axis", "axis"),
+                ("Pre-registered", "prereg"),
+                ("Load-bearing persona", "loadbearing"),
+            ):
                 m = re.match(rf"\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)", raw.strip())
                 if m and in_header:
                     value = m.group(1).strip().strip("*").strip()
                     claims[key + "_count"] = claims.get(key + "_count", 0) + 1
                     if is_substantive(value):
                         claims[key] = value
+            m = re.match(r"\*{0,2}Reckoning\*{0,2}:\*{0,2}(.*)", raw.strip())
+            if m and in_primitives:
+                claims["reckoning_count"] = claims.get("reckoning_count", 0) + 1
+                if is_substantive(m.group(1)):
+                    claims["reckoning"] = m.group(1).strip()
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
@@ -422,13 +483,185 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "it is the demand-side measure missing from a document that claims to carry it."
         )
 
-    for key, label in (("freq_basis", "Frequencies"), ("axis", "Roster axis")):
+    for key, label, where in (
+        ("freq_basis", "Frequencies", "header"), ("axis", "Roster axis", "header"),
+        ("prereg", "Pre-registered", "header"), ("loadbearing", "Load-bearing persona", "header"),
+        ("reckoning", "Reckoning", "synthesis"),
+    ):
         if claims.get(key + "_count", 0) > 1:
             rep.fail(
-                f"{claims[key + '_count']} **{label}:** declarations in the header. Only the last "
-                "is read, so a contradictory earlier one leaves the document asserting two "
-                "different things while this check reports one."
+                f"{claims[key + '_count']} **{label}:** lines in the {where}. Only the last is "
+                "read, so a contradictory earlier one leaves the document asserting two different "
+                "things while this check reports one."
             )
+        # A line that is present but says nothing is a different fault from an
+        # absent one, and telling someone to add a line they already wrote is a
+        # bad error message.
+        if claims.get(key + "_count") and not claims.get(key):
+            rep.fail(
+                f"**{label}:** is present but declares nothing — a placeholder or an empty value. "
+                "Fill it or remove the line; a label on its own reads as a declaration and is not."
+            )
+    if not claims.get("prereg_count"):
+        rep.warn(
+            "no **Pre-registered:** line. Without a prediction recorded before generation, no "
+            "result from this run can come out surprising, and the coverage ratio reports your "
+            "priors rather than the subject. Required for new documents."
+        )
+    elif not claims.get("reckoning"):
+        rep.fail(
+            "pre-registered but no **Reckoning:** line in the synthesis. A prediction nobody "
+            "returns to is decoration; the reckoning is the half that costs something, including "
+            "when the news is that the prediction held and the run taught you nothing."
+        )
+    if not claims.get("prereg_count") and claims.get("reckoning"):
+        rep.fail(
+            "a **Reckoning:** line with no **Pre-registered:** line to reckon against. A "
+            "prediction recovered after the result is not a prediction."
+        )
+    # A modern document is one using the current table schema. Legacy documents
+    # keep warnings so old runs stay readable; anything written to today's
+    # template is held to today's requirements, because the standard Phase 7
+    # invocation does not pass --strict and a warning it ignores is not a rule.
+    modern = any(it.in_today_table for it in items)
+    if modern:
+        for key, label in (("prereg", "Pre-registered"), ("loadbearing", "Load-bearing persona")):
+            if not claims.get(key + "_count"):
+                rep.fail(
+                    f"no **{label}:** line in a document using the current table schema. "
+                    "Legacy documents only warn; this one is written to today's template."
+                )
+
+    # Naming a persona the roster does not contain leaves the assumption
+    # unrevisitable, which is the only thing this declaration is for. Ids are
+    # checked when present; a declaration naming nobody the roster knows fails
+    # too, because "the on-call responder" resolves only if the roster says so.
+    lb = claims.get("loadbearing", "")
+    if lb and roster:
+        unknown = sorted(set(re.findall(r"\bP\d+\b", lb)) - set(roster))
+        known_slugs = [v for v in slugs["persona"].values() if v]
+        if unknown:
+            rep.fail(
+                f"the load-bearing persona names {', '.join(unknown)}, which the roster does "
+                f"not contain (it has {', '.join(sorted(roster))})."
+            )
+        elif not re.search(r"\bP\d+\b", lb) and not any(g in lb for g in known_slugs):
+            rep.fail(
+                "the load-bearing persona names nobody on the roster. Identify them by id "
+                "(P2) or by slug, so synthesis can revisit the assumption."
+            )
+
+    # The reckoning is the one place a number is claimed *about* this document,
+    # which makes it the last place to accept one on trust.
+    if claims.get("reckoning"):
+        pre = parse_prediction(claims.get("prereg", ""), "prereg")
+        rec = parse_prediction(claims["reckoning"], "reckoning")
+        graded_now = [it for it in items if it.coverage]
+        actual_tally = tuple(
+            sum(1 for it in items if it.coverage == mk) for mk in ("✅", "◐", "○")
+        )
+        actual_front = sum(1 for it in items if it.frontier)
+
+        # Which figure this run owes depends on whether it graded coverage.
+        kind = "split" if graded_now else "frontier"
+        want_pred, want_act = f"predicted_{kind}", f"actual_{kind}"
+        missing = [k for k in (want_pred, want_act) if k not in rec]
+        if missing:
+            other = "frontier" if kind == "split" else "split"
+            if rec.get(f"predicted_{other}") or rec.get(f"actual_{other}") or rec.get(other):
+                rep.fail(
+                    f"the reckoning reports a {other} figure, but this run "
+                    f"{'graded coverage' if kind == 'split' else 'graded no coverage'}, so the "
+                    f"figure to reckon is the {kind}."
+                )
+            elif rec.get(kind):
+                rep.fail(
+                    "the **Reckoning:** line carries figures but not in the form "
+                    "'predicted X, actual Y', so the two cannot be told apart. Both halves are "
+                    "required and both are compared."
+                )
+            else:
+                rep.fail(
+                    f"the **Reckoning:** line is missing "
+                    f"{' and '.join(m.replace('_', ' ') for m in missing)}. Both halves are "
+                    "required: a line that states a prediction and then characterises the outcome "
+                    "in words is the half that costs nothing."
+                )
+        # A pre-registration with no figure in it cannot be reckoned against, and
+        # leaves the reckoning free to report a prediction nobody made.
+        if not (pre.keys() & {"split", "frontier"}):
+            rep.fail(
+                "the **Pre-registered:** line states no prediction — substantive prose is not a "
+                "figure. Without one, the reckoning below can report any prediction it likes, "
+                "which is precisely the failure pre-registering was meant to prevent."
+            )
+        elif kind == "split" and "split" not in pre:
+            rep.fail(
+                "this run graded coverage but pre-registered only a frontier figure. Predict the "
+                "kind of result the run produces."
+            )
+        elif not all(w in claims.get("prereg", "").lower() for w in ("surprise", "cut")):
+            rep.fail(
+                "the **Pre-registered:** line carries a prediction but not the surprise threshold "
+                "or the cut rule. All three are required: without a threshold no result can come "
+                "out surprising, and without a cut rule every item generated survives."
+            )
+        elif kind == "frontier" and "frontier" not in pre:
+            rep.fail(
+                "this run graded no coverage but pre-registered a coverage split, which can never "
+                "be reckoned against. Predict the kind of result the run produces."
+            )
+        # (2) The prediction is made against a budget set in Phase 0, so a predicted
+        #     split that does not add up to it was never a plan for this run.
+        budget = sum(roster.values()) if roster else None
+        declared = re.search(r"\bof\s+(\d+)", claims.get("prereg", ""))
+        if declared and budget and int(declared.group(1)) != budget:
+            rep.fail(
+                f"the pre-registration is written against {declared.group(1)} items but the "
+                f"roster budgets {budget}. A denominator that disagrees with the roster describes "
+                "a different run."
+            )
+        target = budget or (int(declared.group(1)) if declared else None)
+        if "split" in pre and target and sum(pre["split"]) != target:
+            rep.fail(
+                f"the pre-registered split {pre['split']} sums to {sum(pre['split'])}, but the "
+                f"run is budgeted for {target} items. These are counts against a total you set "
+                "in Phase 0."
+            )
+        # Frontier items are a subset of the roster's items, so a prediction
+        # larger than the whole run is not a bold guess, it is unreadable.
+        if "frontier" in pre and target and pre["frontier"] > target:
+            rep.fail(
+                f"the pre-registration predicts {pre['frontier']} frontier items in a run "
+                f"budgeted for {target}. Frontier items are a subset of the roster's items."
+            )
+        # Counts, so the actual split must account for every graded item.
+        if "actual_split" in rec and graded_now and sum(rec["actual_split"]) != len(graded_now):
+            rep.fail(
+                f"the reckoning's actual split sums to {sum(rec['actual_split'])} across "
+                f"{len(graded_now)} graded items. These are counts, not percentages."
+            )
+        pre_val = pre["split"] if "split" in pre else pre.get("frontier")
+        rec_pred = (rec["predicted_split"] if "predicted_split" in rec
+                    else rec.get("predicted_frontier"))
+        if pre_val is not None and rec_pred is not None and pre_val != rec_pred:
+            rep.fail(
+                f"the reckoning says it predicted {rec_pred}, but the pre-registration says "
+                f"{pre_val}. A prediction restated differently after the result is not the "
+                "prediction that was made."
+            )
+        if "actual_split" in rec and graded_now and rec["actual_split"] != actual_tally:
+            rep.fail(
+                f"the reckoning reports an actual split of {rec['actual_split']}; the table gives "
+                f"{actual_tally}."
+            )
+        if "actual_frontier" in rec and rec["actual_frontier"] != actual_front:
+            rep.fail(
+                f"the reckoning reports {rec['actual_frontier']} frontier items; the table has "
+                f"{actual_front}."
+            )
+
+
     if not claims.get("freq_basis"):
         rep.fail(
             "no **Frequencies:** line with a stated basis, in the header before the persona "
@@ -520,6 +753,15 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
 
 def main() -> int:
+    # This method's vocabulary is not ASCII -- the frontier mark is in almost
+    # every message -- and a console that cannot encode it must still get the
+    # findings. Without this the checker raises UnicodeEncodeError instead of
+    # reporting, which reads as a crash rather than as a verdict.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
