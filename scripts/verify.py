@@ -69,6 +69,22 @@ class Report:
         self.notes.append(m)
 
 
+def is_substantive(value: str) -> bool:
+    """True when a field actually declares something.
+
+    Length is not evidence of substance — "TBD" clears a three-character bar
+    while asserting nothing — and an unedited template placeholder is worse
+    than a blank, because a blank is visibly missing. Every required field is
+    held to this, not just the ones a reviewer happened to name.
+    """
+    v = value.strip().strip("*").strip()
+    if len(v) < 3 or v.startswith("<"):
+        return False
+    if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
+        return False
+    return bool(re.search(r"[A-Za-z]{3,}", v))
+
+
 def split_row(line: str) -> list[str]:
     # A shell pipeline or a regex in an ask is written `foo \| bar`. Splitting on
     # every pipe shifts every field after it and invents failures.
@@ -165,14 +181,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 if m and in_header:
                     value = m.group(1).strip().strip("*").strip()
                     claims[key + "_count"] = claims.get(key + "_count", 0) + 1
-                    bare = re.sub(r"[^a-z0-9/?-]+", "", value.lower())
-                    substantive = (
-                        len(value) >= 3
-                        and not value.startswith("<")
-                        and bare not in PLACEHOLDERS
-                        and bool(re.search(r"[A-Za-z]{3,}", value))
-                    )
-                    if substantive:
+                    if is_substantive(value):
                         claims[key] = value
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
@@ -341,7 +350,7 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             rep.note(f"frontier unserved: {f_unserved} of {len(frontier)}")
 
     # 5b. The demand-side measure, the frequency basis, and the roster axis.
-    missing_today = [it.n for it in items if not it.today]
+    missing_today = [it.n for it in items if not is_substantive(it.today)]
     if len(missing_today) == len(items):
         rep.warn(
             "no Today column — what each persona does instead, right now. Coverage says whether "
