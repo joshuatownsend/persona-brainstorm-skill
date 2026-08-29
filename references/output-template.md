@@ -41,7 +41,8 @@ possible today. **⚡ marks the frontier** — <one line on what the frontier cl
 **Frequencies:** <estimated from the personas, not measured — or: observed from SOURCE>.
 **Roster axis:** <job role / job-to-be-done / relationship to the subject — plus any persona
 deliberately off that axis, and why>.
-**Pre-registered:** <predicted a/b/c · surprise above N% served · cut: the rule you set in Phase 0>.
+**Pre-registered:** <predicted a/b/c — or, with no coverage pass, predicted N ⚡ · surprise
+threshold · cut: the rule you set in Phase 0>.
 **Load-bearing persona:** <the one whose non-existence would take the most items with it>.
 
 ---
@@ -88,7 +89,8 @@ would need, derived from the items that demand it.
 size of evidence cluster, cheapness of unlock. Name any primitive cheap enough to ride along
 with whatever ships first.>
 
-**Reckoning:** <predicted a/b/c, actual x/y/z — what the gap means, and which of the three cases
+**Reckoning:** <predicted a/b/c, actual x/y/z — or predicted N ⚡, actual M ⚡ — what the gap
+means, and which of the three cases
 this is: the prediction held and taught you nothing, the surprise threshold was crossed and the
 frame is in doubt, or it moved within the threshold and the direction is all you should claim.>
 

@@ -73,6 +73,39 @@ class Report:
         self.notes.append(m)
 
 
+def parse_prediction(text: str) -> dict:
+    """Pull the checkable figures out of a Pre-registered or Reckoning line.
+
+    Returns any of: split (a, b, c), frontier N, and for a reckoning both a
+    predicted and an actual reading. Prose around them is ignored; the numbers
+    are the part that can be wrong.
+    """
+    out = {}
+    splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", text)
+    fronts = re.findall(r"(\d+)\s*⚡", text)
+    m = re.search(r"predicted\b(.*?)(?:,|\bactual\b)", text, re.I | re.S)
+    if m:
+        p_splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", m.group(1))
+        p_fronts = re.findall(r"(\d+)\s*⚡", m.group(1))
+        if p_splits:
+            out["predicted_split"] = tuple(int(x) for x in p_splits[0])
+        if p_fronts:
+            out["predicted_frontier"] = int(p_fronts[0])
+    m = re.search(r"\bactual\b(.*)", text, re.I | re.S)
+    if m:
+        a_splits = re.findall(r"(\d+)\s*/\s*(\d+)\s*/\s*(\d+)", m.group(1))
+        a_fronts = re.findall(r"(\d+)\s*⚡", m.group(1))
+        if a_splits:
+            out["actual_split"] = tuple(int(x) for x in a_splits[0])
+        if a_fronts:
+            out["actual_frontier"] = int(a_fronts[0])
+    if splits and "predicted_split" not in out and "actual_split" not in out:
+        out["split"] = tuple(int(x) for x in splits[0])
+    if fronts and "predicted_frontier" not in out and "actual_frontier" not in out:
+        out["frontier"] = int(fronts[0])
+    return out
+
+
 def is_substantive(value: str) -> bool:
     """True when a field actually declares something.
 
@@ -94,7 +127,12 @@ def is_substantive(value: str) -> bool:
     # A lone ideograph is a whole word — 等 is "wait", 问 is "ask" — while a lone
     # Latin letter is a stray keystroke. Length minimums are an English habit and
     # must not be applied to scripts that do not share it.
-    if len(alpha) < 2 and all(ch.isascii() for ch in alpha):
+    #
+    # Count alphanumerics, not letters: "P2" is how a load-bearing persona is
+    # actually named, and a rule that rejects it is rejecting the answer people
+    # will write.
+    alnum = [ch for ch in v if ch.isalnum()]
+    if len(alnum) < 2 and all(ch.isascii() for ch in alpha):
         return False
     return True
 
@@ -468,6 +506,61 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "a **Reckoning:** line with no **Pre-registered:** line to reckon against. A "
             "prediction recovered after the result is not a prediction."
         )
+    # A modern document is one using the current table schema. Legacy documents
+    # keep warnings so old runs stay readable; anything written to today's
+    # template is held to today's requirements, because the standard Phase 7
+    # invocation does not pass --strict and a warning it ignores is not a rule.
+    modern = any(it.in_today_table for it in items)
+    if modern:
+        for key, label in (("prereg", "Pre-registered"), ("loadbearing", "Load-bearing persona")):
+            if not claims.get(key + "_count"):
+                rep.fail(
+                    f"no **{label}:** line in a document using the current table schema. "
+                    "Legacy documents only warn; this one is written to today's template."
+                )
+
+    # The reckoning is the one place a number is claimed *about* this document,
+    # which makes it the last place to accept one on trust.
+    if claims.get("reckoning"):
+        pre = parse_prediction(claims.get("prereg", ""))
+        rec = parse_prediction(claims["reckoning"])
+        graded_now = [it for it in items if it.coverage]
+        actual_tally = tuple(
+            sum(1 for it in items if it.coverage == mk) for mk in ("✅", "◐", "○")
+        )
+        actual_front = sum(1 for it in items if it.frontier)
+
+        if not (rec.keys() & {"predicted_split", "predicted_frontier",
+                              "actual_split", "actual_frontier"}):
+            rep.fail(
+                "the **Reckoning:** line states no figures. It has to carry 'predicted X, actual "
+                "Y' so both halves can be checked; prose alone reports that a reckoning happened "
+                "rather than what it found."
+            )
+        pre_val = pre.get("split") or pre.get("frontier")
+        rec_pred = rec.get("predicted_split") or rec.get("predicted_frontier")
+        if pre_val is not None and rec_pred is not None and pre_val != rec_pred:
+            rep.fail(
+                f"the reckoning says it predicted {rec_pred}, but the pre-registration says "
+                f"{pre_val}. A prediction restated differently after the result is not the "
+                "prediction that was made."
+            )
+        if "actual_split" in rec and graded_now and rec["actual_split"] != actual_tally:
+            rep.fail(
+                f"the reckoning reports an actual split of {rec['actual_split']}; the table gives "
+                f"{actual_tally}."
+            )
+        if "actual_frontier" in rec and rec["actual_frontier"] != actual_front:
+            rep.fail(
+                f"the reckoning reports {rec['actual_frontier']} frontier items; the table has "
+                f"{actual_front}."
+            )
+        if graded_now and "actual_split" not in rec and "actual_frontier" in rec:
+            rep.warn(
+                "this run graded coverage but reckoned only against the frontier count. The "
+                "coverage split is the figure the prediction was for."
+            )
+
     if not claims.get("freq_basis"):
         rep.fail(
             "no **Frequencies:** line with a stated basis, in the header before the persona "

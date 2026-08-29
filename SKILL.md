@@ -200,9 +200,12 @@ Establish seven things. Ask the user directly; don't guess.
    exists. A prediction made after seeing the result is not a prediction, and this is the only
    phase where these can honestly be answered.
 
-   - **Predicted coverage.** Your honest guess at the ✅/◐/○ split. Guess even if you feel
-     unqualified — an inaccurate prediction recorded in advance is worth more than an accurate one
-     recalled afterwards.
+   - **Predict the ratio your run can actually produce.** With a coverage pass, that is the
+     ✅/◐/○ split. At coverage depth **None** there are no marks to reckon against, so predict the
+     **frontier share** instead — how many of your items you expect to be ⚡. Either way, guess
+     even if you feel unqualified: an inaccurate prediction recorded in advance is worth more than
+     an accurate one recalled afterwards. Predicting a number the run cannot produce is the same
+     as not predicting.
    - **The surprise threshold.** What result would make you doubt the *frame* rather than conclude
      something about the subject? A run that cannot come out surprising has nothing to report but
      your priors.
@@ -213,6 +216,10 @@ Establish seven things. Ask the user directly; don't guess.
    Record it in the document header on one line, beside the coverage key:
 
      `**Pre-registered:** predicted 20/40/40 · surprise above 50% served · cut: no named decision`
+
+   ...or, for a run with no coverage pass:
+
+     `**Pre-registered:** predicted 18 ⚡ of 60 · surprise below 8 · cut: no named decision`
 
    Phase 5 has to reckon against this, and cannot quietly not.
 
@@ -477,10 +484,18 @@ invisible from inside any single document. `references/cross-run.md` covers it: 
 key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
 decides how much the recurrence counts.
 
-**Reckon against the pre-registration.** Put the predicted split beside the actual one on a line
+**Reckon against the pre-registration.** Put the predicted figure beside the actual one on a line
 of exactly this form, in this section:
 
   `**Reckoning:** predicted 20/40/40, actual 12/43/45 — <what the gap means>`
+
+  ...or, where no coverage pass ran:
+
+  `**Reckoning:** predicted 18 ⚡, actual 26 ⚡ — <what the gap means>`
+
+Both figures are checked: the predicted one against your Phase 0 line, the actual one against the
+tables. A reckoning is the one place in this document where a number is claimed *about* the
+document, so it is the last place to take one on trust.
 
 Then say which of three things happened, in words:
 
