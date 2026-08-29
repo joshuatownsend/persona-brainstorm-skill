@@ -114,12 +114,14 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
     dupe_pids: list[str] = []
+    malformed: list[tuple] = []
 
     current_persona = None
     citing = None
     in_primitives = False
     in_header = True   # until the first roster or item row
     item_has_today = None   # set from the item-table header, not guessed
+    item_width = None       # and its column count, to catch short rows
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -210,6 +212,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         # Item-table header row: records the column layout for the rows beneath it.
         if cells[0] == "#" and any("ask" in c.lower() for c in cells):
             item_has_today = any(c.strip().lower() == "today" for c in cells)
+            item_width = len(cells)
             continue
 
         # Roster row: | **P1** | `slug` | Role | Why | 13 |
@@ -228,6 +231,12 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         if cells[0].isdigit() and len(cells) >= 5 and current_persona:
             in_header = False
             n = int(cells[0])
+            # Positional decoding is only safe against a row of the declared width.
+            # A row one cell short slides every field left — Today takes the
+            # frequency, the frequency takes the frontier mark — so a required
+            # field looks filled and a displaced one only warns.
+            if item_width is not None and len(cells) != item_width:
+                malformed.append((n, len(cells), item_width))
             ask, why = cells[1], cells[2]
             # The Today column sits between Why and Freq, and documents written
             # before it existed have Freq there instead. Read the layout from the
@@ -247,6 +256,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
             items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i, has_today))
 
+    claims["malformed_rows"] = malformed
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
@@ -279,6 +289,14 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "items carry coverage marks but the tally line states no coverage figures. The "
             "frontier-only form is for runs that skipped coverage; using it here skips the "
             "comparison entirely."
+        )
+    if claims.get("malformed_rows"):
+        detail = ", ".join(f"item {n} has {got} cells, header declares {want}"
+                           for n, got, want in claims["malformed_rows"][:4])
+        rep.fail(
+            f"{len(claims['malformed_rows'])} row(s) do not match their table header: {detail}. "
+            "Fields are read by position, so a short row slides every value left and a required "
+            "one reads as filled from its neighbour."
         )
     if claims.get("duplicate_personas"):
         rep.fail(
