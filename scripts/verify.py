@@ -79,9 +79,11 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     primitives: dict[str, list[int]] = {}
     claims: dict = {}
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
+    dupes_seen: list[str] = []
 
     current_persona = None
     citing = None
+    in_primitives = False
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -99,8 +101,15 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         # Any other heading closes the persona section. Without this, a numbered
         # table in the appendix is parsed as more items and charged to whichever
         # persona happened to be last.
-        if re.match(r"#{1,3}\s", raw) :
+        if re.match(r"#{1,3}\s", raw):
             current_persona = None
+        # Primitives are parsed only inside the synthesis section. Phase 7 asks the
+        # adversarial reader to answer five numbered questions, which produces
+        # "1. **Something** — ..." entries that are not primitives at all.
+        if re.match(r"##\s", raw):
+            in_primitives = bool(
+                re.search(r"capability primitives|what the .+ imply", raw, re.I)
+            )
 
         if not raw.lstrip().startswith("|"):
             # Primitive citation: "→ items 3, 7, 12" / "→ items **3, 7, 12**"
@@ -117,10 +126,15 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 continue
             citing = None
             # Primitive name: "1. **Name** — ..."
-            m = re.match(r"\s*\d+\.\s+\*\*(.+?)\*\*\s*(?:`([^`]+)`)?", raw)
+            m = re.match(r"\s*\d+\.\s+\*\*(.+?)\*\*\s*(?:`([^`]+)`)?", raw) if in_primitives else None
             if m:
-                primitives[m.group(1)] = []
-                slugs["primitive"][m.group(1)] = m.group(2)
+                name = m.group(1)
+                if name in primitives:
+                    # Overwriting would hide both the duplicate and its citations.
+                    dupes_seen.append(name)
+                    name = f"{name} (duplicate #{dupes_seen.count(name) + 1})"
+                primitives[name] = []
+                slugs["primitive"][name] = m.group(2)
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -161,6 +175,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
             items.append(Item(n, current_persona, ask, why, freq, frontier, cov, i))
 
+    claims["duplicate_primitives"] = sorted(set(dupes_seen))
     return roster, items, primitives, claims, slugs
 
 
@@ -275,6 +290,12 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             rep.warn(f"item {it.n}: ask is not quoted — is it written as a Jira title?")
 
     # 9. Primitives must cite real items.
+    if claims.get("duplicate_primitives"):
+        rep.fail(
+            f"capability primitives sharing a display name: {claims['duplicate_primitives']}. "
+            "Each primitive is cited by item number and addressed by slug; two with one name "
+            "cannot be told apart by either."
+        )
     if not primitives:
         rep.fail(
             "no capability primitives parsed — the synthesis is the deliverable, and a document "
