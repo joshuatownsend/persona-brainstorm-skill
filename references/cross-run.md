@@ -29,6 +29,12 @@ So a comparison is over three things:
 | **Primitives** | slug | the underlying capability set moved |
 | **Coverage** | per-primitive tally | the subject served more or less of what people want |
 
+Coverage is the one dimension that may be unavailable. A run at coverage depth **None** carries no
+marks — the template removes the column — and that depth is not an edge case: it is required when
+the subject has no artifact to inspect. Compare coverage only when *both* runs were Full or Light,
+and when they were not, say so in the report rather than leaving the dimension silently absent. A
+missing row reads as "no movement".
+
 ---
 
 ## Re-running one subject
@@ -78,7 +84,8 @@ Then report movement in these terms:
   and 12, and a genuine rename can cite entirely different numbers because the fresh run sampled
   different asks. A slug reused for a different idea is a mistake and will make every future
   comparison wrong.
-- **Coverage movement per primitive — with a caveat that limits what it can mean.** Two fresh runs
+- **Coverage movement per primitive** — only if both runs graded coverage, and **with a caveat that
+  limits what it can mean.** Two fresh runs
   sample different asks for the same primitive, so a coverage figure can move because the cohort
   changed and not because anything shipped. Movement between two independent runs tells you the
   demand picture shifted; it does **not** measure whether your work served it.
