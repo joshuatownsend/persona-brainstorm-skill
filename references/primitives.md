@@ -16,11 +16,17 @@ proposed primitive means what an entry here means, take the slug — even when
 the phrasing you had in mind was better. Consistency across runs is worth more
 than the best name for one of them.
 
-**Mint freely when nothing fits.** A vocabulary that forces every finding into
-an existing name produces false agreement, which is worse than no vocabulary:
-two subjects would appear to share a primitive because the namer had nowhere
-else to put it. When the fit is arguable, mint the new slug and say in the
-document why it is not the existing one.
+**Mint freely when nothing fits — then record it.** A vocabulary that forces
+every finding into an existing name produces false agreement, which is worse
+than no vocabulary: two subjects would appear to share a primitive because the
+namer had nowhere else to put it. When the fit is arguable, mint the new slug
+and say in the document why it is not the existing one.
+
+Minting without recording is the same failure one step later. The new slug
+lives only in that run's output; the next subject reads the vocabulary, does
+not find it, and mints a synonym — and the two never group, which is precisely
+what this file exists to prevent. Write the slug and its meaning into the
+project vocabulary described below, in the same pass that names it.
 
 **Never reuse a slug for a different idea.** This is the one unrecoverable
 mistake. A slug that means one thing in run A and another in run B makes every
@@ -29,6 +35,28 @@ Renaming a primitive is cheap; re-pointing a slug is not.
 
 **Display names may vary; slugs may not.** The name in the heading is prose and
 can be rewritten to fit its document. The slug is an address.
+
+## Where the vocabulary lives
+
+This file ships with the skill. It is a **seed, and it is read-only** — it
+travels to every subject the skill is run against, so it cannot accumulate the
+slugs any one of them mints.
+
+A set of subjects that will be compared keeps its own vocabulary, in the
+repository holding their documents:
+
+```
+PRIMITIVES.md        beside the generated documents, in the target repo
+```
+
+Create it on the first run of a set by copying the table below, then append to
+it. Phase 5 reads the project vocabulary when one exists and this file when
+none does, and writes newly minted slugs to the project vocabulary — never
+back to this one, which would silently change the seed for unrelated subjects.
+
+Without that file the growth rule has nowhere to put anything: a slug minted
+in run A is recorded only in run A's own document, and run B reads the seed,
+misses it, and mints a synonym.
 
 ## The vocabulary
 

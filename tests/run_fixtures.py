@@ -379,11 +379,28 @@ def main():
         doc = fh.read()
     with open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8") as fh:
         vocab = fh.read()
-    section = doc.split("## What the 60 imply", 1)[-1].split("### If you only ask", 1)[0]
-    in_doc = set(re.findall(r"`([a-z0-9-]+)`", section))
+    # Anchors are asserted, not assumed. Splitting on a missing marker yields
+    # the whole document rather than an error, so a renamed heading would leave
+    # this scanning the wrong text -- and most likely still reporting green,
+    # which is the failure this suite exists to make impossible.
+    start = re.search(r"^##\s+What the \d+ imply\b.*$", doc, re.M)
+    report(start is not None, "the synthesis heading is where the check expects it",
+           "" if start else "no '## What the <N> imply' heading in PERSONAS.md")
+    end = re.search(r"^###\s+If you only ask\b.*$", doc, re.M)
+    report(end is not None, "the synthesis section has a recognised end",
+           "" if end else "no '### If you only ask' heading in PERSONAS.md")
+    section = doc[start.end():end.start()] if start and end else ""
+    # Only the slug in a numbered primitive entry, not every backticked token:
+    # the prose in that section cites other things in backticks too.
+    in_doc = set(re.findall(r"^\s*\d+\.\s+\*\*.+?\*\*\s+`([a-z0-9-]+)`", section, re.M))
     # Whitespace around the cell is formatting, not meaning; a reflowed table
     # must not read as a changed vocabulary.
     in_vocab = set(re.findall(r"\|\s*`([a-z0-9-]+)`\s*\|", vocab))
+    # An empty slice would satisfy the subset test vacuously, so the check has
+    # to know it found something before it can claim the comparison held.
+    report(bool(in_doc), "the synthesis section yields primitive slugs",
+           "no numbered primitive entries matched; the check compared nothing"
+           if not in_doc else "")
     unrecorded = sorted(in_doc - in_vocab)
     report(not unrecorded, "every slug PERSONAS.md uses is in references/primitives.md",
            f"used but not recorded: {unrecorded}" if unrecorded else "")
