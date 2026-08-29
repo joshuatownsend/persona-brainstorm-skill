@@ -144,7 +144,7 @@ useful argument to have on page one rather than at the end.
 | **Data platform / warehouse / dataset** | "a store that can answer anything about \<domain\>" | counterfactual and lineage-aware answers — "where did this number come from, and what if the input were different" | freshness, grain mismatch, backfill and restatement, access scope | § Data platform |
 | **Infrastructure / service / platform** | "a platform that fully operates \<the estate\>" | pre-flight and rollback reasoning — "prove this is safe before I do it" | failure modes, capacity, cost attribution, audit and who-did-what | § Infrastructure |
 | **Process / non-software** | "an ideal way to \<the outcome\>" | the decision made without convening anyone | escalation, exception handling, institutional memory, the case nobody wrote down | § Process — the lanes are human; skip Phase 3 only if there is genuinely nothing to inspect |
-| **None of these** | derive it — see below | derive it | derive it | write the recipe; see `discovery.md` § Contract |
+| **None of these** | derive it — see below | derive it | derive it | write the recipe; see `references/discovery.md` § Contract |
 
 **If no row fits, derive the four columns rather than forcing a fit.** The columns are not
 arbitrary; each answers a fixed question, and any subject can answer them:
