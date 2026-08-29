@@ -52,6 +52,22 @@ discovery of what exists. That ordering is deliberate: an inventory read first i
 impossible to un-see, and every item afterward bends toward it. Resist the urge to "just quickly
 check what it does today" before Phase 3.
 
+**When you already know the implementation, the phase order cannot protect you.** The most likely
+operator of this skill is someone who built the subject — for whom the inventory was never un-seen
+and cannot be. This is the common case, not the edge case. Don't pretend otherwise and don't skip
+the exercise; do one of these, and say in the document which:
+
+- **Generate the items in a separate agent** that receives only the subject, frame, archetype, and
+  persona roster, and is forbidden from reading any file. This restores the protection properly for
+  the cost of one subagent call, and has a side benefit: Phase 3 can then run *concurrently* with
+  Phase 2 instead of after it, because a blind generator cannot be contaminated by an inventory
+  built beside it.
+- **Disclose the contamination** at the top of the document, and treat every item that maps neatly
+  onto an existing capability as suspect rather than as confirmation.
+
+Prefer the first wherever subagents are available. The second is honest but weak — knowing to
+distrust your own anchoring does not undo it.
+
 The corollary: **the unserved items are the deliverable.** A document where everything is already
 covered has failed. Expect half to two-thirds of items to be partly served or impossible.
 
@@ -189,11 +205,31 @@ Start from the user's seed list and do three things to it:
 - **Merge duplicates.** Seed lists routinely name the same human twice under two job titles. Say
   in the document that you merged them, and why.
 - **Add what's missing, each with a stated reason.** The added personas are usually where the
-  document earns its keep, because they're the ones the subject's own framing doesn't see. Look
-  for: the highest-volume/lowest-expertise user (they benefit most from a natural-language
-  interface); the security/compliance reader (their data is usually sitting there unqueried); the
-  automation or pipeline consumer; the rare-but-high-stakes user (migrations, acquisitions,
-  audits); and the non-hands-on decision maker.
+  document earns its keep, because they're the ones the subject's own framing doesn't see. Work
+  the list below; most subjects are missing at least three of them.
+
+  - **The highest-volume, lowest-expertise user** — most contact with the subject, least ability
+    to work around it when it doesn't fit.
+  - **The security, compliance, or audit reader** — their questions are usually answerable from
+    what already exists, and nobody has ever asked them.
+  - **The automation or pipeline consumer** — asks in a different shape entirely: determinism,
+    freshness guarantees, machine-readable output.
+  - **The rare-but-high-stakes user** — migrations, acquisitions, audits, incidents. A handful of
+    enormous questions a year, each expensive to get wrong.
+  - **The non-hands-on decision maker** — never touches the subject, only its output, and has to
+    defend it to people who weren't there.
+
+  The last three are the ones a roster almost never contains, because **every evidence source you
+  have is blind to them**. Name them deliberately or they will not appear at all:
+
+  - **The user who tried it and left.** They file no tickets and answer no surveys. A roadmap
+    built from the people who stayed is optimising for survivors and calling it demand.
+  - **The user forced in by someone else's decision** — a migration, a mandate, a vendor change.
+    They never chose the subject, and their asks look nothing like a volunteer's.
+  - **The classes nobody represented** — on a screen reader, on a bad connection, in a language
+    this was not written in, on hardware two generations old. They are absent from the material
+    that shaped your priors, so they will never surface on their own. Ask explicitly, and if you
+    conclude none belong on the page, say why rather than leaving it silent.
 - **Include the agent itself as a persona** whenever the subject might be driven by an AI agent.
   This is the single most productive addition when planning any surface an agent will drive,
   because it generates asks no human persona will — what must I read before I'm allowed to act,
