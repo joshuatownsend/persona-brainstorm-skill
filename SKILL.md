@@ -436,6 +436,12 @@ primitives cite item numbers that exist.
 Fix what it reports and run it again. Do not talk yourself out of a FAIL — every rule in it exists
 because that failure actually happened.
 
+**Run it a second time after 7b, with `--final`.** That pass additionally requires the Verification
+section to exist. Nothing else would catch its absence: 7a runs before 7b by definition, so the
+first invocation cannot check for a section that has not been written yet, and an executor who
+simply skips the adversarial read leaves a document that passes and reads as though it was
+reviewed.
+
 The checker reads claimed figures **only** from the canonical tally line. That is deliberate: a
 good document discusses numbers in prose — quoting a figure that turned out wrong, citing an
 earlier pass — and a checker that scans everywhere will read that discussion as a claim. If your

@@ -24,8 +24,10 @@ FREQ_VOCAB = {
     "per-incident", "per-release", "per-run", "onboarding",
 }
 COVERAGE_MARKS = {"✅", "◐", "○"}
-# Generated prose uses curly quotes; an ASCII-only test fails valid documents.
-QUOTE_CHARS = "\"'“”‘’«»„‚"
+# An ask is speech, so it opens and closes with matching delimiters. Testing for a
+# quote character anywhere lets "I've got twenty minutes" pass on its apostrophe.
+OPENERS = "\"'“‘«„"
+CLOSERS = "\"'”’»“"
 # Why-restates-Ask above this ratio is a feature request in costume.
 RESTATEMENT_RATIO = 0.62
 # Budgets flatter than this look like fairness, which the method names as a tell.
@@ -202,6 +204,12 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "without it there is nothing to check a self-reported count against — which is the "
             "gate this whole script exists to hold."
         )
+    if any(it.coverage for it in items) and "tally" not in claims:
+        rep.fail(
+            "items carry coverage marks but the tally line states no coverage figures. The "
+            "frontier-only form is for runs that skipped coverage; using it here skips the "
+            "comparison entirely."
+        )
     if claims.get("duplicate_personas"):
         rep.fail(
             f"roster rows sharing a persona id: {claims['duplicate_personas']}. The later row "
@@ -310,7 +318,8 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
     # 8. Every ask should read as speech.
     for it in items:
-        if not any(q in it.ask for q in QUOTE_CHARS):
+        a = it.ask.strip().rstrip(".,;")
+        if not (len(a) >= 2 and a[0] in OPENERS and a[-1] in CLOSERS):
             rep.warn(f"item {it.n}: ask is not quoted — is it written as a Jira title?")
 
     # 9. Primitives must cite real items.
@@ -360,11 +369,22 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures")
+    ap.add_argument(
+        "--final",
+        action="store_true",
+        help="also require the Phase 7b Verification section (run after the adversarial read)",
+    )
     args = ap.parse_args()
 
     text = open(args.path, encoding="utf-8").read()
     rep = Report()
     check(*parse(text), rep)
+    if args.final and not re.search(r"^#{2,3}\s*Verification", text, re.M):
+        rep.fail(
+            "no Verification section — Phase 7b was skipped or its findings were not recorded. "
+            "An absent verification section reads as a passed one, which is why this is checked "
+            "rather than trusted."
+        )
 
     for m in rep.notes:
         print(f"  ..  {m}")
