@@ -24,6 +24,12 @@ FREQ_VOCAB = {
     "per-incident", "per-release", "per-run", "onboarding",
 }
 COVERAGE_MARKS = {"✅", "◐", "○"}
+# A declaration has to declare something. Length is not evidence of substance:
+# "TBD" clears a three-character bar while asserting nothing at all.
+PLACEHOLDERS = {
+    "tbd", "tba", "tbc", "todo", "fixme", "na", "n/a", "none", "null", "nil",
+    "unknown", "unspecified", "pending", "xxx", "placeholder", "?", "???", "-", "--",
+}
 # An ask is speech, so it opens and closes with matching delimiters. Testing for a
 # quote character anywhere lets "I've got twenty minutes" pass on its apostrophe.
 OPENERS = "\"'“‘«„"
@@ -40,10 +46,15 @@ class Item:
     persona: str
     ask: str
     why: str
+    today: str
     freq: str
     frontier: bool
     coverage: str
     line: int
+    # Whether the table this row came from declared a Today column. Per row, not
+    # per document: a document can mix schemas, and one legacy section at the end
+    # must not excuse an earlier section that declared the column and left it empty.
+    in_today_table: bool = False
 
 
 @dataclass
@@ -60,6 +71,32 @@ class Report:
 
     def note(self, m: str) -> None:
         self.notes.append(m)
+
+
+def is_substantive(value: str) -> bool:
+    """True when a field actually declares something.
+
+    Length is not evidence of substance — "TBD" clears a three-character bar
+    while asserting nothing — and an unedited template placeholder is worse
+    than a blank, because a blank is visibly missing. Every required field is
+    held to this, not just the ones a reviewer happened to name.
+    """
+    v = value.strip().strip("*").strip()
+    if not v or v.startswith("<"):
+        return False
+    if re.sub(r"[^a-z0-9/?-]+", "", v.lower()) in PLACEHOLDERS:
+        return False
+    # Alphabetic, not ASCII: a Today value of "何もしない" declares as much as
+    # "does nothing by hand", and this skill is meant to run on any subject.
+    alpha = [ch for ch in v if ch.isalpha()]
+    if not alpha:
+        return False
+    # A lone ideograph is a whole word — 等 is "wait", 问 is "ask" — while a lone
+    # Latin letter is a stray keystroke. Length minimums are an English habit and
+    # must not be applied to scripts that do not share it.
+    if len(alpha) < 2 and all(ch.isascii() for ch in alpha):
+        return False
+    return True
 
 
 def split_row(line: str) -> list[str]:
@@ -85,10 +122,14 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
     dupe_pids: list[str] = []
+    malformed: list[tuple] = []
 
     current_persona = None
     citing = None
     in_primitives = False
+    in_header = True   # until the first roster or item row
+    item_has_today = None   # set from the item-table header, not guessed
+    item_width = None       # and its column count, to catch short rows
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -147,6 +188,18 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             # lets that prose masquerade as the document's own claim. One home.
             #
             #   **Tally:** 10 ✅ · 24 ◐ · 26 ○ · 26 ⚡
+            # Frequencies and Roster axis are canonical header claims, held to the
+            # same rule as the tally: one address, read nowhere else. Parsed only
+            # before the first data table, so a passing mention in later prose —
+            # a Verification section discussing the roster axis, say — cannot
+            # satisfy a requirement it was never making.
+            for label, key in (("Frequencies", "freq_basis"), ("Roster axis", "axis")):
+                m = re.match(rf"\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)", raw.strip())
+                if m and in_header:
+                    value = m.group(1).strip().strip("*").strip()
+                    claims[key + "_count"] = claims.get(key + "_count", 0) + 1
+                    if is_substantive(value):
+                        claims[key] = value
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
@@ -164,9 +217,16 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         if is_divider(cells):
             continue
 
+        # Item-table header row: records the column layout for the rows beneath it.
+        if cells[0] == "#" and any("ask" in c.lower() for c in cells):
+            item_has_today = any(c.strip().lower() == "today" for c in cells)
+            item_width = len(cells)
+            continue
+
         # Roster row: | **P1** | `slug` | Role | Why | 13 |
         m = re.match(r"\*{0,2}(P\d+)\*{0,2}$", cells[0])
         if m and len(cells) >= 4 and cells[-1].isdigit():
+            in_header = False
             pid = m.group(1)
             if pid in roster:
                 dupe_pids.append(pid)
@@ -177,13 +237,34 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
 
         # Item row: | 12 | "ask" | why | freq | ⚡ | cov |
         if cells[0].isdigit() and len(cells) >= 5 and current_persona:
+            in_header = False
             n = int(cells[0])
-            ask, why, freq = cells[1], cells[2], cells[3]
-            rest = cells[4:]
+            # Positional decoding is only safe against a row of the declared width.
+            # A row one cell short slides every field left — Today takes the
+            # frequency, the frequency takes the frontier mark — so a required
+            # field looks filled and a displaced one only warns.
+            if item_width is not None and len(cells) != item_width:
+                malformed.append((n, len(cells), item_width))
+            ask, why = cells[1], cells[2]
+            # The Today column sits between Why and Freq, and documents written
+            # before it existed have Freq there instead. Read the layout from the
+            # table header: sniffing the cell's content misreads any frequency
+            # outside the vocabulary as a Today value and shifts every column
+            # after it, so an unrecognised word silently deletes the frontier
+            # mark instead of warning about the word.
+            if item_has_today is None:
+                has_today = cells[3].lower().lstrip("~") not in FREQ_VOCAB
+            else:
+                has_today = item_has_today
+            if has_today:
+                today, freq, rest = cells[3], cells[4], cells[5:]
+            else:
+                today, freq, rest = "", cells[3], cells[4:]
             frontier = any("⚡" in c for c in rest)
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
-            items.append(Item(n, current_persona, ask, why, freq, frontier, cov, i))
+            items.append(Item(n, current_persona, ask, why, today, freq, frontier, cov, i, has_today))
 
+    claims["malformed_rows"] = malformed
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
@@ -216,6 +297,14 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "items carry coverage marks but the tally line states no coverage figures. The "
             "frontier-only form is for runs that skipped coverage; using it here skips the "
             "comparison entirely."
+        )
+    if claims.get("malformed_rows"):
+        detail = ", ".join(f"item {n} has {got} cells, header declares {want}"
+                           for n, got, want in claims["malformed_rows"][:4])
+        rep.fail(
+            f"{len(claims['malformed_rows'])} row(s) do not match their table header: {detail}. "
+            "Fields are read by position, so a short row slides every value left and a required "
+            "one reads as filled from its neighbour."
         )
     if claims.get("duplicate_personas"):
         rep.fail(
@@ -306,11 +395,69 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             f_unserved = sum(1 for it in frontier if it.coverage == "○")
             rep.note(f"frontier unserved: {f_unserved} of {len(frontier)}")
 
+    # 5b. The demand-side measure, the frequency basis, and the roster axis.
+    declared = [it for it in items if it.in_today_table]
+    legacy = [it for it in items if not it.in_today_table]
+    missing_today = [it.n for it in declared if not is_substantive(it.today)]
+    if declared and legacy:
+        rep.warn(
+            f"mixed table schemas: {len(declared)} item(s) come from a table declaring a Today "
+            f"column and {len(legacy)} from one without. The declared rows are still required to "
+            "carry values; a legacy section later in the document does not excuse them."
+        )
+    if not declared:
+        # No column at all: a document written before the field existed. Warn, so
+        # old runs stay readable, and say plainly that new ones must carry it.
+        rep.warn(
+            "no Today column — what each persona does instead, right now. Coverage says whether "
+            "you serve an ask; Today says whether anyone needs it served, and without it an "
+            "unserved item cannot be told apart from a non-problem. Required for new documents."
+        )
+    elif missing_today:
+        # The column is declared, so the field is required here and a warning would
+        # pass the standard Phase 7 invocation, which does not use --strict.
+        rep.fail(
+            f"{len(missing_today)} item(s) in a declared Today column have no value: "
+            f"{missing_today[:8]}. A declared column that is empty is not back-compatibility, "
+            "it is the demand-side measure missing from a document that claims to carry it."
+        )
+
+    for key, label in (("freq_basis", "Frequencies"), ("axis", "Roster axis")):
+        if claims.get(key + "_count", 0) > 1:
+            rep.fail(
+                f"{claims[key + '_count']} **{label}:** declarations in the header. Only the last "
+                "is read, so a contradictory earlier one leaves the document asserting two "
+                "different things while this check reports one."
+            )
+    if not claims.get("freq_basis"):
+        rep.fail(
+            "no **Frequencies:** line with a stated basis, in the header before the persona "
+            "table. Values like 'weekly' read as measurement and are usually estimates; the "
+            "document has to say which, and a bare label declares nothing."
+        )
+    if not claims.get("axis"):
+        rep.fail(
+            "no **Roster axis:** line with a stated axis, in the header before the persona "
+            "table. A roster mixing job roles, software and review functions cannot be checked "
+            "for completeness, which is the whole point of asking who is missing."
+        )
+
+    # 5c. Persona distinctness is deliberately NOT checked here, and should not be
+    #     added. A lexical version was written and measured against a document with a
+    #     known duplicate pair: the true duplicates scored 0.031 ask-vocabulary overlap,
+    #     the LOWEST of any pair, while unrelated personas reached 0.123. Real duplicates
+    #     ask the same question in different words — "what would a domain expert know is
+    #     wrong" and "which claims get me caught by a twenty-year veteran" share almost no
+    #     vocabulary — so the score is anti-correlated with the thing it would claim to
+    #     detect, and a passing run would be false reassurance. The distinctness test lives
+    #     in Phase 1 (cover the names, read only the asks) and in the Phase 7b question
+    #     list, where a reader who understands the questions can answer it.
+
     # 6. Frequency vocabulary.
     for it in items:
         if not it.freq:
             rep.fail(f"item {it.n} (line {it.line}) has no frequency")
-        elif it.freq not in FREQ_VOCAB:
+        elif it.freq.lstrip("~") not in FREQ_VOCAB:
             rep.warn(f"item {it.n}: frequency {it.freq!r} outside the vocabulary")
 
     # 7. A Why that restates the Ask is a feature request in costume.
