@@ -288,6 +288,24 @@ Start from the user's seed list and do three things to it:
 
 Give each persona a one-line justification for being on the page. If you can't write one, cut it.
 
+**Build the roster on one axis, and name it.** Job roles, or jobs-to-be-done, or relationships to
+the subject — pick one and hold it. A roster mixing axes cannot be checked for completeness, which
+defeats the point of asking who is missing: a set containing four job titles, one piece of
+software, and one review function has no "rest of the set" to reason about. Declare it in the
+document header, beside the coverage key, on a line of exactly this form:
+
+  `**Roster axis:** job role` — or job-to-be-done, or relationship to the subject.
+
+Phase 7's checker reads that line and nowhere else, for the same reason it reads the tally line and
+nowhere else: a claim mentioned in passing further down is not a declaration, and a checker that
+accepts one cannot tell a document that declared its axis from one that merely discussed it. Where a persona genuinely belongs to a different axis and still earns its place — the
+executing agent usually does — say so explicitly rather than letting it pass unremarked.
+
+**You cannot fully test distinctness yet, and should not pretend to.** The real test needs the asks,
+which do not exist until Phase 2. What you can do here is weaker and still worth doing: read the
+justifications side by side and merge any two that differ only in job title. Then carry the
+question forward — the binding test runs at the end of Phase 2, and it can send you back here.
+
 **Then stop and put the roster in front of the user** (AskUserQuestion, or a plain list if it's
 long). Show each persona, its justification, and your rough item budget. Ask what's missing, what's
 really one person, and who doesn't belong. A wrong roster silently wastes every row generated after
@@ -312,12 +330,26 @@ below. Those are reliably the best items on the page.
 Number items continuously across the whole document (not per persona) so the synthesis can cite
 them.
 
+**Say where the frequencies came from.** `weekly` and `quarterly` are empirical claims, and a
+reader takes that column at face value — it is often the first thing they read. Unless you measured
+them, they are estimates, and the document has to say so in the header beside the coverage key, on
+a line of exactly this form:
+
+  `**Frequencies:** estimated from the personas, not measured` — or `observed from <source>`.
+
+Same rule as the axis and the tally: that line is the only place the claim is read from, and a bare
+`**Frequencies:**` with nothing after it declares nothing. Never let an invented number stand
+where a reader will take it for a finding. The same honesty applies to the asks themselves: unless
+they came from real users, they are hypotheses about what people would say, and the document is a
+set of hypotheses worth testing rather than a report of what was found.
+
 Each item is a row with four things:
 
 | Field | What good looks like |
 |---|---|
 | **The ask, in their words** | A quoted sentence the persona would actually say out loud — a question (`"Who was on 10.20.5.66 at 14:20 yesterday?"`) or a want (`"I want to restyle this component without forking it."`). Not `Historical lease attribution query`; not `Themeable component API`. If it reads like a Jira title, rewrite it. |
-| **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
+| **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. Watch for asks already phrased *as* a decision — `"do I pad, or hand back eight and say so?"` — where the Why has nowhere left to go and becomes an inversion of the question. When that happens, name the **consequence** instead: what goes wrong, and to whom, if the answer is unavailable. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
+| **Today** | What they do *instead*, right now. `"Greps four spreadsheets and guesses"` · `"Asks Dave"` · `"Gives up"` · `"Nothing — they don't know it's answerable"`. This is the demand-side measure and the coverage column is not: coverage says whether *you* serve the ask, while this says whether anyone needs it served. A `○` somebody already pays a person to work around is an opportunity; a `○` nobody has ever attempted is usually a non-problem. `"Gives up"` and `"Doesn't know to ask"` are the two most valuable answers here. |
 | **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `per-release`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
 | **Coverage** | Phase 4. Leave blank. |
 
@@ -332,6 +364,27 @@ surface, for instance, gets all the value of a change proposal with none of the 
 
 If your list has no ⚡ items, you have under-reached. If your ⚡ items are all comfortable, you
 named the frontier too conservatively — go back to Phase 0 and find the class you flinched at.
+
+### Before leaving Phase 2 — the distinctness test
+
+Now that the asks exist, run the test Phase 1 could only gesture at. **Cover the persona names and
+read only the asks each one owns.** If you cannot tell two personas apart that way, they are one
+persona wearing two job titles, however different their justifications sounded — two people with
+the same questions are the same persona for this document's purposes, whatever their business cards
+say.
+
+This is a gate, not an observation. When it fires:
+
+1. Merge the pair, keeping the asks from both and cutting the duplicates.
+2. Redistribute the freed budget — the merged persona does not simply inherit the sum, or you have
+   traded a duplicate persona for an overweighted one.
+3. Put the corrected roster back in front of the user, exactly as Phase 1 does. They approved a
+   roster you have now changed.
+4. Generate items for any persona whose budget moved.
+
+Doing this late is not a failure of sequencing; it is the earliest point the test can run at all.
+Phase 7b asks the same question again with fresh eyes, but it only *records* findings — by then the
+document is written, and a duplicate found there costs a regeneration rather than an edit.
 
 ## Phase 3 — Inventory what exists today
 

@@ -38,6 +38,10 @@ promote coverage back to a filter.>
 **Coverage key:** ✅ served well today · ◐ partially served / needs a real primitive · ○ not
 possible today. **⚡ marks the frontier** — <one line on what the frontier class is here>.
 
+**Frequencies:** <estimated from the personas, not measured — or: observed from SOURCE>.
+**Roster axis:** <job role / job-to-be-done / relationship to the subject — plus any persona
+deliberately off that axis, and why>.
+
 ---
 
 ## Personas
@@ -56,9 +60,9 @@ value for this subject>, not fairness.
 
 ### P1 — <Role>
 
-| # | The ask, in their words | Why — the decision it feeds | Freq | ⚡ | Cov |
-|---|---|---|---|---|---|
-| 1 | "<A sentence they'd say out loud.>" | <The job the answer does.> | <many/day> | <⚡ or blank> | <✅> |
+| # | The ask, in their words | Why — the decision it feeds | Today | Freq | ⚡ | Cov |
+|---|---|---|---|---|---|---|
+| 1 | "<A sentence they'd say out loud.>" | <The job the answer does.> | <What they do instead now.> | <many/day> | <⚡ or blank> | <✅> |
 
 <Repeat per persona. Number items continuously across the whole document.>
 
@@ -132,6 +136,14 @@ full writeup if you filed one.>
   been reworded.
 - **The ⚡ column is structural, not decorative.** Marking the frontier inside the ask sentence
   makes it uncountable, which is exactly how a wrong frontier count once went unnoticed.
+- **The Today column is the demand-side measure; the coverage column is not.** Coverage says
+  whether you serve the ask. Today says whether anyone needs it served — an unserved ask somebody
+  already pays a person to work around is an opportunity, and one nobody has ever attempted is
+  usually a non-problem. Fill it in even when the answer is "nothing" or "doesn't know to ask",
+  because those two are the most informative values it takes.
+- **Declare the frequencies and the roster axis in the header, not in prose further down.** Both
+  are claims a reader will otherwise take on trust: the frequency column reads as measurement, and
+  a roster mixing axes cannot be checked for completeness.
 - **Say which coverage marks were proven and which were inferred** if you ran a scoped Full pass.
   A column that silently mixes verified and best-effort marks is worse than one that admits it.
 - **Bold the item numbers you cite** in the primitives section only if the document is long enough
