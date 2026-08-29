@@ -33,6 +33,21 @@ VERIFY = os.path.normpath(os.path.join(HERE, os.pardir, "scripts", "verify.py"))
 REPO = os.path.normpath(os.path.join(HERE, os.pardir))
 
 
+class BrokenFixture(Exception):
+    """A fixture invariant no longer holds.
+
+    Not an assert: `python -O` strips those, and a stripped invariant here does
+    not raise -- it lets a mutation target nothing and report the resulting
+    document as correctly caught. The suite would go green by doing nothing,
+    which is the exact false green this file exists to prevent.
+    """
+
+
+def require(condition, message):
+    if not condition:
+        raise BrokenFixture(message)
+
+
 def load(name):
     with open(os.path.join(FIXTURES, name), encoding="utf-8") as fh:
         return fh.read()
@@ -41,7 +56,7 @@ def load(name):
 def line_starting(text, prefix):
     """The one line beginning with prefix. Ambiguity is a broken fixture."""
     hits = [ln for ln in text.splitlines() if ln.startswith(prefix)]
-    assert len(hits) == 1, f"expected exactly one {prefix!r} line, found {len(hits)}"
+    require(len(hits) == 1, f"expected exactly one {prefix!r} line, found {len(hits)}")
     return hits[0]
 
 
@@ -50,7 +65,7 @@ def drop(text, prefix):
 
 
 def swap(text, old, new):
-    assert old in text, f"anchor not present: {old[:60]!r}"
+    require(old in text, f"anchor not present: {old[:60]!r}")
     return text.replace(old, new, 1)
 
 
@@ -215,9 +230,9 @@ RETIRED = {
     "pipe.md": "fails on a later header requirement, not on pipe escaping",
     "curly.md": "fails on a later header requirement, not on curly quotes",
     "stray.md": "fails on a later header requirement",
-    "verif.md": "fails on a later header requirement, not on the Verification section",
-    "noverif.md": "fails on a later header requirement, not on the missing section",
-    "bareverif.md": "fails on a later header requirement, not on the bare section",
+    "verif.md": "superseded by the --final cases, which test these checks as mutations",
+    "noverif.md": "superseded by final-rejects-a-missing-section",
+    "bareverif.md": "superseded by final-rejects-a-bare-section",
     "appendix.md": "fails on a later header requirement",
     "dupname.md": "fails on a later header requirement, not on duplicate primitive names",
     "nosynth.md": "fails on a later header requirement, not on the missing synthesis",
@@ -227,10 +242,39 @@ RETIRED = {
 }
 
 
-def run(path):
-    r = subprocess.run([sys.executable, VERIFY, path], capture_output=True,
+# --final adds the Phase 7b Verification requirements. Nothing exercised it,
+# so the whole second pass could rot without the suite noticing -- and three
+# fixtures written for exactly these checks are in RETIRED, rotted on a header
+# requirement. Expressed as mutations, they run again.
+FINAL_CASES = [
+    ("final-accepts-a-real-verification", "d_ok.md", None, None),
+    ("final-rejects-a-missing-section", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + t[t.index("## What the 60 imply"):],
+     "no Verification section"),
+    ("final-rejects-a-bare-section", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "non-empty line"),
+]
+
+
+def run(path, *flags):
+    r = subprocess.run([sys.executable, VERIFY, path, *flags], capture_output=True,
                        text=True, encoding="utf-8", errors="replace", cwd=REPO)
     return r.returncode, (r.stdout or "") + (r.stderr or "")
+
+
+def failures_in(out):
+    """Only the [FAIL] lines.
+
+    Searching the whole output would accept a case whose targeted diagnostic
+    had been downgraded to [WARN] while some unrelated check still failed --
+    green for the wrong reason, which is the failure mode this suite exists to
+    catch. Several fixtures legitimately emit more than one failure.
+    """
+    return "\n".join(l for l in out.splitlines() if "[FAIL]" in l)
 
 
 def main():
@@ -255,17 +299,41 @@ def main():
         for name, base, mutate, needle in MUTATIONS:
             try:
                 text = mutate(load(base))
-            except AssertionError as exc:
+            except (BrokenFixture, ValueError) as exc:
                 report(False, name, f"mutation no longer applies to {base}: {exc}")
                 continue
             path = os.path.join(tmp, name + ".md")
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(text)
             rc, out = run(path)
+            fails = failures_in(out)
             if rc == 0:
                 report(False, name, "document passed; the defect was not caught")
-            elif needle.lower() not in out.lower():
-                first = next((l for l in out.splitlines() if "[FAIL]" in l), "")
+            elif needle.lower() not in fails.lower():
+                first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
+                report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
+            else:
+                report(True, name)
+
+        print("\nsecond pass (--final):")
+        for name, base, mutate, needle in FINAL_CASES:
+            try:
+                text = mutate(load(base)) if mutate else load(base)
+            except (BrokenFixture, ValueError) as exc:
+                report(False, name, f"mutation no longer applies to {base}: {exc}")
+                continue
+            path = os.path.join(tmp, name + ".md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            rc, out = run(path, "--final")
+            fails = failures_in(out)
+            if needle is None:
+                report(rc == 0, name,
+                       "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:80])
+            elif rc == 0:
+                report(False, name, "document passed; the defect was not caught")
+            elif needle.lower() not in fails.lower():
+                first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
                 report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
             else:
                 report(True, name)
@@ -277,10 +345,11 @@ def main():
             report(False, name, "fixture file missing")
             continue
         rc, out = run(os.path.join(FIXTURES, name))
+        fails = failures_in(out)
         if rc == 0:
             report(False, name, "document passed; the defect was not caught")
-        elif needle.lower() not in out.lower():
-            first = next((l for l in out.splitlines() if "[FAIL]" in l), "")
+        elif needle.lower() not in fails.lower():
+            first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
             report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
         else:
             report(True, name)

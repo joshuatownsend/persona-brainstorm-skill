@@ -18,6 +18,11 @@ non-ASCII substance and reckoning arithmetic were all silently failing on a
 missing `**Frequencies:**` line added rounds after they were written, and a
 verdict-only suite reported every one of them green.
 
+The needle is searched **only in the `[FAIL]` lines**. Searching the whole
+output would accept a case whose own diagnostic had been downgraded to a
+warning while some unrelated check still failed — green for the wrong reason,
+which is the same bug one level up.
+
 **Generate negatives by mutating a passing base.** Most cases are
 `(base, one mutation, expected message)` rows in `run_fixtures.py`. A schema
 change then costs one edit to the base rather than one edit per fixture, which
@@ -38,6 +43,19 @@ is worse than losing the case: the suite then actively defends the rot.
 Retiring is not deletion. `unquoted.md` still describes a real check — asks
 that do not read as speech — which happens to emit a warning rather than a
 failure, and the suite has no warning cases yet. It is waiting for one.
+
+## Both passes are covered
+
+`verify.py` has a second pass behind `--final`, which adds the Phase 7b
+Verification requirements. `FINAL_CASES` runs it, so those checks cannot rot
+unnoticed.
+
+## Fixture invariants are not `assert`
+
+They raise `BrokenFixture`. `python -O` strips assertions, and a stripped
+invariant here does not raise — it lets a mutation target nothing and then
+reports the unchanged document as correctly caught. The suite would go green
+by doing nothing.
 
 ## Adding a case
 
