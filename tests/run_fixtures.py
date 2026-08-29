@@ -367,13 +367,18 @@ def main():
     # A vocabulary that has drifted from the run it describes is worse than no
     # vocabulary: it invites reuse of a slug that no longer means what it says.
     #
-    # Subset, not equality. The vocabulary is meant to grow: the seed tells
-    # a later run to mint a new slug when nothing fits, and equality here would
-    # make doing so fail the suite -- or force the historical document to be
-    # rewritten to match, which is the one thing slug discipline forbids. What
-    # still has to hold is the direction that matters: every slug a document
-    # uses must be in the vocabulary, or the name was minted without recording
-    # it and the next run has no way to reuse it.
+    # Equality, in both directions. This was briefly a one-way subset, on the
+    # reasoning that the vocabulary has to be able to grow -- but growth now
+    # belongs to the per-set PRIMITIVES.md, and references/primitives.md is a
+    # read-only seed describing exactly one run. Each direction catches a real
+    # and different mistake:
+    #
+    #   used but not recorded   a slug the document uses that the seed lacks;
+    #                           the next run cannot reuse a name it cannot see
+    #   recorded but not used   an entry appended to the seed by hand, which
+    #                           travels to every unrelated subject the skill is
+    #                           run against -- the contamination this file's
+    #                           own read-only rule exists to prevent
     print("\nprimitive vocabulary:")
     with open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8") as fh:
         doc = fh.read()
@@ -404,6 +409,11 @@ def main():
     unrecorded = sorted(in_doc - in_vocab)
     report(not unrecorded, "every slug PERSONAS.md uses is in references/primitives.md",
            f"used but not recorded: {unrecorded}" if unrecorded else "")
+    stray = sorted(in_vocab - in_doc)
+    report(not stray, "the seed records nothing PERSONAS.md does not use",
+           f"recorded but not used: {stray}. The seed is read-only and travels to "
+           f"every subject; per-set slugs belong in that set's PRIMITIVES.md."
+           if stray else "")
 
     # No fixture may sit on disk unaccounted for. Without this, a case can be
     # orphaned by a rename and nobody notices it stopped running.
