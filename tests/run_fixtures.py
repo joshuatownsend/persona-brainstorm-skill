@@ -354,9 +354,14 @@ def main():
         else:
             report(True, name)
 
-    print("\nthe shipped document:")
-    rc, out = run(os.path.join(REPO, "PERSONAS.md"))
-    report(rc == 0, "PERSONAS.md", "" if rc == 0 else "should pass")
+    # --final, because that is the invocation SKILL.md requires of a finished
+    # document. Checking only the default mode here would let the shipped
+    # artifact lose its Verification section without the suite noticing -- the
+    # second pass exists precisely to catch that, so this is where to use it.
+    print("\nthe shipped document (--final):")
+    rc, out = run(os.path.join(REPO, "PERSONAS.md"), "--final")
+    report(rc == 0, "PERSONAS.md", "" if rc == 0
+           else (failures_in(out).splitlines() or [""])[0].strip()[:90])
 
     # No fixture may sit on disk unaccounted for. Without this, a case can be
     # orphaned by a rename and nobody notices it stopped running.
