@@ -73,6 +73,12 @@ class Report:
         self.notes.append(m)
 
 
+# Evidence marks are a closed set. An open one lets "probably", "strong" and
+# "high-confidence" accumulate until the column sorts nothing, which is the
+# failure the frequency vocabulary already exists to prevent.
+EVIDENCE = ("observed", "inferred", "invented")
+
+
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
     """Pull the checkable figures out of a Pre-registered or Reckoning line.
 
@@ -169,6 +175,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     roster: dict[str, int] = {}
     items: list[Item] = []
     primitives: dict[str, list[int]] = {}
+    evidence: dict[str, tuple] = {}
     claims: dict = {}
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
@@ -232,6 +239,10 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     name = f"{name} (duplicate #{dupes_seen.count(name) + 1})"
                 primitives[name] = []
                 slugs["primitive"][name] = m.group(2)
+                # "*(observed: issue #12)*" or "*(invented)*", after the slug.
+                em = re.search(r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", raw)
+                if em:
+                    evidence[name] = (em.group(1).lower(), (em.group(2) or "").strip())
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -327,6 +338,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
 
     claims["malformed_rows"] = malformed
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
+    claims["evidence"] = evidence
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
 
@@ -721,6 +733,43 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "no capability primitives parsed — the synthesis is the deliverable, and a document "
             "without it is a list of asks rather than a finding"
         )
+    # Evidence annotation. The rule that makes this safe to add: it gates
+    # well-formedness, never kind. An `invented` primitive is never penalised --
+    # the frontier is invented by construction and holds the best findings on
+    # most pages -- but a claim of `observed` with no source is worse than an
+    # honest `invented`, because it cannot be audited and reads as stronger.
+    if primitives:
+        marks = claims.get("evidence") or {}
+        # One message for the whole section, not one per primitive: a document
+        # written before evidence marks existed is missing all of them, and ten
+        # copies of the same sentence bury every other finding on the page.
+        unmarked = [n for n in primitives if n not in marks]
+        if unmarked:
+            msg = (f"{len(unmarked)} primitive(s) carry no evidence mark: "
+                   f"{', '.join(repr(n) for n in unmarked[:3])}"
+                   f"{', ...' if len(unmarked) > 3 else ''}. One of "
+                   f"{', '.join(EVIDENCE)} after the slug says whether the demand behind it was "
+                   "seen, reasoned to, or imagined; without it the reader cannot tell an "
+                   "issue-tracker finding from a plausible guess.")
+            rep.fail(msg) if modern else rep.warn(msg)
+        for name in primitives:
+            got = marks.get(name)
+            if not got:
+                continue
+            mark, source = got
+            if mark not in EVIDENCE:
+                rep.fail(
+                    f"primitive {name!r} is marked {mark!r}, which is not one of "
+                    f"{', '.join(EVIDENCE)}. An open vocabulary of confidence words sorts "
+                    "nothing once it has grown."
+                )
+            elif mark in ("observed", "inferred") and not is_substantive(source):
+                rep.fail(
+                    f"primitive {name!r} is marked {mark!r} but names no source. Evidence that "
+                    "cannot be looked up is a stronger claim than 'invented' with none of the "
+                    "backing; write the issue, transcript or document it came from."
+                )
+
     if primitives:
         uncited = [p for p, ns in primitives.items() if not ns]
         if uncited:

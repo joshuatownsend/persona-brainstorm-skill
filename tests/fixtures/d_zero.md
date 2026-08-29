@@ -253,33 +253,33 @@ recorded above.
 The items are evidence; these are the deliverable. Each is a capability the method would need,
 derived from the items demanding it — not a feature name.
 
-1. **Self-assessment the executor cannot fake** `self-assessment` — a way for the method to tell the agent *and* the
+1. **Self-assessment the executor cannot fake** `self-assessment` *(observed: Caveat 1 in this document's appendix)* — a way for the method to tell the agent *and* the
    reader that this run under-reached, went generic, or was too thin to support its own output.
    → items **13, 16, 19, 21, 24, 27, 44, 54, 56**. Demanded by five unrelated personas — the solo
    maintainer, the agent, the consultant, the platform team, and the auditor — who share nothing
    else. It is also the caveat the supply-side inventory found independently: every quality gate in
    the method today is advisory prose addressed to the same model being graded. Both lenses landed
    on the same hole from opposite directions, which is the strongest signal on this page.
-2. **Provenance per claim** `provenance-per-claim` — every persona and item labeled observed / inferred / invented, with
+2. **Provenance per claim** `provenance-per-claim` *(observed: Caveat 3 in this document's appendix)* — every persona and item labeled observed / inferred / invented, with
    its source. → items **21, 22, 28, 41, 46, 53, 59, 60**.
-3. **Run identity and diffability** `run-identity` — stable IDs, a pinned method version, and a meaningful diff
+3. **Run identity and diffability** `run-identity` *(inferred: the frontier miscount recorded in the disclosures)* — stable IDs, a pinned method version, and a meaningful diff
    between two runs of the same subject. → items **4, 25, 39, 50, 51, 53, 55**.
-4. **Deliberate failure injection** `failure-injection` — a corpus of subjects on which the method reliably produces
+4. **Deliberate failure injection** `failure-injection` *(invented)* — a corpus of subjects on which the method reliably produces
    plausible hollow output, so its blind spot can be observed rather than argued about.
    → items **16, 20, 27, 44, 59**. The purest frontier cluster; entirely unserved.
-5. **Counterfactual demand** `counterfactual-demand` — the picture under a different assumption: wrong primary user, a
+5. **Counterfactual demand** `counterfactual-demand` *(invented)* — the picture under a different assumption: wrong primary user, a
    competitor as subject, what single input would most change the answer. → items **3, 6, 11, 32,
    43, 49**.
-6. **Absence detection** `absence-detection` — machinery for finding who is *not* on the list: churned users, users
+6. **Absence detection** `absence-detection` *(invented)* — machinery for finding who is *not* on the list: churned users, users
    forced in by migration, unrepresented classes, the users of year three. → items **29, 34, 56,
    57, 58**.
-7. **Consequence-weighted ranking** `consequence-weighted-ranking` — sorting by what an answer changes (data model, reversibility,
+7. **Consequence-weighted ranking** `consequence-weighted-ranking` *(invented)* — sorting by what an answer changes (data model, reversibility,
    regret) rather than by how many people want it. → items **5, 6, 30, 35, 40**.
-8. **External grounding** `external-grounding` — prior art, who built this before, what the ecosystem will cover anyway.
+8. **External grounding** `external-grounding` *(invented)* — prior art, who built this before, what the ecosystem will cover anyway.
    → items **31, 35, 44, 45, 52**.
-9. **Output shaping** `output-shaping` — the same evidence rendered as landing-page copy, a slide, a customer-safe
+9. **Output shaping** `output-shaping` *(invented)* — the same evidence rendered as landing-page copy, a slide, a customer-safe
    subset, a structured feed, a twenty-minute version. → items **1, 8, 10, 37, 40, 41, 53**.
-10. **Cross-run aggregation** `cross-run-aggregation` — many subjects at once, and the needs common to all of them.
+10. **Cross-run aggregation** `cross-run-aggregation` *(invented)* — many subjects at once, and the needs common to all of them.
     → items **11, 52, 55**.
 
 **Reckoning:** predicted 0 ⚡, actual 26 ⚡ — under-predicted the frontier

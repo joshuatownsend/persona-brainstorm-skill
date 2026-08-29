@@ -81,7 +81,8 @@ value for this subject>, not fairness.
 The items are evidence; these are the deliverable. Each primitive is a capability <the subject>
 would need, derived from the items that demand it.
 
-1. **<Primitive name>** `<kebab-slug>` — <one line on what it is, in plain terms>.
+1. **<Primitive name>** `<kebab-slug>` *(observed: <where it was seen> | inferred: <what it was
+   reasoned from> | invented)* — <one line on what it is, in plain terms>.
    → items <n, n, n>. <Why it matters; note if several unrelated personas demand it.>
 
 ### If you only ask for three

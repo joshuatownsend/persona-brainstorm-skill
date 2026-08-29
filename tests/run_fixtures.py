@@ -164,6 +164,35 @@ MUTATIONS = [
      "no canonical tally line"),
     ("tally-duplicated", "d_ok.md", lambda t: twice(t, TALLY),
      "2 canonical tally lines"),
+
+    # -- evidence marks: well-formedness is gated, the kind never is ---------
+    ("evidence-mark-missing", "d_ok.md",
+     lambda t: swap(t, "`cross-run-aggregation` *(invented)*", "`cross-run-aggregation`"),
+     "carry no evidence mark"),
+    ("evidence-mark-off-vocabulary", "d_ok.md",
+     lambda t: swap(t, "`cross-run-aggregation` *(invented)*",
+                    "`cross-run-aggregation` *(high-confidence)*"),
+     "not one of"),
+    ("evidence-observed-without-source", "d_ok.md",
+     lambda t: swap(t, "`self-assessment` *(observed: Caveat 1 in this document's appendix)*",
+                    "`self-assessment` *(observed)*"),
+     "names no source"),
+    ("evidence-inferred-without-source", "d_ok.md",
+     lambda t: swap(t, "`run-identity` *(inferred: the frontier miscount recorded in the "
+                       "disclosures)*", "`run-identity` *(inferred: TBD)*"),
+     "names no source"),
+]
+
+# ---------------------------------------------------------------------------
+# Mutations that must still PASS. Evidence annotation is only safe to require
+# because it never penalises a finding for being imagined -- the frontier is
+# invented by construction, and a gate on kind would quietly delete it. That
+# property is the one most worth asserting, so it is asserted.
+# ---------------------------------------------------------------------------
+POSITIVE_MUTATIONS = [
+    ("evidence-all-invented-passes", "d_ok.md",
+     lambda t: swap(swap(t, "*(observed: Caveat 1 in this document's appendix)*", "*(invented)*"),
+                    "*(observed: Caveat 3 in this document's appendix)*", "*(invented)*")),
 ]
 
 # ---------------------------------------------------------------------------
@@ -338,6 +367,20 @@ def main():
                 report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
             else:
                 report(True, name)
+
+        print("\ngenerated positives (a mutation that must NOT be penalised):")
+        for name, base, mutate in POSITIVE_MUTATIONS:
+            try:
+                text = mutate(load(base))
+            except AssertionError as exc:
+                report(False, name, f"mutation no longer applies to {base}: {exc}")
+                continue
+            path = os.path.join(tmp, name + ".md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            rc, out = run(path)
+            first = next((l for l in out.splitlines() if "[FAIL]" in l), "")
+            report(rc == 0, name, "" if rc == 0 else first.strip()[:90])
 
     print("\nstatic negatives:")
     for name, needle in STATICS:

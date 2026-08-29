@@ -479,6 +479,28 @@ primitive must cite the item numbers behind it; that citation is what makes the 
 rather than assertive. Primitives demanded by several unrelated personas are the strongest signal
 on the page — say so when you spot one.
 
+**Mark each primitive `observed`, `inferred` or `invented`.** *Observed* means the demand is
+traceable to something that exists — an issue, a transcript, a log, a document — and you name it.
+*Inferred* means you reasoned to it from something real, one step removed, and you name that too.
+*Invented* means it is plausible reasoning with no artifact behind it.
+
+This is the **Frequencies:** rule applied one level down: a value like "weekly" reads as
+measurement and is usually an estimate, so the document has to say which. A primitive reads as a
+finding whether it came from forty support tickets or from an afternoon's imagination.
+
+Two things make the mark safe rather than punitive:
+
+- **It annotates. It never gates.** An `invented` primitive is not weaker for being marked. The
+  frontier is invented by construction and is usually where the best findings are, and a method
+  that penalised the mark would simply stop producing them.
+- **What is checked is honesty, not kind.** `observed` and `inferred` must name their source;
+  `invented` needs nothing. An unauditable claim of evidence is worse than an honest `invented`,
+  because it reads as stronger and cannot be checked.
+
+If every primitive on the page comes out `invented`, that is not a failed run — it is a demand-side
+run reporting accurately what it is. Say so in the synthesis rather than hunting for a stronger
+word.
+
 **Write "if you only ask for three."** Name three primitives in priority order with the reasoning
 for the order — highest unique value, largest evidence cluster, cheapest unlock. Forcing a rank is
 what turns a survey into a recommendation, and it's the part a reader will act on. Note any
