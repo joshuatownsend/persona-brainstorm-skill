@@ -1,6 +1,6 @@
 ---
 name: persona-brainstorm
-description: Run an unconstrained, demand-side persona and use-case brainstorm: what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it: "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo — the subject comes from the repo's domain, not its implementation — and against subjects with no repo: a product, service, API, dataset, or team process. Prefer it over an ad-hoc list when the answer is user needs, not features.
+description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. Prefer it over an ad-hoc list when the answer is user needs, not features.
 ---
 
 # Persona Brainstorm
@@ -110,8 +110,11 @@ Establish six things. Ask the user directly; don't guess.
    containing duplicates. Both get fixed in Phase 1.
 
 5. **Whether to run the coverage pass at all**, and at what depth. Offer three:
-   - **Full** — verify what's served today against the source, cite `file:line`, write up any
-     defect you find as its own issue doc. Most expensive, and the pass that finds real bugs — in
+   - **Full** — verify what's served today against the evidence and cite it **in whatever form
+     the lane provides**: `file:line` for code, the document and section for a written process,
+     the named report, dashboard, or role for a human lane. Write up any defect you find as its
+     own issue doc. Never invent a citation to satisfy the format — if a lane cannot actually be
+     verified, mark it Light and say so. Most expensive, and the pass that finds real bugs — in
      the run this skill came from, it surfaced a security-relevant enforcement gap that no amount
      of doc-reading would have found.
    - **Light** — build the coverage map from manifests, docs, and public surface. Best-effort
@@ -138,13 +141,21 @@ useful argument to have on page one rather than at the end.
 
 | Archetype | Phrase the subject as | Frontier class (⚡) | Reach-further axes | Discovery |
 |---|---|---|---|---|
-| **Read surface** — API, query tool, MCP server, reporting layer | "a generic read-only interface over \<domain estate\>" | reads that feel like writes: simulation, blast radius, what-if | time ("what was true last Tuesday"), cross-source joins, entitlement, provenance | `references/discovery.md` § Read surface |
+| **Read surface** — query API, MCP server, dashboard, reporting layer | "a generic read-only interface over \<domain estate\>" | reads that feel like writes: simulation, blast radius, what-if | time ("what was true last Tuesday"), cross-source joins, entitlement, provenance | `references/discovery.md` § Read surface |
 | **Library / SDK / framework** | "a library that fully serves \<the job it exists for\>" | migration and failure injection — "what breaks if I upgrade", "make it fail the way prod does" | version skew, error paths, extension points, debuggability, the escape hatch | § Library |
 | **Application / UI product** | "a product that fully serves \<the workflow\>" | the task done *for* you rather than *by* you | degraded and offline states, multi-user collision, recovery from a mistake, handoff between people | § Application |
 | **Data platform / warehouse / dataset** | "a store that can answer anything about \<domain\>" | counterfactual and lineage-aware answers — "where did this number come from, and what if the input were different" | freshness, grain mismatch, backfill and restatement, access scope | § Data platform |
 | **Infrastructure / service / platform** | "a platform that fully operates \<the estate\>" | pre-flight and rollback reasoning — "prove this is safe before I do it" | failure modes, capacity, cost attribution, audit and who-did-what | § Infrastructure |
 | **Process / non-software** | "an ideal way to \<the outcome\>" | the decision made without convening anyone | escalation, exception handling, institutional memory, the case nobody wrote down | § Process — the lanes are human; skip Phase 3 only if there is genuinely nothing to inspect |
 | **None of these** | derive it — see below | derive it | derive it | write the recipe; see `references/discovery.md` § Contract |
+
+**A subject whose value includes changing something is not the Read-surface row.** That row is for
+subjects whose value is *answering* — its phrasing and its frontier are both read-only, so picking
+it for a payments API, a provisioning platform, or a deployment tool deletes the core asks (create,
+refund, reverse, roll out) before the brainstorm starts. "API" alone does not put a subject there.
+Use the **Infrastructure / service / platform** row, whose frontier — pre-flight and rollback
+reasoning — is already write-shaped, or derive your own below. The read-only constraint is a
+deliberate scope choice made in the frame, never a default inherited from the word "API".
 
 **If no row fits, derive the four columns rather than forcing a fit.** The columns are not
 arbitrary; each answers a fixed question, and any subject can answer them:
