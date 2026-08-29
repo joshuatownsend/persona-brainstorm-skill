@@ -70,15 +70,15 @@ Item counts are deliberately uneven — they track how often each persona is pre
 much their asks carry, not fairness. P1 and P2 hold 28 of 60 because they are present at every
 single invocation; P3 asks seven enormous questions a year.
 
-| # | Persona | Why they're here | Items |
-|---|---|---|---|
-| **P1** | Solo maintainer / indie builder | Highest volume, lowest research expertise. No PM exists, so they run discovery on their own work, often while mid-build and tired. Needs the method to substitute for training they never had. | 13 |
-| **P2** | **The AI agent executing the method** | The subject is agent-executed by definition, so this persona is present at every invocation. Generates asks no human will: how do I detect that I under-reached, what do I do when the user contradicts what I observe, am I permitted to skip a step. | 15 |
-| **P3** | Staff engineer scoping a system that doesn't exist yet | Rare-but-high-stakes. A few greenfield architecture bets a year, each with enormous consequences, slow feedback, and no artifact to inspect. | 7 |
-| **P4** | PM defending a roadmap | Non-hands-on decision maker — never runs it, only consumes it, and must justify the ranking to people who weren't in the room. Cares about provenance and auditability, which no operator persona asks for. | 8 |
-| **P5** | Consultant working in a client's domain | The inverse of P1: research skill, zero domain knowledge, two weeks, and a client who will catch any error of fact. The closest human analogue to P2's predicament. | 6 |
-| **P6** | Platform team running it across many subjects | The automation consumer — forty internal services, or a re-run per release. Needs determinism, diffability, and machine-readable output. Nobody else asks for any of it. | 6 |
-| **P7** | Representation auditor | Reviews whether the persona set itself was complete — whether whole classes of user were silently omitted. Asks about the method's blind spots rather than the product's. | 5 |
+| # | Slug | Persona | Why they're here | Items |
+|---|---|---|---|---|
+| **P1** | `solo-maintainer` | Solo maintainer / indie builder | Highest volume, lowest research expertise. No PM exists, so they run discovery on their own work, often while mid-build and tired. Needs the method to substitute for training they never had. | 13 |
+| **P2** | `executing-agent` | **The AI agent executing the method** | The subject is agent-executed by definition, so this persona is present at every invocation. Generates asks no human will: how do I detect that I under-reached, what do I do when the user contradicts what I observe, am I permitted to skip a step. | 15 |
+| **P3** | `greenfield-architect` | Staff engineer scoping a system that doesn't exist yet | Rare-but-high-stakes. A few greenfield architecture bets a year, each with enormous consequences, slow feedback, and no artifact to inspect. | 7 |
+| **P4** | `roadmap-defender` | PM defending a roadmap | Non-hands-on decision maker — never runs it, only consumes it, and must justify the ranking to people who weren't in the room. Cares about provenance and auditability, which no operator persona asks for. | 8 |
+| **P5** | `domain-outsider-consultant` | Consultant working in a client's domain | The inverse of P1: research skill, zero domain knowledge, two weeks, and a client who will catch any error of fact. The closest human analogue to P2's predicament. | 6 |
+| **P6** | `platform-operator` | Platform team running it across many subjects | The automation consumer — forty internal services, or a re-run per release. Needs determinism, diffability, and machine-readable output. Nobody else asks for any of it. | 6 |
+| **P7** | `representation-auditor` | Representation auditor | Reviews whether the persona set itself was complete — whether whole classes of user were silently omitted. Asks about the method's blind spots rather than the product's. | 5 |
 
 ---
 
@@ -98,7 +98,7 @@ single invocation; P3 asks seven enormous questions a year.
 | 8 | "Don't give me personas. Give me the four sentences I should put on the landing page." | What copy ships tomorrow | monthly | | ○ |
 | 9 | "Which of these would show up as a support email, and which would show up as a silent uninstall?" | Where to spend limited instrumentation and where to spend limited care | monthly | | ○ |
 | 10 | "I'm tired. Just tell me what to do next and hide the reasoning unless I ask." | Whether the session ends in an action or in another document to read later | weekly | | ◐ |
-| 11 | "Run this on my competitor instead of me and tell me who they're serving that I'm not." | Whether there's an underserved flank worth aiming at | quarterly | | ✅ |
+| 11 | "Run this on my competitor instead of me and tell me who they're serving that I'm not." | Whether there's an underserved flank worth aiming at | quarterly | | ○ |
 | 12 | "Keep this to what a one-person team can actually serve — if a need requires a support org, say so up front instead of at the end." | Whether a need is even in scope for a solo shop before he emotionally commits | weekly | | ○ |
 | 13 | "Last time you gave me generic startup advice dressed as user research. How do I stop that from happening again without reading every line?" | Whether to keep using the method at all | monthly | ⚡ | ◐ |
 
@@ -130,7 +130,7 @@ single invocation; P3 asks seven enormous questions a year.
 | 30 | "Which of these needs, if real, changes the data model? Sort by that, not by how many people want it." | Which decisions are cheap now and catastrophic later | quarterly | ⚡ | ◐ |
 | 31 | "Who already built this and what did their user set turn out to be after two years in production?" | Build versus buy versus adopt the existing thing | quarterly | ⚡ | ○ |
 | 32 | "Give me the demand picture under the assumption we're wrong about the primary user — who's the second-most-likely primary?" | Whether the design survives being wrong about its main audience | quarterly | | ○ |
-| 33 | "Which needs here are actually the same need wearing two different job titles?" | Whether to build two subsystems or one with a flag | quarterly | | ✅ |
+| 33 | "Which needs here are actually the same need wearing two different job titles?" | Whether to build two subsystems or one with a flag | quarterly | | ◐ |
 | 34 | "I need the list of users who will be forced onto this by a migration, not the ones who choose it." | Whether the migration path is a feature or an afterthought | quarterly | ⚡ | ◐ |
 | 35 | "Tell me which of these needs will be served by something else entirely within eighteen months so I don't build it." | Whether to scope a capability in or bet on the ecosystem covering it | annually | | ○ |
 
@@ -173,15 +173,19 @@ single invocation; P3 asks seven enormous questions a year.
 
 | # | The ask, in their words | Why — the decision it feeds | Freq | ⚡ | Cov |
 |---|---|---|---|---|---|
-| 56 | "Who is missing from this list, and don't tell me 'no one' — tell me the process by which you'd know." | Whether the persona set can be signed off or has to go back | per-run | ⚡ | ✅ |
+| 56 | "Who is missing from this list, and don't tell me 'no one' — tell me the process by which you'd know." | Whether the persona set can be signed off or has to go back | per-run | ⚡ | ◐ |
 | 57 | "Where are the people who tried this and left? They don't file tickets and they don't answer surveys." | Whether the roadmap is optimizing for survivors and calling it demand | per-run | ⚡ | ○ |
 | 58 | "Show me the version of each persona who's using a screen reader, on a bad connection, in a language this wasn't written in." | Whether accessibility and localization are requirements or a later ticket | per-run | | ○ |
 | 59 | "You generated these from text written mostly by and about a certain kind of user. Name that skew out loud." | Whether to weight the output down or commission real research to correct it | per-run | ⚡ | ○ |
 | 60 | "Which of these personas did you include because they're real, and which because leaving them out would look bad?" | Whether the persona set is honest or performatively inclusive, which changes what gets funded | per-run | | ✅ |
 
-**Tally: 10 ✅ · 24 ◐ · 26 ○.** Seventeen percent of what these seven people would actually ask is
-served well today. **The ratio is the finding, not the item count** — and it runs worse than the
-skill's own stated expectation of "half to two-thirds partly served or impossible."
+**Tally:** 7 ✅ · 26 ◐ · 27 ○ · 26 ⚡
+
+Twelve percent of what these seven people would actually ask is served well today. **The ratio is
+the finding, not the item count** — though see Verification below: the grading was done by the
+contaminated operator, who had stated in advance that a high ratio would mean the run had failed,
+which is not a neutral instrument. Three marks originally scored ✅ were corrected to ◐ or ○ after
+the Phase 7b read found them contradicting the document's own text.
 
 **The frontier is worse.** Of the 26 ⚡ items, 3 are ✅, 8 are ◐, and **15 are ○** — 58% of the
 hardest, highest-value class is impossible today. The Library/SDK archetype predicted this shape
@@ -190,47 +194,82 @@ before a single item was graded: its frontier is migration and failure injection
 
 ---
 
+## Verification (Phase 7)
+
+**7a — the checker.** `python scripts/verify.py PERSONAS.md` passes. Numbering is continuous 1–60,
+per-persona counts match the roster, the frontier count is 26, and the coverage tally matches the
+table. The arithmetic in this document is sound; what follows is about everything arithmetic cannot
+reach.
+
+**7b — adversarial read** by an agent given only this file and five fixed questions, with no access
+to the skill that produced it. Its findings, and what was done about each:
+
+| Finding | Verdict |
+|---|---|
+| **The "strongest signal" is circular.** Primitive 1 claims the demand-side items and the supply-side inventory converged "from opposite directions." They did not: the generating agent was handed the archetype *and* its frontier class ("show me this method's blind spot before I trust it"), so blind-spot items were seeded, not discovered. Same defect in "the archetype predicted this shape before a single item was graded." | **Accepted.** Primitive 1's independent-corroboration claim is withdrawn — see the note under it. This is the most serious finding on the page and it invalidates the document's headline argument for its own top recommendation. |
+| **Items 11, 33 and 56 were graded ✅ against the document's own text.** 56 claims a process for knowing who is missing, while the disclosure says there is no way to know. 33 claims merged-duplicate detection is served, and this document failed exactly that (P2/P5). 11's ask is comparative, and one-subject-per-run forbids the comparison. | **Accepted.** Re-graded ○, ◐, ◐. Tally corrected from 10/24/26 to 7/26/27. |
+| **P2 and P5 are near-duplicates** — 44≈27, 47≈17, 46≈22/28, 45≈15 — while the document defends *not* merging P1 and P5 at length. P7 is also three-fifths P2. Strip the labels and there are roughly four askers, not seven. | **Accepted, not fixed.** Correcting it means re-running Phases 1–2, not editing. Recorded as the roster's principal defect. The persona table's own phrase "the closest human analogue to P2's predicament" was the tell. |
+| **The P4/P5 willingness-to-pay claim borrows other personas' items** — only 4 of the 13 belong to them, and the single ✅ is P7's. | **Accepted.** Observation rewritten; the budget premise was unevidenced and is withdrawn. |
+| **Grading was not blinded.** Generation was blinded; grading was done by the contaminated operator, who had stated in advance that a high coverage ratio would mean failure. | **Accepted.** Noted at the tally. The blinding was applied to the half where bias bites least. |
+| **Roughly a third of items are archetype or agent-frame boilerplate** — all six P6 items, plus 25, 26, 50–55, 1, 10, 13, 18, 23, 41 — that would read identically for any generative pipeline. Only ~10 are subject-specific. | **Partly accepted.** The Library/SDK archetype legitimately produces version-and-failure asks, so their presence is not itself the error; treating their unservedness as a *discovery* finding is. P6's block says more about markdown-emitting skills than about demand. |
+| **~1/5 of "Why" cells restate the ask** — concentrated in P2, whose asks are already phrased as decisions (14, 15, 18, 22, 23, 24, 26), plus 3, 28, 45, 46, 47, 55. Item 45 names no decision at all. | **Accepted, not fixed.** Note that 7a's restatement check did *not* catch these: it compares strings, and these are semantic restatements in different words. A real limitation of the countable half. |
+| **There is no demand-side evidence in a demand-side document.** No interviews, tickets, reviews, search data, churn logs. Sixty invented quotes are stimulus, not findings, and the Freq column is fabricated — "weekly", "quarterly" are empirical claims with no source. | **Accepted as the method's central limitation**, not this run's. It applies to every run of this skill and belongs in the skill, not here. |
+| **Personas mix three incompatible axes** — five job roles, one piece of software (P2), one governance function (P7) — so the set cannot be checked for completeness, which is the job P7 was added to do. | **Accepted.** Real and unaddressed. |
+| **Missing the genre's most useful column: the current alternative** — what the person does *today* instead. Coverage is supply-side introspection; the existing workaround is the demand-side measure, and it distinguishes an opportunity from a non-problem. | **Accepted.** The single most actionable suggestion in the review. |
+| **Nothing was falsifiable.** Every result was pre-interpreted as confirmation, including the disclosed miscount. No statement, before the run, of what would have counted as the frame being wrong. | **Accepted.** The strongest of the six answers and the hardest to fix. |
+
+**Disputed:** the reviewer marks items 14, 15, 36, 48 as generic "any-deliverable" asks. They are
+general, but the frame explicitly constrains to an agent-executed method with no domain expertise,
+which makes orientation-under-ignorance a legitimate first-class concern rather than filler. The
+reviewer also reads "83% not served well" as a category error given the list was built to be
+unservable; the method's stated expectation is that half to two-thirds go unserved, so a high ratio
+is anticipated — but the criticism that the grader had pre-registered a preference stands, and is
+recorded above.
+
+---
+
 ## What the 60 imply: 10 capability primitives
 
 The items are evidence; these are the deliverable. Each is a capability the method would need,
 derived from the items demanding it — not a feature name.
 
-1. **Self-assessment the executor cannot fake** — a way for the method to tell the agent *and* the
+1. **Self-assessment the executor cannot fake** `self-assessment` — a way for the method to tell the agent *and* the
    reader that this run under-reached, went generic, or was too thin to support its own output.
    → items **13, 16, 19, 21, 24, 27, 44, 54, 56**. Demanded by five unrelated personas — the solo
    maintainer, the agent, the consultant, the platform team, and the auditor — who share nothing
    else. It is also the caveat the supply-side inventory found independently: every quality gate in
    the method today is advisory prose addressed to the same model being graded. Both lenses landed
    on the same hole from opposite directions, which is the strongest signal on this page.
-2. **Provenance per claim** — every persona and item labeled observed / inferred / invented, with
+2. **Provenance per claim** `provenance-per-claim` — every persona and item labeled observed / inferred / invented, with
    its source. → items **21, 22, 28, 41, 46, 53, 59, 60**.
-3. **Run identity and diffability** — stable IDs, a pinned method version, and a meaningful diff
+3. **Run identity and diffability** `run-identity` — stable IDs, a pinned method version, and a meaningful diff
    between two runs of the same subject. → items **4, 25, 39, 50, 51, 53, 55**.
-4. **Deliberate failure injection** — a corpus of subjects on which the method reliably produces
+4. **Deliberate failure injection** `failure-injection` — a corpus of subjects on which the method reliably produces
    plausible hollow output, so its blind spot can be observed rather than argued about.
    → items **16, 20, 27, 44, 59**. The purest frontier cluster; entirely unserved.
-5. **Counterfactual demand** — the picture under a different assumption: wrong primary user, a
+5. **Counterfactual demand** `counterfactual-demand` — the picture under a different assumption: wrong primary user, a
    competitor as subject, what single input would most change the answer. → items **3, 6, 11, 32,
    43, 49**.
-6. **Absence detection** — machinery for finding who is *not* on the list: churned users, users
+6. **Absence detection** `absence-detection` — machinery for finding who is *not* on the list: churned users, users
    forced in by migration, unrepresented classes, the users of year three. → items **29, 34, 56,
    57, 58**.
-7. **Consequence-weighted ranking** — sorting by what an answer changes (data model, reversibility,
+7. **Consequence-weighted ranking** `consequence-weighted-ranking` — sorting by what an answer changes (data model, reversibility,
    regret) rather than by how many people want it. → items **5, 6, 30, 35, 40**.
-8. **External grounding** — prior art, who built this before, what the ecosystem will cover anyway.
+8. **External grounding** `external-grounding` — prior art, who built this before, what the ecosystem will cover anyway.
    → items **31, 35, 44, 45, 52**.
-9. **Output shaping** — the same evidence rendered as landing-page copy, a slide, a customer-safe
+9. **Output shaping** `output-shaping` — the same evidence rendered as landing-page copy, a slide, a customer-safe
    subset, a structured feed, a twenty-minute version. → items **1, 8, 10, 37, 40, 41, 53**.
-10. **Cross-run aggregation** — many subjects at once, and the needs common to all of them.
+10. **Cross-run aggregation** `cross-run-aggregation` — many subjects at once, and the needs common to all of them.
     → items **11, 52, 55**.
 
 ### If you only ask for three
 
 **Self-assessment**, then **provenance**, then **run identity** — in that order.
 
-*Self-assessment* first because it has both the largest evidence cluster (nine items, five
-unrelated personas) and the only independent corroboration on the page: the supply-side inventory
-found the same gap without reference to the items. *Provenance* second because it is by far the
+*Self-assessment* first because it has the largest evidence cluster on the page — nine items across
+five unrelated personas. An earlier draft also claimed independent corroboration from the
+supply-side inventory; **that claim is withdrawn as circular** (see Verification), and the ranking
+now rests on cluster size alone. *Provenance* second because it is by far the
 cheapest — it is a column and a labeling discipline, not a system — and because self-assessment is
 untrustworthy without it: a method that grades itself must first be able to say where each claim
 came from. *Run identity* third because it unlocks P6 entirely, the only persona with zero ✅ rows,
@@ -253,10 +292,13 @@ classes nobody represented. It is the cheapest real improvement identified by th
   one-subject-per-run rule. That rule is well-reasoned for document quality and directly hostile to
   the only persona who would run this at scale. Someone has to decide which of those two goods
   wins; nothing in the method acknowledges the trade exists.
-- **Highest willingness to pay sits on the worst-covered cluster.** The consultant and the PM
-  (P4, P5) are the two personas with actual budget, and their asks concentrate in provenance,
-  defensibility, and confidence labeling — clusters 2 and 9, which together hold one ✅ across
-  thirteen items. The people most able to pay are asking for the things least available.
+- **Provenance and output-shaping are the worst-covered clusters.** Clusters 2 and 9 together hold
+  thirteen items and a single ✅ — item 60, which belongs to P7. An earlier draft of this line
+  claimed those clusters were where "the two personas with actual budget" concentrated; that was
+  wrong twice over. Only four of the thirteen items (37, 40, 41, 46) belong to P4 or P5, and the
+  budget premise was asserted with nothing behind it — a platform team running forty services
+  plausibly has more budget than a lone consultant. The cluster is genuinely the worst-covered;
+  who wants it most is not established by anything in this document.
 
 ---
 
