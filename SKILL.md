@@ -57,21 +57,35 @@ operator of this skill is someone who built the subject, and cannot un-see what 
 This is the common case, not the edge case. Don't pretend otherwise and don't skip the exercise;
 do one of these, and say in the document which:
 
-- **Generate the items in a separate agent.** Give it the subject, the frame, the archetype with
-  its frontier class and reach axes, the roster with per-persona budgets, and **the whole of Phase
-  2 restated in the prompt** — item schema, frequency vocabulary, the ⚡ rule, continuous
-  numbering, the no-padding rule. Then forbid it from reading any file.
+- **Derive the roster and the items in separate agents — two calls, not one.** A roster you derived
+  yourself carries the contamination at its most consequential point: personas that mirror the
+  surface you already know, and no trace of the people it doesn't serve. Handing that roster to a
+  blind generator locks the omission in, because a generator only writes for the roles it is given.
+  Blinding Phase 2 while Phase 1 stays contaminated protects the cheap half.
+
+  **Call one — the roster.** Give it the subject, the frame, the archetype, any seed personas the
+  *user* supplied, and Phase 1's derivation checklist. Ask it both to derive the roster and to say
+  what the seed list was missing. Then run Phase 1's approval gate unchanged: put that roster in
+  front of the user, who is the one participant with real domain knowledge and no stake in the
+  implementation.
+
+  **Call two — the items.** Give it the approved roster with budgets, plus **the whole of Phase 2
+  restated in the prompt** — item schema, frequency vocabulary, the ⚡ rule, continuous numbering,
+  the no-padding rule. Forbid both calls from reading any file.
 
   **Passing the method is not contamination; passing the inventory is.** That distinction is what
   makes this work, and it matters most where the two live in one document: when the subject *is*
   the method, "don't read the implementation" and "read the protocol" point at the same file, so
-  the protocol has to travel in the prompt rather than by reference. An agent handed four inputs
-  and a prohibition cannot produce a conforming item set — it will hand back something shaped like
-  an answer.
+  the protocol has to travel in the prompt rather than by reference. An agent handed a few inputs
+  and a prohibition cannot produce a conforming roster or item set — it will hand back something
+  shaped like an answer.
 
-  This restores the protection for the cost of one subagent call, and has a side benefit: Phase 3
-  can then run *concurrently* with Phase 2 instead of after it, because a blind generator cannot be
+  Phase 3 can still run *concurrently* with Phases 1–2, because a blind generator cannot be
   contaminated by an inventory built beside it.
+
+  **This pushes the contamination back; it does not remove it.** You still wrote the frame, and the
+  frame shapes everything downstream. Say that in the document rather than claiming the run was
+  clean.
 - **Disclose the contamination** at the top of the document, and treat every item that maps neatly
   onto an existing capability as suspect rather than as confirmation.
 

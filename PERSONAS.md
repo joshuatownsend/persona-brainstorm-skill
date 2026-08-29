@@ -42,6 +42,15 @@ given only the subject, frame, archetype, and persona roster, with an explicit p
 reading any file. It made zero tool calls. The coverage pass was then run by the contaminated
 operator, where knowing the implementation is not a bias but the job.
 
+**The roster was not generated blind, and that is the weaker half of this run.** All seven personas
+were derived by the contaminated operator; the only check on them was the user's approval at the
+Phase 1 gate. That gate did real work — it added P7, the auditor, which went on to produce this
+run's most actionable finding — but a generator only writes items for the roles it is handed, so
+any persona nobody thought to name is absent from this document along with every ask they would
+have made, and there is no way from inside the document to know which. Blinding Phase 2 while
+Phase 1 stayed contaminated protected the cheaper half. The frame was operator-written too, and it
+shapes everything downstream.
+
 **One number in this document was self-reported wrong.** The generating agent reported "⚡ count:
 21" for output that actually carries 26. It miscounted its own work by 24% while being asked to
 count nothing else. Item 24 is about exactly this, and no part of the method caught it — the
