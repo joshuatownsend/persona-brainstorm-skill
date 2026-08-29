@@ -18,6 +18,7 @@ base rather than one edit per fixture. Static files are kept only where a
 mutation cannot express the defect.
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -365,16 +366,27 @@ def main():
 
     # A vocabulary that has drifted from the run it describes is worse than no
     # vocabulary: it invites reuse of a slug that no longer means what it says.
+    #
+    # Subset, not equality. The vocabulary is meant to grow: primitives.md tells
+    # a later run to mint a new slug when nothing fits, and equality here would
+    # make doing so fail the suite -- or force the historical document to be
+    # rewritten to match, which is the one thing slug discipline forbids. What
+    # still has to hold is the direction that matters: every slug a document
+    # uses must be in the vocabulary, or the name was minted without recording
+    # it and the next run has no way to reuse it.
     print("\nprimitive vocabulary:")
-    import re
-    doc = open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8").read()
-    vocab = open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8").read()
+    with open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8") as fh:
+        doc = fh.read()
+    with open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8") as fh:
+        vocab = fh.read()
     section = doc.split("## What the 60 imply", 1)[-1].split("### If you only ask", 1)[0]
     in_doc = set(re.findall(r"`([a-z0-9-]+)`", section))
-    in_vocab = set(re.findall(r"\| `([a-z0-9-]+)` \|", vocab))
-    report(in_doc == in_vocab, "references/primitives.md matches PERSONAS.md",
-           f"only in document: {sorted(in_doc - in_vocab)}; "
-           f"only in vocabulary: {sorted(in_vocab - in_doc)}" if in_doc != in_vocab else "")
+    # Whitespace around the cell is formatting, not meaning; a reflowed table
+    # must not read as a changed vocabulary.
+    in_vocab = set(re.findall(r"\|\s*`([a-z0-9-]+)`\s*\|", vocab))
+    unrecorded = sorted(in_doc - in_vocab)
+    report(not unrecorded, "every slug PERSONAS.md uses is in references/primitives.md",
+           f"used but not recorded: {unrecorded}" if unrecorded else "")
 
     # No fixture may sit on disk unaccounted for. Without this, a case can be
     # orphaned by a rename and nobody notices it stopped running.
