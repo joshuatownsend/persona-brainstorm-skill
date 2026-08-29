@@ -1,7 +1,7 @@
 # Comparing runs
 
 One subject per run is a rule about **generation**, not about analysis. A document that spans two
-subjects produces personas for neither — that is why Phase 0 forbids it. Nothing stops you reading
+subjects produces personas for neither — that is why Phase 0 forbids it. Nothing stops you from reading
 several finished documents together afterwards, and this file is how.
 
 Two jobs live here, and they are different. **Re-running one subject** asks what changed since last
@@ -37,15 +37,34 @@ Run the whole method again — Phase 0 through 7, a genuinely fresh pass. Do **n
 document to the generating agents; it anchors exactly as an inventory does, and the point of a
 second run is to shed the first one's framing. Compare the finished documents, not the drafts.
 
+**Reconcile the slugs before comparing anything.** A blind agent cannot know what the previous run
+called things, so the same idea will often arrive under a synonym — `provenance-per-claim` one time,
+`claim-provenance` the next. Joining on slugs without reconciling first reports that one vanished
+and another appeared, which is the loudest possible false finding.
+
+Reconciliation happens **after** both documents exist, never in the prompt: put the two slug lists
+side by side, map the pairs that are plainly the same idea, and record the mapping alongside the
+comparison so a later reader can check your judgement. That preserves generation isolation for the
+same reason aggregation does — it operates on finished output, not on the run.
+
 Then report movement in these terms:
 
-- **Personas gained or lost**, by slug. A persona that disappears without the subject changing is
-  usually a roster error in one of the two runs, not a real departure — say which you think it is.
+- **Personas gained or lost**, by reconciled slug. A persona that disappears without the subject
+  changing is usually a roster error in one of the two runs, not a real departure — say which you
+  think it is.
 - **Primitives gained, lost, or renamed.** A rename with the same citations is not a change; a slug
   reused for a different idea is a mistake and will make every future comparison wrong.
-- **Coverage movement per primitive.** This is the number worth having: it says whether shipping
-  actually served the demand you found, and it is the only measurement in this whole method that
-  compares against something other than its own judgement.
+- **Coverage movement per primitive — with a caveat that limits what it can mean.** Two fresh runs
+  sample different asks for the same primitive, so a coverage figure can move because the cohort
+  changed and not because anything shipped. Movement between two independent runs tells you the
+  demand picture shifted; it does **not** measure whether your work served it.
+
+**To measure whether shipping served demand, hold the cohort fixed.** Take the *previous*
+document's items unchanged and run Phases 3–4 against today's artifact — a re-grade, not a
+brainstorm. Same asks, same wording, new coverage marks, so every difference is attributable to the
+subject rather than to the sampling. That is the only comparison in this method that measures
+against something other than its own judgement, and it is worth doing separately from a fresh run
+rather than conflated with one.
 - **What the method did, versus what the world did.** If the skill itself changed between the runs,
   some movement is method drift and some is real. Say which is which, or the reader will assume all
   of it is real. When you cannot tell, say that.

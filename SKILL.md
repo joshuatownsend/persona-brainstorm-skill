@@ -395,8 +395,9 @@ primitive cheap enough to ride along with whatever ships first.
 
 **If other subjects have been run, say which primitives they share.** A primitive demanded by
 several *unrelated* subjects is a platform capability rather than N copies of a feature, and it is
-invisible from inside any single document. `references/cross-run.md` covers the join; the short
-version is that slugs group and unrelatedness weights.
+invisible from inside any single document. `references/cross-run.md` covers it: slugs are the join
+key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
+decides how much the recurrence counts.
 
 **Write two or three observations worth carrying.** The things visible only from the whole page:
 which persona the current framing under-serves, where the clearest whitespace is, which cluster has
