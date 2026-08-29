@@ -291,8 +291,14 @@ Give each persona a one-line justification for being on the page. If you can't w
 **Build the roster on one axis, and name it.** Job roles, or jobs-to-be-done, or relationships to
 the subject — pick one and hold it. A roster mixing axes cannot be checked for completeness, which
 defeats the point of asking who is missing: a set containing four job titles, one piece of
-software, and one review function has no "rest of the set" to reason about. State the axis in the
-document. Where a persona genuinely belongs to a different axis and still earns its place — the
+software, and one review function has no "rest of the set" to reason about. Declare it in the
+document header, beside the coverage key, on a line of exactly this form:
+
+  `**Roster axis:** job role` — or job-to-be-done, or relationship to the subject.
+
+Phase 7's checker reads that line and nowhere else, for the same reason it reads the tally line and
+nowhere else: a claim mentioned in passing further down is not a declaration, and a checker that
+accepts one cannot tell a document that declared its axis from one that merely discussed it. Where a persona genuinely belongs to a different axis and still earns its place — the
 executing agent usually does — say so explicitly rather than letting it pass unremarked.
 
 **Then apply the distinctness test, which is the one Phase 1 has always implied and never
