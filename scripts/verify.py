@@ -252,8 +252,16 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     if re.match(r"\s*\d+\.\s+\*\*", nxt):
                         break
                     entry += " " + nxt.strip()
+                # Only the annotation in its prescribed position counts: after
+                # the slug, before the em dash that opens the description.
+                # Searching the whole entry let a literal example in the prose
+                # -- `*(invented)*` quoted while explaining the notation --
+                # stand in for a mark that was never written.
+                region = re.split(r"\s[—–-]\s", entry[m.end():], maxsplit=1)[0]
+                # and not one quoted as code inside that region either.
+                region = re.sub(r"`[^`]*`", "", region)
                 marks = re.findall(
-                    r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", entry)
+                    r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", region)
                 if len(marks) > 1:
                     # Keeping only the first would let a stale mark sit beside
                     # its replacement and report the document as consistent.
