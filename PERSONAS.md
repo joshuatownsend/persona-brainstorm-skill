@@ -230,6 +230,15 @@ to the skill that produced it. Its findings, and what was done about each:
 | **Missing the genre's most useful column: the current alternative** — what the person does *today* instead. Coverage is supply-side introspection; the existing workaround is the demand-side measure, and it distinguishes an opportunity from a non-problem. | **Accepted.** The single most actionable suggestion in the review. |
 | **Nothing was falsifiable.** Every result was pre-interpreted as confirmation, including the disclosed miscount. No statement, before the run, of what would have counted as the frame being wrong. | **Accepted.** The strongest of the six answers and the hardest to fix. |
 
+**Not pre-registered, and not retrofittable.** This run predates the pre-registration requirement,
+and the requirement is the one thing in this method that cannot be added afterwards: a predicted
+coverage split written now, with the actual split already on the page, is not a prediction. So this
+document has no Reckoning line and cannot honestly acquire one. Which makes its headline number
+weaker than it reads — 7 ✅ of 60 is reported here with no prior against which it could have come
+out surprising, so it measures the operator's framing as much as the subject. A later run of this
+same subject can do better, and the comparison between them will be the first honest measurement
+this repo has.
+
 **Not retrofitted:** this run predates the **Today** column — what each persona does *instead*,
 right now — which is the demand-side measure the 7b read named as the most actionable thing missing.
 Filling sixty values after the fact would mean inventing sixty more unsourced claims, which is the

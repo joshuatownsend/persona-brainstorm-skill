@@ -193,13 +193,23 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             # before the first data table, so a passing mention in later prose —
             # a Verification section discussing the roster axis, say — cannot
             # satisfy a requirement it was never making.
-            for label, key in (("Frequencies", "freq_basis"), ("Roster axis", "axis")):
+            for label, key in (
+                ("Frequencies", "freq_basis"),
+                ("Roster axis", "axis"),
+                ("Pre-registered", "prereg"),
+                ("Load-bearing persona", "loadbearing"),
+            ):
                 m = re.match(rf"\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)", raw.strip())
                 if m and in_header:
                     value = m.group(1).strip().strip("*").strip()
                     claims[key + "_count"] = claims.get(key + "_count", 0) + 1
                     if is_substantive(value):
                         claims[key] = value
+            m = re.match(r"\*{0,2}Reckoning\*{0,2}:\*{0,2}(.*)", raw.strip())
+            if m:
+                claims["reckoning_count"] = claims.get("reckoning_count", 0) + 1
+                if is_substantive(m.group(1)):
+                    claims["reckoning"] = m.group(1).strip()
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
                 claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
@@ -422,13 +432,42 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             "it is the demand-side measure missing from a document that claims to carry it."
         )
 
-    for key, label in (("freq_basis", "Frequencies"), ("axis", "Roster axis")):
+    for key, label, where in (
+        ("freq_basis", "Frequencies", "header"), ("axis", "Roster axis", "header"),
+        ("prereg", "Pre-registered", "header"), ("loadbearing", "Load-bearing persona", "header"),
+        ("reckoning", "Reckoning", "synthesis"),
+    ):
         if claims.get(key + "_count", 0) > 1:
             rep.fail(
-                f"{claims[key + '_count']} **{label}:** declarations in the header. Only the last "
-                "is read, so a contradictory earlier one leaves the document asserting two "
-                "different things while this check reports one."
+                f"{claims[key + '_count']} **{label}:** lines in the {where}. Only the last is "
+                "read, so a contradictory earlier one leaves the document asserting two different "
+                "things while this check reports one."
             )
+        # A line that is present but says nothing is a different fault from an
+        # absent one, and telling someone to add a line they already wrote is a
+        # bad error message.
+        if claims.get(key + "_count") and not claims.get(key):
+            rep.fail(
+                f"**{label}:** is present but declares nothing — a placeholder or an empty value. "
+                "Fill it or remove the line; a label on its own reads as a declaration and is not."
+            )
+    if not claims.get("prereg_count"):
+        rep.warn(
+            "no **Pre-registered:** line. Without a prediction recorded before generation, no "
+            "result from this run can come out surprising, and the coverage ratio reports your "
+            "priors rather than the subject. Required for new documents."
+        )
+    elif not claims.get("reckoning"):
+        rep.fail(
+            "pre-registered but no **Reckoning:** line in the synthesis. A prediction nobody "
+            "returns to is decoration; the reckoning is the half that costs something, including "
+            "when the news is that the prediction held and the run taught you nothing."
+        )
+    if not claims.get("prereg_count") and claims.get("reckoning"):
+        rep.fail(
+            "a **Reckoning:** line with no **Pre-registered:** line to reckon against. A "
+            "prediction recovered after the result is not a prediction."
+        )
     if not claims.get("freq_basis"):
         rep.fail(
             "no **Frequencies:** line with a stated basis, in the header before the persona "
