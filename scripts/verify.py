@@ -148,6 +148,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             #
             #   **Tally:** 10 ✅ · 24 ◐ · 26 ○ · 26 ⚡
             if re.match(r"\*{0,2}Tally\*{0,2}:", raw.strip()):
+                claims["tally_count"] = claims.get("tally_count", 0) + 1
                 claims["tally_seen"] = True
                 m = re.search(r"(\d+)\s*✅.*?(\d+)\s*◐.*?(\d+)\s*○", raw)
                 if m:
@@ -198,6 +199,12 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
         return
     if not roster:
         rep.fail("no persona roster table parsed — item budgets cannot be checked against anything")
+    if claims.get("tally_count", 0) > 1:
+        rep.fail(
+            f"{claims['tally_count']} canonical tally lines. Only the last is validated, so an "
+            "obsolete one left above a corrected one leaves the document asserting two different "
+            "counts while this check reports consistency."
+        )
     if not claims.get("tally_seen"):
         rep.fail(
             "no canonical tally line found. It is the only place a claimed figure may live, so "
@@ -379,12 +386,25 @@ def main() -> int:
     text = open(args.path, encoding="utf-8").read()
     rep = Report()
     check(*parse(text), rep)
-    if args.final and not re.search(r"^#{2,3}\s*Verification", text, re.M):
-        rep.fail(
-            "no Verification section — Phase 7b was skipped or its findings were not recorded. "
-            "An absent verification section reads as a passed one, which is why this is checked "
-            "rather than trusted."
-        )
+    if args.final:
+        m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
+        if not m:
+            rep.fail(
+                "no Verification section — Phase 7b was skipped or its findings were not "
+                "recorded. An absent verification section reads as a passed one, which is why "
+                "this is checked rather than trusted."
+            )
+        else:
+            # A bare heading satisfies a heading check while recording nothing. The
+            # adversarial read answers five questions; require enough substance to
+            # have carried them.
+            body = [ln for ln in m.group(1).splitlines() if ln.strip()]
+            if len(body) < 5:
+                rep.fail(
+                    f"Verification section has {len(body)} non-empty line(s). Phase 7b asks five "
+                    "questions and requires the answers recorded, disagreements included; a "
+                    "heading on its own passes the gate without carrying any of them."
+                )
 
     for m in rep.notes:
         print(f"  ..  {m}")
