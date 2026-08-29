@@ -30,8 +30,12 @@ for _stream in (sys.stdout, sys.stderr):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures")
-VERIFY = os.path.normpath(os.path.join(HERE, os.pardir, "scripts", "verify.py"))
 REPO = os.path.normpath(os.path.join(HERE, os.pardir))
+# The skill ships as a plugin, so everything it needs at runtime lives under
+# skills/<name>/ and travels with it. The suite does not: it is a development
+# artifact and stays at the repo root, which is why it has to reach in.
+SKILL = os.path.join(REPO, "skills", "persona-brainstorm")
+VERIFY = os.path.join(SKILL, "scripts", "verify.py")
 
 
 class BrokenFixture(Exception):
@@ -485,7 +489,7 @@ def main():
     print("\nprimitive vocabulary:")
     with open(os.path.join(REPO, "PERSONAS.md"), encoding="utf-8") as fh:
         doc = fh.read()
-    with open(os.path.join(REPO, "references", "primitives.md"), encoding="utf-8") as fh:
+    with open(os.path.join(SKILL, "references", "primitives.md"), encoding="utf-8") as fh:
         vocab = fh.read()
     # Anchors are asserted, not assumed. Splitting on a missing marker yields
     # the whole document rather than an error, so a renamed heading would leave

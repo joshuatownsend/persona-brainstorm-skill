@@ -1,0 +1,8 @@
+{
+  "name": "persona-brainstorm",
+  "description": "Unconstrained demand-side persona brainstorm: derive the personas, capture what each would really ask if the subject could answer anything, then synthesize the capability primitives and the gaps. Coverage annotates; it never gates.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Josh Townsend"
+  }
+}
