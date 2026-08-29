@@ -139,6 +139,12 @@ Establish six things. Ask the user directly; don't guess.
    **One subject per run.** If the repo holds several (a monorepo, a platform with distinct
    products), pick one. A document spanning two subjects produces personas for neither.
 
+   That constrains **generation, not analysis.** Run the method once per subject and read the
+   finished documents together afterwards — that is how a platform team gets "which need shows up
+   across all forty services" with no single run weakened, and how a re-run of one subject reports
+   what moved. Both are in `references/cross-run.md`, and both depend on the stable slugs Phase 6's
+   template requires.
+
    You may need light orientation to name the domain at all. Keep it tightly bounded, because
    Phase 3's whole protection is that you have not yet seen the surface:
 
@@ -386,6 +392,12 @@ on the page — say so when you spot one.
 for the order — highest unique value, largest evidence cluster, cheapest unlock. Forcing a rank is
 what turns a survey into a recommendation, and it's the part a reader will act on. Note any
 primitive cheap enough to ride along with whatever ships first.
+
+**If other subjects have been run, say which primitives they share.** A primitive demanded by
+several *unrelated* subjects is a platform capability rather than N copies of a feature, and it is
+invisible from inside any single document. `references/cross-run.md` covers it: slugs are the join
+key that groups the same primitive across documents, and how *unrelated* the demanding subjects are
+decides how much the recurrence counts.
 
 **Write two or three observations worth carrying.** The things visible only from the whole page:
 which persona the current framing under-serves, where the clearest whitespace is, which cluster has
