@@ -35,8 +35,8 @@ possible today. **⚡ marks the frontier** — <one line on what the frontier cl
 ## Personas
 
 <Count.> <One or two sentences on what you did to the seed list: which were merged and why, which
-were added and why. Then:> Item counts are deliberately uneven — they track <read volume and
-value>, not fairness.
+were added and why. Then:> Item counts are deliberately uneven — they track <what drives volume and
+value for this subject>, not fairness.
 
 | # | Persona | Why they're here | Items |
 |---|---|---|---|
@@ -58,9 +58,9 @@ value>, not fairness.
 
 ---
 
-## What the <N> imply: <M> <read/capability> primitives
+## What the <N> imply: <M> capability primitives
 
-The items are evidence; these are the deliverable. Each primitive is a capability <the thing>
+The items are evidence; these are the deliverable. Each primitive is a capability <the subject>
 would need, derived from the items that demand it.
 
 1. **<Primitive name>** — <one line on what it is, in plain terms>.
@@ -81,10 +81,10 @@ with whatever ships first.>
 
 ## Appendix A — Current coverage (verified <date>)
 
-_This is the supply-side mapping, retained because <reason>. It describes what <thing> does
+_This is the supply-side mapping, retained because <reason>. It describes what <the subject> does
 today; it does **not** bound the brainstorm above._
 
-### The <N> lanes in today's <binary/product>
+### The <N> lanes in <the subject> today
 
 | Lane | Surface | Notes |
 |---|---|---|
@@ -105,7 +105,15 @@ full writeup if you filed one.>
 ## Notes on filling it in
 
 - **The title is a question**, and the scope constraint belongs in it. "What DDI people would read
-  from BAM, if a read-only MCP server could answer anything" does more work than "BAM personas".
+  from an IPAM estate, if a read-only interface could answer anything" does more work than "BAM
+  personas"; "What a consumer would want from a date library without reading its source" does more
+  work than "date-lib personas".
+- **Name the archetype and its frontier class** in the opening section, matching what you picked in
+  Phase 0. The `⚡ marks the frontier` line is not boilerplate — it says which class of ask this
+  particular subject makes hard and valuable, and a reader who doesn't know it will misread every
+  ⚡ row as wishful thinking.
+- **Say which coverage marks were proven and which were inferred** if you ran a scoped Full pass.
+  A column that silently mixes verified and best-effort marks is worse than one that admits it.
 - **Bold the item numbers you cite** in the primitives section only if the document is long enough
   that readers will jump; otherwise plain is fine.
 - **Keep the appendix genuinely demoted.** If it grows past about a quarter of the document, it's

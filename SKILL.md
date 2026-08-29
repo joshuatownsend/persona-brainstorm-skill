@@ -1,6 +1,6 @@
 ---
 name: persona-brainstorm
-description: Run an unconstrained, demand-side persona and use-case brainstorm about what users would actually want from a system — imagining what could be possible rather than cataloguing what currently ships. Derives the personas, captures what each would ask for in their own words and the decision it feeds, then synthesizes the underlying capability primitives and the gaps. Use this whenever the user wants personas, user research, use cases, a wish list, a gap analysis, feature discovery, whitespace analysis, or roadmap input — and also when they describe the goal without naming any of that, e.g. "who would use this and what would they want", "what should this MCP server be able to answer", "what's possible here that we haven't built", "what are we missing", "brainstorm use cases for X", "what would a real practitioner ask this thing". Works on any subject — a product, a service, a codebase, an API, a dataset, a team's process — not only on shipped software. Prefer this skill over an ad-hoc list any time the answer would be a set of user needs rather than a set of features.
+description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. Prefer it over an ad-hoc list when the answer is user needs, not features.
 ---
 
 # Persona Brainstorm
@@ -25,6 +25,12 @@ all have practitioners with jobs to do, and that is the only input the imaginati
 
 Only Phases 3–4 touch the artifact itself, and they are optional. If the subject has no repo, no
 code, or doesn't exist yet, skip them and the rest works unchanged.
+
+What *does* change per subject is vocabulary: how the subject is phrased, what counts as the
+frontier, and where to reach when the obvious asks run out. Phase 0 pins those down once, in one
+table, and every later phase reads them from there. If you want to see the whole workflow run end
+to end on a real subject before starting your own, `references/worked-example-ddi.md` is the run
+this skill was extracted from.
 
 ## The one hard rule
 
@@ -51,55 +57,130 @@ covered has failed. Expect half to two-thirds of items to be partly served or im
 
 ## Phase 0 — Frame and scope
 
-Establish five things. Ask the user directly; don't guess.
+Establish six things. Ask the user directly; don't guess.
 
 1. **The subject — and it is not the repo.** The subject is the *system the personas work
    against*, named generically. A repo, if there is one, is only where evidence lives and where
    the output lands. Getting this backwards is the most common way this document comes out small:
-   personas who use "BlueCat Address Manager" generate a rich, product-independent wish list,
-   while personas who use "bamcli's MCP server" generate a bug list about bamcli.
+   personas who use "an IP address management system" generate a rich, product-independent wish
+   list, while personas who use "our CLI's MCP server" generate a bug list about the CLI.
 
    State the subject as **a hypothetical generic capability over the domain**, never as the
-   shipped thing: *"a generic read-only MCP server capable of reading BlueCat Address Manager"*,
-   not *"the bamcli MCP server"*. That phrasing does real work — it gives every persona
-   permission to want something nobody has built, which is the entire point of the exercise.
+   shipped thing. That phrasing does real work — it gives every persona permission to want
+   something nobody has built, which is the entire point of the exercise.
 
-   You may need light orientation to name the domain at all (skim a README, a manifest, the
-   user's own description). Keep it to *what field is this in and who works in it* — that is not
-   the same as an inventory, and the inventory waits for Phase 3.
+   | Say this | Not this |
+   |---|---|
+   | "a generic read-only interface capable of answering anything about the DNS/DHCP/IPAM estate" | "the bamcli MCP server" |
+   | "a library that fully serves date-and-time handling in TypeScript" | "our `parseDate` module" |
+   | "a product that fully serves the incident-response workflow" | "the alerts dashboard" |
+   | "an ideal way to get a new engineer productive in week one" | "our onboarding checklist" |
+
+   **One subject per run.** If the repo holds several (a monorepo, a platform with distinct
+   products), pick one. A document spanning two subjects produces personas for neither.
+
+   You may need light orientation to name the domain at all. Keep it tightly bounded, because
+   Phase 3's whole protection is that you have not yet seen the surface:
+
+   - **Allowed now:** the README's first paragraph, the package/manifest name and description,
+     the top-level directory names, the user's own description of the thing.
+   - **Deferred to Phase 3:** command lists, API surface, feature docs, tests, changelogs,
+     issue trackers, anything enumerating what it does.
+
+   You are answering *what field is this in and who works in it* — not *what does it do*.
 
 2. **The frame** — the sentence the whole document answers, built on that subject. A good frame
-   carries a scope constraint that sharpens every downstream item: *"what would a DDI practitioner
-   ask a **read-only** MCP server over BAM, if it could answer anything?"*, *"what would a support
-   engineer ask this library **without reading its source**?"* The "if it could answer anything"
+   carries a scope constraint that sharpens every downstream item: *"what would a network engineer
+   ask a **read-only** interface over the IPAM estate, if it could answer anything?"*, *"what would
+   a support engineer want from this library **without reading its source**?"*, *"what would a
+   frontline responder want from an incident tool **during** an incident, not after?"* Those bolded
+   constraints are what make the items specific. The "if it could answer anything"
    clause is not decoration — say it out loud so the constraint that survives is the deliberate
    one rather than an accidental one. A frame like "what could this product do" is too loose to
    produce anything good. If the user hasn't given you one, propose two or three and let them pick.
 
 3. **The item budget — a lever, not a size.** Ask for a target count and treat it as a forcing
    function. The first fifteen items are the obvious ones anyone could write; the value is
-   concentrated in the back half, because reaching a bigger number is what pushes past familiar
-   asks into temporal, cross-source, entitlement, and simulation territory. If a user doubles the
-   number on a second pass, they are not asking for padding — they are asking you to reach
-   further. 40–80 is a healthy band; 60 is a good default.
+   concentrated in the back half, because reaching a bigger number is what pushes past the familiar
+   asks and out along the reach-further axes for your archetype. If a user doubles the number on a
+   second pass, they are not asking for padding — they are asking you to reach further. 40–80 is a
+   healthy band; 60 is a good default.
 
 4. **The seed personas** — whoever the user already has in mind. Often incomplete, sometimes
    containing duplicates. Both get fixed in Phase 1.
 
 5. **Whether to run the coverage pass at all**, and at what depth. Offer three:
-   - **Full** — verify what's served today against the source, cite `file:line`, write up any
-     defect you find as its own issue doc. Most expensive, and the pass that finds real bugs; the
-     original run surfaced a security-relevant read-only-enforcement gap this way.
+   - **Full** — verify what's served today against the evidence and cite it **in whatever form
+     the lane provides**: `file:line` for code, the document and section for a written process,
+     the named report, dashboard, or role for a human lane. Write up any defect you find as its
+     own issue doc. Never invent a citation to satisfy the format — if a lane cannot actually be
+     verified, mark it Light and say so. Most expensive, and the pass that finds real bugs — in
+     the run this skill came from, it surfaced a security-relevant enforcement gap that no amount
+     of doc-reading would have found.
    - **Light** — build the coverage map from manifests, docs, and public surface. Best-effort
      rather than proven.
    - **None** — pure demand-side. Fastest, and the only option when the subject has no artifact
      to inspect. Loses the gap-list half.
 
-Also settle the output path. Default to `PERSONAS.md` at the repo root, unless the repo has a docs
-convention that fits better. If it's a **generated tree** (look for `.printing-press.json`, a
-`.printing-press-patches/` directory, or an AGENTS.md warning that a reprint can overwrite the
-tree), a reprint will clobber the file — register it in the patch ledger or write it somewhere the
-ledger protects, and say which you did.
+   In a large codebase, verifying all 40–80 items against source is disproportionate. Scope Full
+   verification to the items behind your Phase 5 primitives, mark the rest Light, and say in the
+   appendix which marks were proven and which were inferred. A coverage column that silently mixes
+   the two is worse than one that admits the split.
+
+6. **The subject archetype** — one row of the table below. It sets the vocabulary for the whole
+   run, and it is the only thing in this skill that varies by subject.
+
+### Subject archetypes
+
+Pick the closest row. It fixes four things every later phase reads back: how you phrase the
+subject, what counts as the frontier in Phase 2, which directions to reach when the obvious asks
+run out, and which discovery recipe Phase 3 uses. If two rows fit, run the one the **personas
+experience**, not the one you build. State the row you picked in the document's opening section —
+a reader who disagrees with the archetype will disagree with everything downstream, and that is a
+useful argument to have on page one rather than at the end.
+
+| Archetype | Phrase the subject as | Frontier class (⚡) | Reach-further axes | Discovery |
+|---|---|---|---|---|
+| **Read surface** — query API, MCP server, dashboard, reporting layer | "a generic read-only interface over \<domain estate\>" | reads that feel like writes: simulation, blast radius, what-if | time ("what was true last Tuesday"), cross-source joins, entitlement, provenance | `references/discovery.md` § Read surface |
+| **Library / SDK / framework** | "a library that fully serves \<the job it exists for\>" | migration and failure injection — "what breaks if I upgrade", "make it fail the way prod does" | version skew, error paths, extension points, debuggability, the escape hatch | § Library |
+| **Application / UI product** | "a product that fully serves \<the workflow\>" | the task done *for* you rather than *by* you | degraded and offline states, multi-user collision, recovery from a mistake, handoff between people | § Application |
+| **Data platform / warehouse / dataset** | "a store that can answer anything about \<domain\>" | counterfactual and lineage-aware answers — "where did this number come from, and what if the input were different" | freshness, grain mismatch, backfill and restatement, access scope | § Data platform |
+| **Infrastructure / service / platform** | "a platform that fully operates \<the estate\>" | pre-flight and rollback reasoning — "prove this is safe before I do it" | failure modes, capacity, cost attribution, audit and who-did-what | § Infrastructure |
+| **Process / non-software** | "an ideal way to \<the outcome\>" | the decision made without convening anyone | escalation, exception handling, institutional memory, the case nobody wrote down | § Process — the lanes are human; skip Phase 3 only if there is genuinely nothing to inspect |
+| **None of these** | derive it — see below | derive it | derive it | write the recipe; see `references/discovery.md` § Contract |
+
+**A subject whose value includes changing something is not the Read-surface row.** That row is for
+subjects whose value is *answering* — its phrasing and its frontier are both read-only, so picking
+it for a payments API, a provisioning platform, or a deployment tool deletes the core asks (create,
+refund, reverse, roll out) before the brainstorm starts. "API" alone does not put a subject there.
+Use the **Infrastructure / service / platform** row, whose frontier — pre-flight and rollback
+reasoning — is already write-shaped, or derive your own below. The read-only constraint is a
+deliberate scope choice made in the frame, never a default inherited from the word "API".
+
+**If no row fits, derive the four columns rather than forcing a fit.** The columns are not
+arbitrary; each answers a fixed question, and any subject can answer them:
+
+- **Subject phrasing** — complete "a \_\_\_ that fully serves \_\_\_" using the *domain's* noun,
+  never the implementation's. If the blank wants your product's name, you have the wrong noun.
+- **Frontier class** — name the kind of ask that is obviously valuable, obviously hard, and that
+  a cautious reader would delete first. That deletion instinct is the detector: whatever you
+  flinch at is the frontier.
+- **Reach-further axes** — ask what dimension the obvious asks all hold constant. Time, other
+  systems, permission, provenance, failure, and scale are the usual constants; the axis is
+  whichever of those your first fifteen items never vary.
+- **Discovery** — read `references/discovery.md` § Contract. Phases 4–5 need exactly two things
+  from discovery: a set of named lanes and each lane's real limits. Write the shortest recipe
+  that produces those two, and consider contributing it back as a new archetype row.
+
+### Where the document lands
+
+Default to `PERSONAS.md` at the repo root, unless the repo has a docs convention that fits better.
+Check whether that path sits in a **generated or managed tree** — a
+codegen config, a `*.generated` marker, a template-sync bot, or an `AGENTS.md`/`README` warning
+that regeneration overwrites the tree (in a Printing Press tree the tells are `.printing-press.json`
+and a `.printing-press-patches/` directory). If it does, regeneration will clobber the file: write
+it where the tree's escape hatch protects it — a patch ledger, an ignore list, a directory the
+generator doesn't own — and say in the document which you did.
 
 ## Phase 1 — Derive the personas, then stop
 
@@ -114,10 +195,10 @@ Start from the user's seed list and do three things to it:
   automation or pipeline consumer; the rare-but-high-stakes user (migrations, acquisitions,
   audits); and the non-hands-on decision maker.
 - **Include the agent itself as a persona** whenever the subject might be driven by an AI agent.
-  This is the single most productive addition for tool-surface planning, because it generates asks
-  no human persona will — what must I read before I'm allowed to act, how fresh is this answer,
-  what am I entitled to see, what would this change touch. Those items are cheap relative to their
-  value and have no owner in a feature list organized by subsystem.
+  This is the single most productive addition when planning any surface an agent will drive,
+  because it generates asks no human persona will — what must I read before I'm allowed to act,
+  how fresh is this answer, what am I entitled to see, what would this change touch. Those items
+  are cheap relative to their value and have no owner in a feature list organized by subsystem.
 
 Give each persona a one-line justification for being on the page. If you can't write one, cut it.
 
@@ -134,11 +215,13 @@ truth.
 ## Phase 2 — The items
 
 Work to the budget from Phase 0, and treat missing it as a signal rather than an arithmetic
-problem. If you're short, don't pad with variations on what you have — reach into the places the
-obvious asks never go: questions with a *time* in them ("what was true last Tuesday"), questions
-that need a second system joined in, questions about entitlement and provenance, questions the
-rare high-stakes personas ask once a year, and the simulation class below. Those are reliably the
-best items on the page.
+problem. If you're short, don't pad with variations on what you have — reach along the
+**reach-further axes for your archetype**, chosen in Phase 0. Those axes exist because the obvious
+asks all hold some dimension constant, and varying it is where the good items are: for a read
+surface, time and joins and entitlement; for a library, version skew and error paths; for a
+process, the exception nobody wrote down. Two more pay off in every archetype regardless of which
+axes you picked: what the **rare high-stakes persona** asks once a year, and the frontier class
+below. Those are reliably the best items on the page.
 
 Number items continuously across the whole document (not per persona) so the synthesis can cite
 them.
@@ -147,15 +230,22 @@ Each item is a row with four things:
 
 | Field | What good looks like |
 |---|---|
-| **The ask, in their words** | A quoted sentence the persona would actually say out loud. `"Who was on 10.20.5.66 at 14:20 yesterday?"` — not `Historical lease attribution query`. If it reads like a Jira title, rewrite it. |
+| **The ask, in their words** | A quoted sentence the persona would actually say out loud — a question (`"Who was on 10.20.5.66 at 14:20 yesterday?"`) or a want (`"I want to restyle this component without forking it."`). Not `Historical lease attribution query`; not `Themeable component API`. If it reads like a Jira title, rewrite it. |
 | **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
-| **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
+| **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `per-release`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
 | **Coverage** | Phase 4. Leave blank. |
 
-Mark with **⚡** the items that are reads which feel like writes: simulation, blast radius, what-if,
-"what breaks if I delete this." These are consistently the highest-value and hardest items, and a
-read-only surface is uniquely suited to them — all the value of a change proposal with none of the
-risk. If your list has no ⚡ items, you have under-reached.
+Mark with **⚡** the items in the **frontier class you named in Phase 0** — the class of ask that is
+obviously valuable, obviously hard, and that a cautious reader would delete first. For a read
+surface that's reads which feel like writes (simulation, blast radius, "what breaks if I delete
+this"); for a library it's migration and failure injection; for an application it's the task done
+*for* the user rather than *by* them; for a process it's the decision made without convening
+anyone. These are consistently the highest-value and hardest items on the page, and the frontier
+class is usually where the subject is uniquely suited to something nobody has tried — a read-only
+surface, for instance, gets all the value of a change proposal with none of the risk.
+
+If your list has no ⚡ items, you have under-reached. If your ⚡ items are all comfortable, you
+named the frontier too conservatively — go back to Phase 0 and find the class you flinched at.
 
 ## Phase 3 — Inventory what exists today
 
@@ -173,10 +263,17 @@ useful than an exhaustive endpoint list because a persona's ask usually maps to 
 For each lane, note its real limits: row caps, staleness, auth scope, what it silently refuses.
 Those limits become appendix caveats and are frequently more interesting than the inventory itself.
 
-If the subject is a printed CLI (a `*-pp-cli` binary, `tools-manifest.json`, an `internal/mcp`
-tree), read `references/discovery-printed-cli.md` for concrete commands and files. That file is the
-only product-shaped part of this skill; its closing section states the two things Phases 4–5
-actually need from discovery, so you can write an equivalent recipe for any other kind of subject.
+Read `references/discovery.md` and follow the section for the archetype you picked in Phase 0. It
+states the contract — Phases 4–5 need exactly **named lanes** and **each lane's real limits**, and
+nothing else — then gives a recipe per archetype: what to read, in what order, what the lanes
+usually turn out to be, and which caveats reliably exist. If your subject is a printed CLI (a
+`*-pp-cli` binary, `tools-manifest.json`, an `internal/mcp` tree), `references/discovery/printed-cli.md`
+is a fully worked instance of that contract and the closest thing to a template for writing your own.
+
+**Prefer runtime truth over reading source** wherever the subject can describe itself: a `--help`
+tree, an OpenAPI document, a `doctor` or self-describe command, an exported type surface, a schema
+dump. Self-descriptions are usually more accurate than the docs and far cheaper than the code. Run
+only read-only commands during discovery — never one that mutates remote state.
 
 ## Phase 4 — Annotate coverage
 
@@ -268,3 +365,7 @@ Check the draft against these before handing it over.
   or onto the subject's existing subsystems, no clustering happened.
 - **Hedging the ⚡ items.** The hard, "we could never build that" entries are why anyone reads the
   page. Write them at full strength and let the coverage column say ○.
+- **An archetype forced to fit.** If you picked "read surface" for a library because it was the
+  first row, every item will come out as a query and the real asks — migration, failure, escape
+  hatches — never get written. Deriving the four columns from scratch is cheaper than a run spent
+  in the wrong vocabulary.

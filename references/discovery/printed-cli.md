@@ -4,10 +4,12 @@ Concrete mechanics for the supply-side inventory when the target is a CLI Printi
 (`bamcli`, `micetrocli`, and their siblings). Recognise one by a `cmd/<name>-pp-cli` directory, a
 `tools-manifest.json`, and an `AGENTS.md` that names the Printing Press.
 
-**This file is the generalization seam — the only product-shaped part of the skill.** Everything
-below is specific to this repo shape. For any other subject, replace this file's contents with an
-equivalent discovery recipe and leave the rest of the skill untouched: no other phase assumes the
-subject is a CLI, is software, or even exists yet.
+**This is one fully worked instance of the discovery contract in `../discovery.md`** — a
+Read-surface subject taken all the way down to specific commands, files, and greps. Nothing here
+generalizes, and nothing needs to: read it when your subject is a printed CLI, or read it as a
+template for how much specificity a good recipe carries when you are writing one for an archetype
+that has no section yet. The rest of the skill assumes nothing about the subject being a CLI, being
+software, or existing at all.
 
 ## Ask the binary first
 
@@ -73,15 +75,8 @@ Check each; they map straight onto coverage marks and onto the provenance/freshn
   wrong answer, not a partial one.
 - **Provenance fields that misreport** which lane an answer came from.
 
-## Generalizing to non-CLI targets
+## For any other subject
 
-Phases 4–5 need exactly two things from discovery: a set of named **lanes** (the distinct ways an
-answer can be obtained) and each lane's **real limits**. Any subject can supply those. For a web
-app it's the screens and the exports; for a library it's the public API surface and what it
-refuses; for a data platform it's the tables, the views, and the freshness of each; for a team
-process it's the reports that exist, who can run them, and how stale they are. Write the
-equivalent of this file for that shape and the rest of the skill works unchanged.
-
-If the subject has no artifact to inspect at all — a product that doesn't exist yet, a capability
-being scoped before anyone builds it — there is no discovery phase. Run Phases 0–2 and 5, drop the
-coverage column, and the document is still the useful half.
+`../discovery.md` carries the contract these mechanics satisfy — named lanes, each lane's real
+limits — plus recipes for the other archetypes: library/SDK, application, data platform,
+infrastructure, and process. Go there rather than adapting this file.
