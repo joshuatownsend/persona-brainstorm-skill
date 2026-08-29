@@ -5,7 +5,15 @@ order, because it encodes the argument: *frame → who → what they want → wh
 means*. Putting coverage earlier makes readers grade the ideas instead of reading them.
 
 Replace every `<>` placeholder. If no coverage pass ran, delete the coverage column, the coverage
-key, the tally, and the appendix — the document still stands on the items and the synthesis.
+key, and the appendix — the document still stands on the items and the synthesis. **Keep a tally
+line**, reduced to the part that is always true:
+
+```
+**Tally:** <d> ⚡
+```
+
+The frontier count exists whether or not anything was graded, and the tally line is the only place
+a claimed figure may live, so deleting it outright leaves the checker with nothing to compare.
 
 ---
 

@@ -418,8 +418,14 @@ asked to compute about its own output, and nothing in the method caught it.
 ### 7a — Run the checker
 
 ```bash
-python scripts/verify.py <output-path>        # add --strict to fail on warnings too
+# <skill-dir> is the directory this SKILL.md lives in — the path you were given when the
+# skill loaded. It is NOT the working directory: this skill runs against a target repo.
+python "<skill-dir>/scripts/verify.py" <output-path>      # --strict fails on warnings too
 ```
+
+Resolve that path against the skill's own directory every time. A bare `scripts/verify.py` is
+wrong in every repo but this one: usually it does not exist, and occasionally it is some other
+project's script that will run happily and tell you nothing about your document.
 
 It parses the tables and computes what the document actually contains, then compares that against
 what the document claims. It checks continuous numbering, per-persona counts against the roster's

@@ -266,9 +266,10 @@ derived from the items demanding it — not a feature name.
 
 **Self-assessment**, then **provenance**, then **run identity** — in that order.
 
-*Self-assessment* first because it has both the largest evidence cluster (nine items, five
-unrelated personas) and the only independent corroboration on the page: the supply-side inventory
-found the same gap without reference to the items. *Provenance* second because it is by far the
+*Self-assessment* first because it has the largest evidence cluster on the page — nine items across
+five unrelated personas. An earlier draft also claimed independent corroboration from the
+supply-side inventory; **that claim is withdrawn as circular** (see Verification), and the ranking
+now rests on cluster size alone. *Provenance* second because it is by far the
 cheapest — it is a column and a labeling discipline, not a system — and because self-assessment is
 untrustworthy without it: a method that grades itself must first be able to say where each claim
 came from. *Run identity* third because it unlocks P6 entirely, the only persona with zero ✅ rows,

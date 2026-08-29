@@ -67,7 +67,7 @@ def is_divider(cells: list[str]) -> bool:
 
 
 def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], dict, dict]:
-    """Return (roster budgets, items, primitive->cited items, claims)."""
+    """Return (roster budgets, items, primitive->cited items, claims, slugs)."""
     lines = text.split("\n")
     roster: dict[str, int] = {}
     items: list[Item] = []
@@ -76,6 +76,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
 
     current_persona = None
+    citing = None
     in_fence = False
 
     for i, raw in enumerate(lines, 1):
@@ -97,7 +98,14 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             if m and primitives:
                 nums = [int(x) for x in re.findall(r"\d+", m.group(1))]
                 primitives[list(primitives)[-1]].extend(nums)
+                # A wrapped citation continues on the next lines. Without this,
+                # a dangling reference past the first line is never checked.
+                citing = list(primitives)[-1]
                 continue
+            if citing and raw.strip() and re.fullmatch(r"[\d,\s*]+\.?", raw.strip()):
+                primitives[citing].extend(int(x) for x in re.findall(r"\d+", raw))
+                continue
+            citing = None
             # Primitive name: "1. **Name** — ..."
             m = re.match(r"\s*\d+\.\s+\*\*(.+?)\*\*\s*(?:`([^`]+)`)?", raw)
             if m:
@@ -139,7 +147,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
             n = int(cells[0])
             ask, why, freq = cells[1], cells[2], cells[3]
             rest = cells[4:]
-            frontier = any("⚡" in c for c in rest) or "⚡" in ask
+            frontier = any("⚡" in c for c in rest)
             cov = next((c for c in rest if c.strip() in COVERAGE_MARKS), "")
             items.append(Item(n, current_persona, ask, why, freq, frontier, cov, i))
 
@@ -181,6 +189,13 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             )
 
     # 4. Frontier count — computed, then compared to whatever the document claims.
+    stray = [it.n for it in items if "⚡" in it.ask]
+    if stray:
+        rep.warn(
+            f"items with ⚡ inside the ask rather than the column: {stray}. "
+            "Only the column is counted — a mark in prose is uncountable, which is how a "
+            "wrong frontier figure went unnoticed in the first place."
+        )
     frontier = [it for it in items if it.frontier]
     rep.note(f"frontier (⚡) items: {len(frontier)} of {len(items)}")
     if not frontier:
@@ -195,6 +210,11 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
 
     # 5. Coverage tally — computed, then compared to the claim.
     graded = [it for it in items if it.coverage]
+    if not graded and "tally" in claims:
+        rep.fail(
+            f"tally line claims {claims['tally']} but no coverage mark parsed on any item — "
+            "either the marks are missing or they are not in the ✅ / ◐ / ○ vocabulary"
+        )
     if graded:
         tally = tuple(sum(1 for it in items if it.coverage == m) for m in ("✅", "◐", "○"))
         rep.note(f"coverage: {tally[0]} ✅ · {tally[1]} ◐ · {tally[2]} ○ of {len(graded)} graded")
