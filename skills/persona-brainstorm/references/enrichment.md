@@ -29,7 +29,8 @@ mark already in the table:
 
 | Coverage | Third block heading | Mood |
 |---|---|---|
-| ✅ or ◐ | **How it's answered today** | present tense — describes something that runs |
+| ✅ | **How it's answered today** | present tense — describes something that runs |
+| ◐ | **How it's answered today** | present tense, and states what it still cannot do |
 | ○ | **What would have to exist** | conditional — describes something assessed and absent |
 | *no coverage pass* | **What answering this would take** | conditional — describes the capability, claims nothing about whether it is there |
 
@@ -77,6 +78,14 @@ unverified, and record the item under **What this pass noticed**. Then let the u
 That is the honest handling, and it is also the only one available: enrichment cannot edit the
 core document, so a mark it disagrees with is something to report, never something to route
 around.
+
+**A ◐ item must say what is missing, not only what works.** It shares a heading with ✅ because
+something genuinely runs, and that is where the two stop being alike: ◐ means *part* of the quoted
+ask is served, and a block describing only the served part makes the whole ask sound answered. The
+legend does not rescue it — `◐ partially served` says some unspecified portion, and the item is the
+only place the portion can be named. So write both halves: what the lane returns today, and which
+clause of the ask it leaves on the floor, taken from that lane's limits in Appendix A. Getting this
+wrong turns the most informative mark on the page into the least.
 
 The situation and the stakes are yours to write. The capability is not.
 
@@ -311,5 +320,12 @@ a case study. A depth-**None** run has no marks and shows no pills — and carri
 instead of dropping it. This is the copy most likely to reach someone who never saw the core
 document, so an absence here has to be labelled or it will be read as a finding.
 
+Write it as a single HTML file beside the markdown, named the same way — `<core>-enriched.html`
+next to `<core>-enriched.md`. Naming it deterministically is what makes a re-run replace the page
+rather than leave a second one beside it, and what lets someone find it later without asking which
+run produced it.
+
 The page must be **self-contained**: styles and behaviour inline, no external assets. Filtering and
 collapsing are the only interactions it needs, and both are a few lines of vanilla JavaScript.
+Where the environment can publish an artifact, publish that same file rather than building a
+different one — one page, one source, and the local copy survives whether or not publishing does.
