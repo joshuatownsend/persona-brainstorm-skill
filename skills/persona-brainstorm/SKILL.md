@@ -172,6 +172,15 @@ Establish seven things. Ask the user directly; don't guess.
    second pass, they are not asking for padding — they are asking you to reach further. 40–80 is a
    healthy band; 60 is a good default.
 
+   **Check for a prior document on this subject before you ask.** If one exists, read
+   `references/cross-run.md` now rather than at Phase 5, and offer the comparison re-run explicitly:
+   a comparison holds subject, frame, budget, archetype *and* coverage depth constant, so a budget
+   chosen freely here silently forfeits it. The operator who asks these seven questions in the order
+   written, takes a bigger number because reaching further sounds right, and reads `cross-run.md`
+   afterwards has already destroyed comparability and will not find out until the synthesis. That
+   ordering is the one this step exists to prevent — both files are individually correct, and the
+   defect lives in the order you read them.
+
 4. **The seed personas** — whoever the user already has in mind. Often incomplete, sometimes
    containing duplicates. Both get fixed in Phase 1.
 
@@ -388,7 +397,7 @@ Each item is a row with four things:
 | **The ask, in their words** | A quoted sentence the persona would actually say out loud — a question (`"Who was on 10.20.5.66 at 14:20 yesterday?"`) or a want (`"I want to restyle this component without forking it."`). Not `Historical lease attribution query`; not `Themeable component API`. If it reads like a Jira title, rewrite it. |
 | **Why — the decision it feeds** | The job the answer does. Not a restatement of the ask. Watch for asks already phrased *as* a decision — `"do I pad, or hand back eight and say so?"` — where the Why has nowhere left to go and becomes an inversion of the question. When that happens, name the **consequence** instead: what goes wrong, and to whom, if the answer is unavailable. `"Attribution for abuse, incident, and legal requests"` earns its place; `"lets them see lease history"` does not. If you can't name a decision, the item probably isn't real. |
 | **Today** | What they do *instead*, right now. `"Greps four spreadsheets and guesses"` · `"Asks Dave"` · `"Gives up"` · `"Nothing — they don't know it's answerable"`. This is the demand-side measure and the coverage column is not: coverage says whether *you* serve the ask, while this says whether anyone needs it served. A `○` somebody already pays a person to work around is an opportunity; a `○` nobody has ever attempted is usually a non-problem. `"Gives up"` and `"Doesn't know to ask"` are the two most valuable answers here. |
-| **Frequency** | `many/day`, `daily`, `weekly`, `quarterly`, `per-incident`, `per-release`, `onboarding`, `per-run`. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
+| **Frequency** | `many/day`, `daily`, `weekly`, `monthly`, `quarterly`, `annually`, `per-incident`, `per-release`, `onboarding`, `per-run`. This list is the whole vocabulary and `scripts/verify.py` enforces exactly it — the two drifted once, with `monthly` and `annually` accepted by the checker and published nowhere, so change them together or not at all. Note that `onboarding` is a lifecycle stage rather than a cadence; it earns its place because "the first week, once" is a real answer, but do not read the column as uniformly a rate. Frequency separates the item deserving a first-class answer from the one deserving a documented workaround, and it makes the uneven budgets legible. |
 | **Coverage** | Phase 4. Leave blank. |
 
 Mark with **⚡** the items in the **frontier class you named in Phase 0** — the class of ask that is

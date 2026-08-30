@@ -754,6 +754,13 @@ ADVERSARIAL_MUTATIONS = [
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"\s*\*\([^)]*\)\*", "", _adv_first(t), count=1)),
      "carry no evidence mark"),
+    # A mark that was written and did not parse is a third state. Reporting it
+    # as "no mark" sends the author to add one, which the two-marks rule then
+    # refuses -- a diagnostic that names the wrong cause steers the fix.
+    ("adversarial-unparseable-mark-is-not-a-missing-one",
+     lambda t: swap(t, _adv_first(t),
+                    _adv_first(t).replace("*(invented)*", "*(invented)", 1)),
+     "could not be read"),
     ("adversarial-two-evidence-marks",
      lambda t: swap(t, _adv_first(t),
                     _adv_first(t).replace("*(observed: a support thread)*",
@@ -851,8 +858,44 @@ ADVERSARIAL_MUTATIONS = [
 
 # Must still pass: the expectation gap is the one kind exempt from the lane
 # rule, and an exemption nothing asserts is an exemption nobody knows is there.
+def about_soft_wrapped(t):
+    """Wrap the first About block so its status word falls on line two.
+
+    Identical words, valid markdown, identical rendering -- and it used to FAIL.
+    The block value was read from the label's own physical line, so a wrap hid
+    the lane or the status; and a continuation line beginning with emphasis was
+    itself parsed as a new label, truncating the block. These lines carry a
+    lane, a status and a mark, so they are long, and the reference's own worked
+    example wraps its heading for the same reason.
+    """
+    first = _adv_first(t)
+    m = re.search(r"^\*\*About:\*\* (.*)$", first, re.M)
+    require(m is not None, "no About line in the first grievance")
+    line = m.group(1)
+    cut = line.rfind(" ", 0, len(line) // 2)
+    require(cut > 0, "About line too short to wrap")
+    return swap(t, first,
+                first.replace(m.group(0),
+                              "**About:** " + line[:cut] + "\n" + line[cut + 1:], 1))
+
+
+def mark_source_with_a_parenthesis(t):
+    """An observed source that quotes this checker's own output.
+
+    Those messages contain "primitive(s)", and the source capture used to stop
+    at the first ')' -- so the mark vanished and was reported as *absent*. The
+    most auditable source an observed mark can name was the one the rule broke
+    on.
+    """
+    first = _adv_first(t)
+    quoted = '*(observed: verify.py said "1 primitive(s) carry no mark")*'
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
 ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
+    ("adversarial-about-block-may-soft-wrap", about_soft_wrapped),
+    ("adversarial-mark-source-may-contain-a-parenthesis", mark_source_with_a_parenthesis),
 ]
 
 # ---------------------------------------------------------------------------
@@ -946,7 +989,21 @@ FINAL_CASES = [
      lambda t: t[:t.index("## Verification (Phase 7)")]
      + "## Verification (Phase 7)\n\n"
      + t[t.index("## What the 60 imply"):],
-     "non-empty line"),
+     "substantive line"),
+    # A graded document with its inventory removed. --final used to pass this at
+    # exit 0 with a full tally still on the page: sixty coverage claims and no
+    # evidence in the file for any of them.
+    ("final-rejects-graded-document-with-no-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")],
+     "no Appendix A lanes can be read"),
+    # Five lines cleared the old non-empty count while recording nothing. The
+    # gate exists to require five recorded answers, so the bar is substance --
+    # a claim satisfied by a non-claim is the failure this whole suite is for.
+    ("final-rejects-five-placeholder-lines", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nx\ny\nz\na\nb\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "1 substantive line"),
 ]
 
 

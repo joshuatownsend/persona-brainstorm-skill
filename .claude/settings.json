@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "persona-brainstorm-marketplace": {
+      "source": {
+        "source": "directory",
+        "path": "."
+      }
+    }
+  },
+  "enabledPlugins": {
+    "persona-brainstorm@persona-brainstorm-marketplace": true
+  }
+}

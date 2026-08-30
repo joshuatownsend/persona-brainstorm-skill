@@ -78,8 +78,24 @@ class Report:
 # failure the frequency vocabulary already exists to prevent.
 EVIDENCE = ("observed", "inferred", "invented")
 
+# The source runs to the mark's own closing delimiter, not to the first closing
+# parenthesis. A plain [^)]* ended the capture at any ')' inside the source, the
+# trailing \)\* then failed, and the mark vanished -- reported as *absent* by
+# every caller. The text most likely to trip it was this checker's own output,
+# because those messages contain "primitive(s)", so quoting what the checker
+# reported -- the most auditable source an observed mark can name -- was the
+# thing the rule punished. Accept a ')' that is not the delimiter.
+MARK_SOURCE = r"(?:[^)]|\)(?!\*))*"
+
 # The annotation, anchored: leading space, then *(kind)* or *(kind: source)*.
-MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*"
+MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*(" + MARK_SOURCE + r"))?\)\*"
+
+# An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
+# apart from "your mark did not parse": the first sends the author to write one,
+# and telling them that when a correct mark is present sends them to add a
+# second, which the two-marks rule then refuses. A diagnostic that names the
+# wrong cause is worse than a silent failure, because it steers the fix.
+MARK_ATTEMPT_RE = r"\*\(\s*[A-Za-z-]+\s*[:)]"
 
 
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
@@ -207,6 +223,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     slugs: dict[str, dict] = {"persona": {}, "primitive": {}}
     dupes_seen: list[str] = []
     multi_marked: list[str] = []
+    malformed_marks: list[str] = []
     dupe_pids: list[str] = []
     malformed: list[tuple] = []
 
@@ -315,6 +332,13 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     multi_marked.append(name)
                 elif marks:
                     evidence[name] = (marks[0][0].lower(), marks[0][1].strip())
+                elif re.match(r"\s*" + MARK_ATTEMPT_RE, region):
+                    # A mark was written and did not parse. Reporting that as
+                    # "no mark" sends the author to add one, and the two-marks
+                    # rule then refuses the result -- so the diagnostic has to
+                    # name the real cause or it steers the fix into a second
+                    # error.
+                    malformed_marks.append(name)
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -412,6 +436,7 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
     claims["duplicate_primitives"] = sorted(set(dupes_seen))
     claims["evidence"] = evidence
     claims["multi_marked"] = multi_marked
+    claims["malformed_marks"] = malformed_marks
     claims["duplicate_personas"] = sorted(set(dupe_pids))
     return roster, items, primitives, claims, slugs
 
@@ -825,6 +850,17 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
         # A primitive carrying two marks is invalid, not unmarked; naming it
         # here too would report the wrong defect and inflate the count.
         contradicted = set(claims.get("multi_marked") or [])
+        # A mark that was written and did not parse is a third state, and it is
+        # the one an author cannot act on from a "no mark" message.
+        malformed = claims.get("malformed_marks") or []
+        for name in malformed:
+            rep.fail(
+                f"primitive {name!r} carries an evidence mark that could not be read. The mark "
+                "is present -- do not add another, which the two-marks rule refuses -- but its "
+                "source runs past the closing delimiter. The usual cause is a ')' inside the "
+                "source text; the mark ends at the first ')*', so quote carefully or reword."
+            )
+        contradicted |= set(malformed)
         unmarked = [n for n in primitives if n not in marks and n not in contradicted]
         if unmarked:
             msg = (f"{len(unmarked)} primitive(s) carry no evidence mark: "
@@ -1300,7 +1336,13 @@ def check_enriched(items: list[Item], claims: dict, core_text: str,
         return not re.search(r"\b(no|not|never|nothing|none)\b",
                              sentence[: m.end()], re.I)
 
-    affirmed = any(affirms(s) for s in re.split(r"(?<=[.!?])\s+", header))
+    # Trailing markdown and quote characters do not end a sentence, but they do
+    # sit between the full stop and the whitespace -- and a bare (?<=[.!?])\s+
+    # then never splits there. The templates all open with an italic provenance
+    # line, "_... changes nothing in it._", so the sentence after it joined the
+    # same chunk and the negation guard below found that line's "nothing". The
+    # declaration was present, correct, and reported as absent.
+    affirmed = any(affirms(s) for s in re.split(r"(?<=[.!?])[_*\"'”’)\]]*\s+", header))
     if not affirmed:
         rep.fail(
             "the enriched header carries no affirmative statement that the scenes are invented "
@@ -1399,9 +1441,13 @@ def verification_problem(core_text: str) -> str:
     if not body:
         return ("has no Verification section — Phase 7b was skipped or its findings were not "
                 "recorded")
-    lines = [ln for ln in body.splitlines() if ln.strip()]
+    # Substantive, not merely non-empty. A line count let five one-character
+    # lines satisfy a gate whose whole job is recording five answers -- the
+    # check fired on an empty section and passed a meaningless one, which is
+    # the shape this suite calls a claim satisfied by a non-claim.
+    lines = [ln for ln in body.splitlines() if is_substantive(ln)]
     if len(lines) < 5:
-        return (f"has a Verification section of {len(lines)} non-empty line(s). Phase 7b asks "
+        return (f"has a Verification section of {len(lines)} substantive line(s). Phase 7b asks "
                 "five questions and requires the answers recorded, disagreements included")
     return ""
 
@@ -1518,6 +1564,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
     statusless: list[str] = []
     bad_kind: list[str] = []
     no_mark: list[str] = []
+    malformed_mark: list[str] = []
     multi_mark: list[str] = []
     off_vocab: list[str] = []
     unsourced: list[str] = []
@@ -1535,13 +1582,35 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         # The label's trailing period lives inside the bold — "**What it
         # costs.**" — so it has to come off the key or no block ever matches.
         labels = {}
+        blocks = {}
         spans = {}
         counts: dict[str, int] = {}
-        found_labels = list(re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M))
+        # Only the five known block labels open a block. Any bold run at the
+        # start of a line used to, which meant a continuation line beginning
+        # with emphasis -- "**verified**. *(observed: ..." after a soft wrap --
+        # was read as a new label and silently truncated the block above it.
+        # The labels are a closed set, so matching against it is exact, and a
+        # mistyped label now reports as an absent block rather than corrupting
+        # its neighbour.
+        _known = {normalise(b).strip(" .:") for b in ADVERSARIAL_BLOCKS}
+        found_labels = [m for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M)
+                        if normalise(m.group(1)).strip(" .:") in _known]
         for i, m in enumerate(found_labels):
             k = normalise(m.group(1)).strip(" .:")
             counts[k] = counts.get(k, 0) + 1
             labels.setdefault(k, m.group(2).strip())
+            # Two extents, deliberately. `labels` is the label's own line, which
+            # is what a one-line field like Kind means. `blocks` is the whole
+            # block, which is what a field whose content gets *searched* means:
+            # About carries a lane, a status word and a mark on one long line,
+            # and reading only line one failed a correct document the moment it
+            # soft-wrapped. The reference's own worked example wraps its heading
+            # because these lines are long, and every other continuation in this
+            # checker is handled -- heading, primitive entry, carried finding.
+            _stop = (found_labels[i + 1].start()
+                     if i + 1 < len(found_labels) else len(body))
+            blocks.setdefault(k, re.sub(r"\s+", " ",
+                                        (m.group(2) + " " + body[m.end():_stop]).strip()))
             spans.setdefault(k, m.end(1))
             # The block's content runs to the next label, so a label with an
             # empty body is visible. Presence alone let an entry carry all five
@@ -1569,16 +1638,21 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         if "kind" in labels and kind not in {normalise(k) for k in ADVERSARIAL_KINDS}:
             bad_kind.append(f"{key} says {labels['kind'].strip() or '(nothing)'!r}")
 
-        about = labels.get("about", "")
+        about = blocks.get("about", "")
         # The mark is read from the About block, anchored at the label's own
         # position rather than found by searching for its text: the About text
         # can occur earlier in the entry — quoted in the complaint, say — and a
         # find() then slices from the wrong place and reports a missing mark.
-        about_block = (body[spans["about"]:].split("\n\n", 1)[0]
-                       if "about" in spans else "")
-        marks = re.findall(r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", about_block)
+        about_block = blocks.get("about", "")
+        # One definition, one home: this was a second copy of the mark pattern
+        # and it drifted from MARK_RE the moment MARK_RE was fixed, so a mark
+        # that parsed for a primitive still vanished for a grievance.
+        marks = re.findall(MARK_RE, about_block)
         if not marks:
-            no_mark.append(key)
+            if re.search(MARK_ATTEMPT_RE, about_block):
+                malformed_mark.append(key)
+            else:
+                no_mark.append(key)
         elif len(marks) > 1:
             multi_mark.append(key)
         else:
@@ -1626,6 +1700,10 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         ("carry no evidence mark", no_mark,
          "An unmarked grievance is an accusation: it asserts in someone's voice that real people "
          "are unhappy with a real thing, to the person who owns that thing."),
+        ("carry an evidence mark that could not be read", malformed_mark,
+         "The mark is present -- do not add another, which the two-marks rule refuses -- but its "
+         "source runs past the closing delimiter. The usual cause is a ')' inside the source "
+         "text; the mark ends at the first ')*', so quote carefully or reword."),
         ("carry more than one evidence mark", multi_mark,
          "Keeping the first would let a stale mark sit beside its replacement and read as "
          "consistent."),
@@ -1803,6 +1881,26 @@ def main() -> int:
         # has to cite live in Appendix A, which the item tables do not carry.
         check_adversarial(parsed[0], parsed[1], text,
                           open(args.adversarial, encoding="utf-8").read(), rep)
+    # A graded document whose inventory is gone. Coverage marks are claims about
+    # what the subject serves, and Appendix A is the only thing in the document
+    # that grounds them -- so a Full or Light run with no readable lanes states
+    # sixty findings and carries the evidence for none. This was reachable:
+    # truncating a document at its appendix heading left --final passing at
+    # exit 0 with a full tally still on the page.
+    #
+    # Marks are the trigger rather than a declared depth, deliberately. A
+    # depth-None run has no marks and no appendix and is correct; a graded run
+    # has both. The two are told apart by what the document already carries,
+    # which costs no new required field and cannot go stale.
+    if any(it.coverage.strip() for it in parsed[1]) and not core_lanes(text):
+        msg = ("this document grades coverage but no Appendix A lanes can be read from it. "
+               "Every coverage mark is a claim about what the subject serves today, and the "
+               "inventory is what grounds them — without it the tally is sixty findings with no "
+               "evidence behind any of them. Lanes are read from rows of the form "
+               "'| **A — The documented path** | …'. A run at coverage depth None has no marks "
+               "and needs no appendix; this one has marks.")
+        rep.fail(msg) if args.final else rep.warn(msg)
+
     if args.final:
         m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
         if not m:
@@ -1815,12 +1913,16 @@ def main() -> int:
             # A bare heading satisfies a heading check while recording nothing. The
             # adversarial read answers five questions; require enough substance to
             # have carried them.
-            body = [ln for ln in m.group(1).splitlines() if ln.strip()]
+            # Substantive, not merely non-empty: a body of "x/y/z/a/b" cleared a
+            # bare line count while recording nothing at all. is_substantive is
+            # the same bar every required field is already held to.
+            body = [ln for ln in m.group(1).splitlines() if is_substantive(ln)]
             if len(body) < 5:
                 rep.fail(
-                    f"Verification section has {len(body)} non-empty line(s). Phase 7b asks five "
+                    f"Verification section has {len(body)} substantive line(s). Phase 7b asks five "
                     "questions and requires the answers recorded, disagreements included; a "
-                    "heading on its own passes the gate without carrying any of them."
+                    "heading on its own, or five placeholder lines, passes a line count without "
+                    "carrying any of them."
                 )
 
     for m in rep.notes:

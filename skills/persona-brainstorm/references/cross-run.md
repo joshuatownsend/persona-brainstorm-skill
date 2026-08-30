@@ -90,6 +90,14 @@ Then report movement in these terms:
   changed and not because anything shipped. Movement between two independent runs tells you the
   demand picture shifted; it does **not** measure whether your work served it.
 
+**The frontier count is not comparable between runs, and it looks like it is.** ⚡ is applied by the
+generating agent as a judgement, so it carries evaluator drift in full — two runs holding subject,
+frame, budget and archetype identical have differed by more than a factor of two on ⚡ alone, with
+the frontier class unchanged between them. It is also the figure a reader compares first, because it
+is the only count the tally line carries at coverage depth **None**. Report a ⚡ movement as a
+measurement of two graders unless you re-marked a fixed cohort yourself, and say so rather than
+letting the number stand beside the coverage figures as though it were the same kind of thing.
+
 **To measure whether shipping served demand, hold the cohort fixed.** Take the *previous*
 document's items unchanged and run Phases 3–4 against today's artifact — a re-grade, not a
 brainstorm. Same asks, same wording, new coverage marks. Hold the discovery pass and the coverage
