@@ -64,6 +64,14 @@ without coverage: `d_ok.md` exercises the ✅/◐/○ forms, and `nocov.md` exer
 *"What answering this would take"* and the rule that a run which assessed
 nothing may not carry `○`.
 
+`--adversarial` works the same way. Its base is generated too, and for a
+stronger reason: the entries cite the core document's persona ids *and* its
+Appendix A lane letters, so a stored one goes stale when either changes.
+`nocov.md` appears there as well, but as the subject of a check rather than a
+base — the pass refuses a core document with no coverage marks, and that
+precondition is a property of the core rather than of anything a mutation could
+express.
+
 ## Both passes are covered
 
 `verify.py` has a second pass behind `--final`, which adds the Phase 7b

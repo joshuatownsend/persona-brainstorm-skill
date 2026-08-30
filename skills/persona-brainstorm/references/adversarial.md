@@ -255,6 +255,33 @@ doubts, a persona that looks missing, an ask that turns out to be a grievance in
 
 ---
 
+## Verify it
+
+```bash
+python "<skill-dir>/scripts/verify.py" <core document> --adversarial <adversarial document>
+```
+
+It settles what is a relation between the two documents, and refuses outright when the core
+document has no coverage marks — the precondition above, enforced rather than trusted.
+
+- **the lane rule** — every grievance names an Appendix A lane, except an expectation gap, which
+  names a promise instead;
+- **the evidence marks** — exactly one per grievance, from the closed vocabulary, sourced for
+  `observed` and `inferred` and unsourced for `invented`;
+- **the roster** — every persona id appears in the core document's roster, and no grievance id
+  is used twice;
+- **the shape** — a quoted complaint in the heading, a kind from the five, and all five blocks
+  present;
+- **the header** — the coverage depth, the carried Verification findings, the declaration of which
+  entries are reported complaints, and — when nothing is marked `observed` — that the run says so.
+
+**What it cannot check is whether a grievance is real.** An invented complaint and an observed one
+are the same shape, and a lane cited correctly says nothing about whether the persona would
+actually resent it. The checks make the *claims* auditable; whether the claims are true is what
+Phase 7b and the people who own the subject are for.
+
+---
+
 ## The artifact
 
 Offered once, and declining changes nothing else — the markdown is the deliverable either way.

@@ -354,8 +354,8 @@ def enriched_from(core_text):
             "**Coverage:** not assessed — no coverage pass ran, so no item carries a mark.", ""]
     head += ["**⚡ marks the frontier** — reads that feel like writes.", "",
              "**Topics:** `identity` · `provenance` · `agent-surface`.", "",
-             "**Carried from the core document's Verification section:** the adversarial read "
-             "found three coverage marks contradicting the document's own text.", "", "---", ""]
+             "**Carried from the core document's Verification section:** "
+             + carried_verification(core_text), "", "---", ""]
 
     body = []
     seen = set()
@@ -616,6 +616,13 @@ ENRICHED_MUTATIONS = [
      "**Coverage key:** lines in the enriched header"),
     # An apostrophe is not a quote delimiter: treating one as an opener let an
     # unquoted ask containing a contraction read as quoted.
+    # The same substitution the adversarial pass is checked for: findings
+    # replaced by something reassuring rather than summarised.
+    ("enriched-verification-replaced",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "**Carried from the core document's Verification section:** "
+                         "everything passed."),
+     "no vocabulary in common"),
     ("enriched-heading-ask-only-apostrophes",
      lambda t: re.sub(r"^(####\s+\d+\s+—).*$", r"\1 they don't know it's answerable",
                       t, count=1, flags=re.M),
@@ -633,6 +640,219 @@ ENRICHED_NOCOV_MUTATIONS = [
      "carries ○ on a run with no coverage pass"),
     ("enriched-nocov-deletes-the-key", lambda t: drop(t, "**Coverage:** not assessed"),
      "not assessed' line in the enriched header"),
+]
+
+# ---------------------------------------------------------------------------
+# Adversarial. Generated from a core document for the same reason the enriched
+# base is: the entries cite that document's personas and its Appendix A lanes,
+# so a stored one goes stale the moment either changes.
+# ---------------------------------------------------------------------------
+ADV_KINDS = ("it's wrong", "it's expensive", "it refuses", "it surprises")
+
+
+def carried_verification(core_text):
+    """A summary of the core's Verification section, drawn from its own words.
+
+    Composed from the section rather than invented, because that is what
+    carrying findings forward means -- and because a generator writing its own
+    reassuring sentence would produce a base that fails the check requiring the
+    two to share vocabulary, which is the check working.
+    """
+    m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
+    require(m, "no Verification section in the core base")
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z'-]{3,}", m.group(1))][:60]
+    require(words, "the core Verification section has no words to carry")
+    return " ".join(words)
+
+
+def core_lane_letters(core_text):
+    """The Appendix A lane letters, in document order."""
+    # Every dash the checker accepts. Matching only the em dash meant a core
+    # document written with a hyphen would break the generator rather than the
+    # thing it generates for, which is the wrong failure.
+    out = [m.group(1) for m in
+           re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–][^*|]+\*\*", core_text)]
+    require(out, "no Appendix A lanes found in the core base")
+    return out
+
+
+def adversarial_from(core_text):
+    """A conforming adversarial pass over a core document."""
+    rows = core_items(core_text)
+    personas = list(dict.fromkeys(r.persona for r in rows))
+    lanes = core_lane_letters(core_text)
+    head = ["# What someone would want — what they can't stand about it", "",
+            "_Adversarial pass over `PERSONAS.md` (2026-08-30)._", "",
+            "**Only the `observed` entries are reported complaints.** inferred and invented are "
+            "both reconstructions.", "",
+            "**Coverage depth:** Full, copied from the core document.", "",
+            "**Carried from the core document's Verification section:** "
+            + carried_verification(core_text), "", "---", ""]
+    body = []
+    for i, persona in enumerate(personas):
+        body += [f"## {persona} — Role", ""]
+        for k in (1, 2):
+            lane = lanes[(i + k) % len(lanes)]
+            mark = "observed: a support thread" if (i + k) % 3 == 0 else "invented"
+            body += [f'#### {persona}-{k} — "I can never tell whether this answer is current."',
+                     "",
+                     f"**About:** Lane {lane} — the read it serves; Appendix A marks this "
+                     f"lane verified. *({mark})*", "",
+                     f"**Kind:** {ADV_KINDS[(i + k) % len(ADV_KINDS)]}.", "",
+                     "**What they expected.** That the answer would say how old it was.", "",
+                     "**What it costs.** They confirm it elsewhere, which takes longer.", "",
+                     "**What would fix it.** A timestamp on the answer.", ""]
+    return "\n".join(head + body)
+
+
+def _adv_first(text):
+    """The first grievance entry, as a block."""
+    m = re.search(r"^####\s+P\d+-\d+\s+—", text, re.M)
+    require(m, "no grievance entries in the generated base")
+    end = text.find("\n#### ", m.end())
+    return text[m.start():end if end > 0 else len(text)]
+
+
+def _as_expectation_gap(text, about):
+    """Turn the first entry into an expectation gap with the given About."""
+    block = _adv_first(text)
+    out = re.sub(r"^\*\*About:\*\*.*$", about, block, count=1, flags=re.M)
+    out = re.sub(r"^\*\*Kind:\*\*.*$", "**Kind:** the expectation gap.", out,
+                 count=1, flags=re.M)
+    require(out != block, "the entry was already an expectation gap")
+    return swap(text, block, out)
+
+
+def expectation_gap_with_promise(text):
+    return _as_expectation_gap(
+        text, '**About:** the promise in `README.md` that it "answers anything". *(invented)*')
+
+
+def expectation_gap_without_promise(text):
+    return _as_expectation_gap(text, "**About:** the thing generally. *(invented)*")
+
+
+ADVERSARIAL_MUTATIONS = [
+    ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
+     "no grievance entries found"),
+    ("adversarial-everything-fenced",
+     lambda t: "~~~markdown\n" + t + "\n~~~\n", "no grievance entries found"),
+    ("adversarial-persona-not-on-roster",
+     lambda t: t.replace("#### P1-1", "#### P99-1", 1), "not on the approved roster"),
+    ("adversarial-duplicate-id",
+     lambda t: t + "\n" + _adv_first(t), "duplicate grievance id"),
+    ("adversarial-complaint-not-quoted",
+     lambda t: re.sub(r'^(####\s+P\d+-\d+\s+—).*$', r"\1 the answer is stale",
+                      t, count=1, flags=re.M),
+     "carry no quoted complaint"),
+    ("adversarial-no-lane",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*About:\*\*.*$", "**About:** the thing generally. *(invented)*",
+                           _adv_first(t), count=1, flags=re.M)),
+     "name no Appendix A lane"),
+    ("adversarial-no-evidence-mark",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"\s*\*\([^)]*\)\*", "", _adv_first(t), count=1)),
+     "carry no evidence mark"),
+    ("adversarial-two-evidence-marks",
+     lambda t: swap(t, _adv_first(t),
+                    _adv_first(t).replace("*(observed: a support thread)*",
+                                          "*(observed: a support thread)* *(invented)*", 1)
+                    if "*(observed" in _adv_first(t)
+                    else _adv_first(t).replace("*(invented)*",
+                                               "*(invented)* *(observed: a note)*", 1)),
+     "carry more than one evidence mark"),
+    ("adversarial-mark-off-vocabulary",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"\*\(\s*[A-Za-z-]+", "*(probable", _adv_first(t), count=1)),
+     "is marked 'probable'"),
+    ("adversarial-observed-without-source",
+     lambda t: t.replace("*(observed: a support thread)*", "*(observed)*", 1),
+     "names no source"),
+    ("adversarial-invented-with-source",
+     lambda t: t.replace("*(invented)*", "*(invented: a support thread)*", 1),
+     "invented and names a source"),
+    ("adversarial-kind-off-vocabulary",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*Kind:\*\*.*$", "**Kind:** annoying.",
+                           _adv_first(t), count=1, flags=re.M)),
+     "says 'annoying.'"),
+    ("adversarial-block-missing",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*What it costs\.\*\*.*$", "",
+                           _adv_first(t), count=1, flags=re.M)),
+     "is missing What it costs"),
+    ("adversarial-no-coverage-depth",
+     lambda t: drop(t, "**Coverage depth:**"), "no **Coverage depth:** line"),
+    ("adversarial-coverage-depth-neither",
+     lambda t: edit_line(t, "**Coverage depth:**", "**Coverage depth:** thorough."),
+     "does not open with Full or Light"),
+    ("adversarial-two-coverage-depths",
+     lambda t: twice(t, "**Coverage depth:**"), "**Coverage depth:** lines"),
+    ("adversarial-no-verification-carry",
+     lambda t: drop(t, "**Carried from the core document's Verification section:**"),
+     "Verification section is not carried"),
+    ("adversarial-no-observed-disclosure",
+     lambda t: drop(t, "**Only the `observed` entries are reported complaints.**"),
+     "does not say which entries are reported complaints"),
+    ("adversarial-all-invented-undisclosed",
+     lambda t: t.replace("*(observed: a support thread)*", "*(invented)*"),
+     "no grievance is marked observed, and the header does not say so"),
+    # The word appearing is not the declaration, here as in the enriched header.
+    ("adversarial-disclosure-negated",
+     lambda t: edit_line(t, "**Only the `observed` entries are reported complaints.**",
+                         "**The `observed` entries are not reported complaints.**"),
+     "does not say which entries are reported complaints"),
+    # "None, not Full or Light" declares the one depth this pass refuses, and
+    # passed on the word it used to refuse it.
+    ("adversarial-depth-discusses-rather-than-states",
+     lambda t: edit_line(t, "**Coverage depth:**",
+                         "**Coverage depth:** None, not Full or Light."),
+     "does not open with Full or Light"),
+    ("adversarial-verification-replaced",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "**Carried from the core document's Verification section:** "
+                         "everything passed."),
+     "no vocabulary in common"),
+    ("adversarial-expectation-gap-cites-nothing", expectation_gap_without_promise,
+     "cite no promise"),
+    # setdefault kept the first and ignored the rest, so a stale block sat
+    # beside its replacement and the entry read as consistent.
+    ("adversarial-lane-without-status",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"; Appendix A marks this lane verified", "",
+                           _adv_first(t), count=1)),
+     "name no verification status"),
+    ("adversarial-block-empty",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^(\*\*What it costs\.\*\*).*$", r"\1", _adv_first(t),
+                           count=1, flags=re.M)),
+     "What it costs is empty"),
+    ("adversarial-block-repeated",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^(\*\*Kind:\*\*.*)$", r"\1\n\n**Kind:** it refuses.",
+                           _adv_first(t), count=1, flags=re.M)),
+     "repeats Kind"),
+    # Without the blank line the heading continuation swallowed the About block,
+    # and the quoted text there stood in for the missing complaint.
+    ("adversarial-heading-runs-into-the-about",
+     lambda t: re.sub(r'^(####\s+P\d+-\d+\s+—).*\n\n', r"\1 the answer is stale\n",
+                      t, count=1, flags=re.M),
+     "carry no quoted complaint"),
+    # Advice to the author, not a statement about this run.
+    ("adversarial-no-observed-declared-as-advice",
+     lambda t: edit_line(
+         t.replace("*(observed: a support thread)*", "*(invented)*"),
+         "**Only the `observed` entries are reported complaints.**",
+         "**Only the `observed` entries are reported complaints.**\n\n"
+         "**Do not label invented entries observed.**"),
+     "no grievance is marked observed, and the header does not say so"),
+]
+
+# Must still pass: the expectation gap is the one kind exempt from the lane
+# rule, and an exemption nothing asserts is an exemption nobody knows is there.
+ADVERSARIAL_POSITIVES = [
+    ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
 ]
 
 # ---------------------------------------------------------------------------
@@ -826,6 +1046,88 @@ def main():
                            f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
                 else:
                     report(True, name)
+
+        print("\nadversarial (--adversarial):")
+        core_path = os.path.join(FIXTURES, "d_ok.md")
+        try:
+            base = adversarial_from(load("d_ok.md"))
+        except (BrokenFixture, ValueError) as exc:
+            report(False, "adversarial base", str(exc))
+            base = None
+        if base is not None:
+            ok_path = os.path.join(tmp, "adversarial_ok.md")
+            with open(ok_path, "w", encoding="utf-8") as fh:
+                fh.write(base)
+            rc, out = run(core_path, "--adversarial", ok_path)
+            fails = failures_in(out)
+            report(rc == 0, "generated adversarial pass over d_ok.md passes",
+                   "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
+
+            # The precondition, which no mutation of the document can express:
+            # it is a property of the core document, not of this one.
+            rc, out = run(os.path.join(FIXTURES, "nocov.md"), "--adversarial", ok_path)
+            fails = failures_in(out)
+            report("nothing to run against" in fails,
+                   "a core with no coverage pass is refused",
+                   "" if "nothing to run against" in fails
+                   else (fails.splitlines() or ["(passed)"])[0].strip()[:80])
+
+            # The other precondition, and also a property of the core: these
+            # passes require it to have passed --final, and --final refuses a
+            # Verification section too short to hold Phase 7b's five answers.
+            # Both passes are checked, because both stated the precondition and
+            # only one of them enforced it.
+            thin = re.sub(r"(^#{2,3}\s*Verification\b.*?)(?=^##\s)",
+                          "## Verification (Phase 7)\n\ncoverage marks passed.\n\n",
+                          load("d_ok.md"), count=1, flags=re.M | re.S)
+            require(thin != load("d_ok.md"), "the Verification section was not thinned")
+            thin_path = os.path.join(tmp, "thin_core.md")
+            with open(thin_path, "w", encoding="utf-8") as fh:
+                fh.write(thin)
+            for flag, other in (("--adversarial", ok_path),
+                                ("--enriched",
+                                 os.path.join(tmp, "enriched_ok_d_ok.md"))):
+                rc, out = run(thin_path, flag, other)
+                fails = failures_in(out)
+                report("has not passed --final" in fails,
+                       f"{flag} refuses a core whose Verification is too thin",
+                       "" if "has not passed --final" in fails
+                       else (fails.splitlines() or ["(passed)"])[0].strip()[:80])
+
+            for name, mutate, needle in ADVERSARIAL_MUTATIONS:
+                try:
+                    text = mutate(base)
+                except (BrokenFixture, ValueError) as exc:
+                    report(False, name, f"mutation no longer applies: {exc}")
+                    continue
+                require(text != base, f"{name} changed nothing")
+                path = os.path.join(tmp, name + ".md")
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                rc, out = run(core_path, "--adversarial", path)
+                fails = failures_in(out)
+                if rc == 0:
+                    report(False, name, "document passed; the defect was not caught")
+                elif needle.lower() not in fails.lower():
+                    first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
+                    report(False, name,
+                           f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
+                else:
+                    report(True, name)
+
+            for name, mutate in ADVERSARIAL_POSITIVES:
+                try:
+                    text = mutate(base)
+                except (BrokenFixture, ValueError) as exc:
+                    report(False, name, f"mutation no longer applies: {exc}")
+                    continue
+                path = os.path.join(tmp, name + ".md")
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                rc, out = run(core_path, "--adversarial", path)
+                fails = failures_in(out)
+                report(rc == 0, name,
+                       "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
 
         print("\nsecond pass (--final):")
         for name, base, mutate, needle in FINAL_CASES:

@@ -810,6 +810,16 @@ Three things decide whether this pass is worth running:
    persona with *no* grievances is a real result: sometimes nobody complains because nobody got far
    enough in to be disappointed.
 
+The first two are checkable, and are checked:
+
+```bash
+python "<skill-dir>/scripts/verify.py" <core document> --adversarial <adversarial document>
+```
+
+It refuses a core document with no coverage marks, then settles the lane rule, the evidence marks,
+the roster, and the header declarations. It cannot tell a real grievance from an invented one —
+that is what Phase 7b and the people who own the subject are for.
+
 ## Re-running with a corrected frame
 
 Expect the first run to come out narrower than the user wanted, and expect them to say so — often
