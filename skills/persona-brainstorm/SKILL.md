@@ -756,6 +756,17 @@ of care:
    ask arises, written concretely because a hedged scene teaches nothing. Where one came from
    something real, name the source on that item.
 
+The first of those is checkable, and is checked — run the enriched document against the core one:
+
+```bash
+python "<skill-dir>/scripts/verify.py" <core document> --enriched <enriched document>
+```
+
+It settles the heading rule, that every item has exactly one entry, that the footer marks agree
+with the core document, and that the header carries the declarations a detached reader has instead
+of that document. It cannot tell an invented scene from an observed one — that is Phase 7b's job
+here as much as on the core document.
+
 This is the `**Frequencies:**` rule again, two levels down. Enrichment is where a demand-side
 document turns into a case study, and a case study is a different claim — sixty scenes of confident
 prose are far more persuasive than sixty table rows, and nothing in the prose reveals which of them
