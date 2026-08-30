@@ -354,8 +354,8 @@ def enriched_from(core_text):
             "**Coverage:** not assessed — no coverage pass ran, so no item carries a mark.", ""]
     head += ["**⚡ marks the frontier** — reads that feel like writes.", "",
              "**Topics:** `identity` · `provenance` · `agent-surface`.", "",
-             "**Carried from the core document's Verification section:** the adversarial read "
-             "found three coverage marks contradicting the document's own text.", "", "---", ""]
+             "**Carried from the core document's Verification section:** "
+             + carried_verification(core_text), "", "---", ""]
 
     body = []
     seen = set()
@@ -616,6 +616,13 @@ ENRICHED_MUTATIONS = [
      "**Coverage key:** lines in the enriched header"),
     # An apostrophe is not a quote delimiter: treating one as an opener let an
     # unquoted ask containing a contraction read as quoted.
+    # The same substitution the adversarial pass is checked for: findings
+    # replaced by something reassuring rather than summarised.
+    ("enriched-verification-replaced",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "**Carried from the core document's Verification section:** "
+                         "everything passed."),
+     "no vocabulary in common"),
     ("enriched-heading-ask-only-apostrophes",
      lambda t: re.sub(r"^(####\s+\d+\s+—).*$", r"\1 they don't know it's answerable",
                       t, count=1, flags=re.M),
@@ -643,6 +650,21 @@ ENRICHED_NOCOV_MUTATIONS = [
 ADV_KINDS = ("it's wrong", "it's expensive", "it refuses", "it surprises")
 
 
+def carried_verification(core_text):
+    """A summary of the core's Verification section, drawn from its own words.
+
+    Composed from the section rather than invented, because that is what
+    carrying findings forward means -- and because a generator writing its own
+    reassuring sentence would produce a base that fails the check requiring the
+    two to share vocabulary, which is the check working.
+    """
+    m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
+    require(m, "no Verification section in the core base")
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z'-]{3,}", m.group(1))][:60]
+    require(words, "the core Verification section has no words to carry")
+    return " ".join(words)
+
+
 def core_lane_letters(core_text):
     """The Appendix A lane letters, in document order."""
     # Every dash the checker accepts. Matching only the em dash meant a core
@@ -664,8 +686,8 @@ def adversarial_from(core_text):
             "**Only the `observed` entries are reported complaints.** inferred and invented are "
             "both reconstructions.", "",
             "**Coverage depth:** Full, copied from the core document.", "",
-            "**Carried from the core document's Verification section:** the adversarial read "
-            "found three coverage marks contradicting the document's own text.", "", "---", ""]
+            "**Carried from the core document's Verification section:** "
+            + carried_verification(core_text), "", "---", ""]
     body = []
     for i, persona in enumerate(personas):
         body += [f"## {persona} — Role", ""]

@@ -954,7 +954,8 @@ def blank_fences(text: str) -> str:
     return "\n".join(out)
 
 
-def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> None:
+def check_enriched(items: list[Item], claims: dict, core_text: str,
+                   text: str, rep: Report) -> None:
     """Check an enriched document against the core document it expands.
 
     Only the things a checker can settle: that every item is present exactly
@@ -1271,6 +1272,13 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
             "nothing after it reads as though the adversarial pass found nothing, which is a "
             "stronger claim than the document is making."
         )
+    elif not shares_vocabulary(carried_block(header, carried.start(1)),
+                               core_verification(core_text)):
+        rep.fail(
+            "the carried Verification findings have no vocabulary in common with the core "
+            "document's Verification section. A tight summary is allowed; replacing the "
+            "findings with something reassuring is the failure this line exists to prevent."
+        )
 
     # Sentence by sentence, and negation-free. Matching a window between two
     # phrases keeps admitting the opposite claim by a route the window does not
@@ -1373,20 +1381,25 @@ def core_verification(core_text: str) -> str:
     return m.group(1) if m else ""
 
 
-def shares_vocabulary(carried: str, source: str, floor: int = 2) -> bool:
-    """True when the carried text and the source share distinctive words.
+def distinctive(s: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z][a-z'-]{3,}", s.lower()) if w not in STOPWORDS}
 
-    Deliberately weak. The reference allows the findings verbatim or tightly
-    summarised, so the strong comparison the frequency basis gets would be
-    wrong here — but a summary of a text shares words with it, and a sentence
-    written over the findings instead of from them shares none. With no source
-    to compare against, this passes rather than inventing a verdict.
+
+def shares_vocabulary(carried: str, source: str) -> bool:
+    """True when the carried text plausibly derives from the source.
+
+    A floor scaled to the source, not a match. The reference allows the findings
+    verbatim *or* tightly summarised, so the verbatim comparison the frequency
+    basis gets would be wrong — but a summary of a long section shares more with
+    it than a two-word phrase does, and the floor grows with the section.
+
+    What this detects is wholesale replacement. It cannot prove every finding
+    survived, and neither the message nor the reference claims it does.
     """
-    if not source.strip():
+    src = distinctive(source)
+    if not src:
         return True
-    words = lambda s: {w for w in re.findall(r"[a-z][a-z'-]{3,}", s.lower())
-                       if w not in STOPWORDS}
-    return len(words(carried) & words(source)) >= floor
+    return len(distinctive(carried) & src) >= max(3, min(6, len(src) // 8))
 
 
 def core_lanes(core_text: str) -> set[str]:
@@ -1529,8 +1542,13 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             # it names the promise and where it is made. An expectation traced
             # to nothing is a preference, and belongs in the core document.
             stripped = re.sub(r"\*\([^)]*\)\*", "", about)
-            if not re.search(r"[\"“][^\"”]+[\"”]|`[^`]+`|\[[^\]]+\]\([^)]+\)|https?://"
-                             r"|\b\w+\.(md|html|txt)\b|:\d+", stripped):
+            # Both halves, not either: the promise *and* where it is made. An
+            # alternation accepted a quotation with no location and a filename
+            # with no promise, and each of those is half a citation.
+            promise = re.search(r"[\"“][^\"”]+[\"”]", stripped)
+            where = re.search(r"`[^`]+`|\[[^\]]+\]\([^)]+\)|https?://"
+                              r"|\b[\w./-]+\.(?:md|html|txt|json|ya?ml)\b|:\d+", stripped)
+            if not (promise and where):
                 promiseless.append(key)
         elif kind:
             if not any(re.search(rf"\bLane {re.escape(l)}\b", about) if len(l) == 1
@@ -1606,6 +1624,16 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             "header. Phase 7b may have questioned the very personas this pass writes complaints "
             "for, and a file carrying the grievances without those findings inverts it."
         )
+    elif not core_verification(core_text).strip():
+        # The precondition is that the core passed --final, which refuses a
+        # document with no Verification section. Reaching here means it did not,
+        # and an optional pass amplifying an unverified document is exactly what
+        # that precondition exists to prevent.
+        rep.fail(
+            "the core document has no Verification section, so it has not passed --final and "
+            "there is nothing for this pass to carry. Run Phase 7b on the core document first: "
+            "these passes amplify what is already there."
+        )
     else:
         block = carried_block(header, carried.start(1))
         if not is_substantive(block):
@@ -1624,8 +1652,12 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
     # Negation-checked, like the enriched disclosure: a bold sentence saying the
     # observed entries are *not* reported complaints contains the word and
     # asserts the opposite of the rule it is standing in for.
+    # And what it asserts, not only its polarity. A bold sentence saying the
+    # observed entries are "fictional reconstructions" is affirmative, mentions
+    # the word, and states the opposite relationship.
     disclosed = any(
         not re.search(r"\b(no|not|never|nothing|none)\b", m.group(0), re.I)
+        and re.search(r"\breport|complaint", m.group(0), re.I)
         for m in re.finditer(r"^\*\*[^*]*\bobserved\b[^*]*\*\*", header, re.M)
     )
     if not disclosed:
@@ -1684,7 +1716,7 @@ def main() -> int:
         # rule worth checking is a relation between the two: the heading a mark
         # selects, the items that must all be present, the declarations copied
         # across. An enriched file has no meaning apart from what it expands.
-        check_enriched(parsed[1], parsed[3],
+        check_enriched(parsed[1], parsed[3], text,
                        open(args.enriched, encoding="utf-8").read(), rep)
     if args.adversarial:
         # The core text as well as its parse: the lane identifiers a grievance
