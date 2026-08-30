@@ -725,8 +725,11 @@ of care:
 2. **A served item may only claim what Phase 3 recorded**, and names the Appendix A lane that
    carries it. The heading rule catches past tense on an unserved item; it does not catch invented
    specificity on a served one — a plausible number, a named field, a duration, all reading as
-   observation because they are too particular to be anything else. If you cannot name the lane,
-   the item takes the conditional form instead.
+   observation because they are too particular to be anything else. When no lane carries it, the
+   mark still wins — switching the heading would leave the item disagreeing with its own footer.
+   Write what the inventory supports, say which part is unverified, and record it as a finding:
+   a served mark you cannot trace is a problem with the core document, and this pass reports one
+   rather than routing around it. `references/enrichment.md` carries the handling.
 3. **The scenes are declared invented, once, in the header.** They are hypotheses about how each
    ask arises, written concretely because a hedged scene teaches nothing. Where one came from
    something real, name the source on that item.

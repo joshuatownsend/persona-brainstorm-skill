@@ -143,6 +143,11 @@ halves of the document together.
 **The footer line** — frequency, the frontier mark if the item carries one, the coverage mark, and
 the topics. Everything here is copied from the core document except the topics.
 
+At coverage depth **None** the core document has no coverage column, so the footer has no mark to
+copy and simply omits it: `many/day · ⚡ · topics: …`. Do not write `○` there. `○` is a finding —
+assessed and not served — and a run that never assessed anything has not earned it. The artifact
+drops the coverage pill for the same reason, rather than showing an empty one.
+
 ---
 
 ## Topics
@@ -175,8 +180,8 @@ persona and primitive slugs are not. Every subject needs a different set — `DN
 ```markdown
 # <The core document's title> — the story behind each ask
 
-_Enrichment of `<core document path>` (<date>, subject SHA `<sha>`). The core document is the record; this
-one expands it and changes nothing in it._
+_Enrichment of `<core document path>` (<date><, subject SHA `<sha>` — only if the core document
+recorded one>). The core document is the record; this one expands it and changes nothing in it._
 
 **The scenes are invented.** Each item's situation is a plausible reconstruction of how the ask
 arises, not an observed incident — written concretely because a hedged scene teaches nothing.
@@ -236,9 +241,11 @@ Structure, in order:
    the core document. Collapsed because the items are what this page is for.
 7. **A dated source line** — what this is, what it was generated from, and when.
 
-Keep the coverage mark visible on every card. It is what tells a reader which of the two third-block
-forms they are reading, and a filtered view that hides it turns the whole page back into a
-case study.
+Where there are coverage marks, keep them visible on every card. The mark is what tells a reader
+which of the two third-block forms they are reading, and a filtered view that hides it turns the
+page back into a case study. A depth-**None** run has no marks and shows no pills, which is honest
+for the same reason the footer omits them there — every item is in the conditional form, and the
+header says so.
 
 The page must be **self-contained**: styles and behaviour inline, no external assets. Filtering and
 collapsing are the only interactions it needs, and both are a few lines of vanilla JavaScript.
