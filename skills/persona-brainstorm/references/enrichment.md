@@ -77,7 +77,9 @@ becomes the honest default rather than a blanket.
 
 ## What enrichment may touch
 
-**It reads** the finished core document — the item tables, the coverage marks, and Appendix A.
+**It reads** the finished core document — the item tables, the coverage marks, and Appendix A — and
+one line of its own previous output, the `**Topics:**` header, when re-enriching a subject it has
+enriched before. Nothing else.
 
 **It writes** a sibling of it, and optionally an artifact.
 
@@ -164,14 +166,25 @@ persona and primitive slugs are not. Every subject needs a different set — `DN
 
 - **Six to ten of them.** Fewer and they do not separate; more and every item gets a private label
   and the axis stops grouping anything.
-- **One to three per item.** An item touching everything is usually an item phrased too broadly.
+- **One to three per item, the first of them primary.** An item touching everything is usually an
+  item phrased too broadly. The first topic listed is the one the item is *most* about, and it is
+  what the artifact's per-persona bars are segmented by — a bar built from every label on every
+  item would sum past the persona's item count and stop meaning anything. Filtering still matches
+  on all of an item's topics; only the bar uses the primary.
 - **Derived from the items, never from the subject's architecture.** Topics named after the
   subject's modules re-impose the supply side on a demand-side document, and the crossing goes
   flat because each persona maps to the module they use.
-- **Recorded in the document header.** A later enrichment of the same subject reuses the recorded
-  set rather than minting a synonym for a topic that already exists — the light-weight version of
-  what `PRIMITIVES.md` does for primitive slugs, and it works because the topics only ever have to
-  be consistent within one subject.
+- **Recorded in the document header**, and read back from there. A later enrichment of the same
+  subject reuses the recorded set rather than minting a synonym for a topic that already exists —
+  the light-weight version of what `PRIMITIVES.md` does for primitive slugs, and it works because
+  topics only ever have to be consistent within one subject.
+
+  This is the one thing the pass may read besides the core document: **the `**Topics:**` line of
+  its own previous output**, and nothing else in that file. Reading the prior enriched document's
+  header is not contamination — it is this pass's own vocabulary, the way Phase 5 reads
+  `PRIMITIVES.md` — but reading its *scenes* would anchor the new ones to the old, so do not.
+  Without this the reuse rule cannot be satisfied at all: the topics live nowhere else, and every
+  re-run would mint a fresh set and overwrite the file that held the last one.
 
 ---
 
@@ -187,6 +200,9 @@ recorded one>). The core document is the record; this one expands it and changes
 arises, not an observed incident — written concretely because a hedged scene teaches nothing.
 Where a scene came from something real it says so on the item. Capability claims under
 "How it's answered today" are held to Appendix A of the core document.
+
+**Frequencies:** <copied verbatim from the core document's header — estimated, or observed from
+SOURCE>.
 
 **Topics:** `<slug>` · `<slug>` · … <one line on what the axis is here>
 
@@ -231,9 +247,11 @@ Structure, in order:
 2. **The honesty note from the markdown header**, in full. It is more necessary here, not less:
    the artifact is the version that gets shared onward, detached from this conversation.
 3. **Topic chips** — click to filter. `n of N` visible.
-4. **Topic mix by persona** — one stacked bar per persona, segmented by topic, with the item count.
-   This is the crossing made visible, and it is the one view that justifies the format: it answers
-   "who is this document actually about" in a glance.
+4. **Topic mix by persona** — one stacked bar per persona, segmented by each item's **primary**
+   topic, with the item count. Primary, because items carry up to three topics and a bar counting
+   all of them exceeds the persona's item total; segmenting on the primary keeps the bar summing to
+   the number printed beside it. This is the crossing made visible, and it is the one view that
+   justifies the format: it answers "who is this document actually about" in a glance.
 5. **Persona sections** — the roster's order and the roster's uneven counts. Each item a card:
    number, ask, the one-line why, then frequency / frontier / coverage / topic pills, then the
    three blocks, collapsible and collapsed by default.
