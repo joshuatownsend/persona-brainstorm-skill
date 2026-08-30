@@ -103,7 +103,9 @@ The format carries its honesty mechanically rather than by disclaimer: the cover
 
 And an **adversarial pass** collects the other half of the picture: what each persona dislikes, distrusts, works around, or believes they should be able to do and can't. The wish frame has one blind spot — nobody phrases a grievance as a wish — so someone who stopped trusting a view after it misled them during an incident never turns up asking for a trustworthy view. They turn up asking for something else, or not at all.
 
-The gate that keeps it from being the unserved list in a bad mood: every grievance must name the thing it's about, and that thing has to exist. Absence is already on the page; this pass is for what exists and disappoints. It needs a coverage pass to have run, because a persona can't resent a hypothetical.
+The gate that keeps it from being the unserved list in a bad mood: every grievance must name the thing it's about, and that thing has to exist. Absence is already on the page; this pass is for what exists and disappoints. It needs a coverage pass to have run at Full or Light depth, because a persona can't resent a hypothetical.
+
+Every grievance also carries an `observed` / `inferred` / `invented` mark, and only `observed` is a reported complaint. The stakes are higher here than for an invented primitive: an unmarked grievance asserts in someone's voice that real people are unhappy with a real thing, to the person who owns that thing.
 
 This repo's own `PERSONAS.md` is a real run of the skill against itself — the worked output, not a template. `skills/persona-brainstorm/references/worked-example-ddi.md` walks through the DDI run the method was extracted from.
 

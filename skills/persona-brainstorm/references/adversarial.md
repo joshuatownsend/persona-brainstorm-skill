@@ -100,9 +100,26 @@ So:
 - `invented` — a plausible reconstruction of how this lane would frustrate this persona. Honest,
   useful, and not a lesser mark. Most grievances in a first pass are this.
 
-**A run whose grievances are all `invented` is a hypothesis list, and the document says so in its
-header rather than in a footnote.** That framing is the difference between a page that starts a
-conversation with the people who own the subject and a page that ends one.
+**Only `observed` is a report.** `inferred` and `invented` are both reconstructions — one reasoned
+from something real, one not — and a detached reader who sees a source named beside `inferred`
+will take the whole entry as established unless told otherwise. Say it in the header in those
+terms, and a run whose grievances are all `invented` says *that* in its header rather than in a
+footnote. The framing is the difference between a page that starts a conversation with the people
+who own the subject and a page that ends one.
+
+**The mark covers a claim, not an entry — so say where it stops.** This is where the marks are
+easiest to abuse, and the abuse is invisible: cite a real caveat, then write four paragraphs of
+vivid operational detail underneath it, and every sentence inherits the citation's authority
+without deserving it. Durations, headcounts, access distributions, whether anyone complained —
+none of those follow from a documented staleness window. Name what the source establishes, then
+name what you reconstructed around it. The reconstruction is worth writing; passing it off as
+sourced is not.
+
+**Carry each lane's own verification status, not the run's.** Phase 0 explicitly allows a scoped
+Full pass that proves the lanes behind the primitives and leaves the rest Light, so "Full" in the
+header does not mean every lane was checked. A grievance resting on an unverified lane rests on a
+reading of documentation, and in a detached document it will otherwise look grounded in verified
+inventory. Name the lane's status in `About`.
 
 ---
 
@@ -131,18 +148,21 @@ Where a persona has nothing, say what that means. Rarely-touched surfaces are no
 #### P2-3 — "I stopped trusting the lease view after it told me an address was free during an
 incident."
 
-**About:** Lane B — the DHCP lease read. *(inferred: Caveat 2 in Appendix A records the lane's
-staleness window; the incident is a reconstruction of what that window costs.)*
+**About:** Lane B — the DHCP lease read; Appendix A marks this lane **verified**.
+*(inferred: Caveat 2 records that the lane can return a lease state minutes stale and does not
+timestamp its answer. That much is documented. The incident, the abandonment and the costs below
+are reconstruction — the appendix records what the lane does, not what it costs anyone.)*
 
 **Kind:** it's wrong.
 
 **What they expected.** That a lease shown as expired was expired at the moment they looked, or
-that the view said how old it was.
+that the view said how old it was. Caveat 2 confirms it does neither.
 
-**What it costs.** They now confirm every lease against the server directly, which takes four
-minutes and requires access half the desk does not have. The feature still exists, is still
-maintained, and has one user fewer. Nobody filed anything — the view was not broken enough to
-report, only enough to abandon.
+**What it costs.** *(reconstructed.)* Confirming a lease against the server directly is slower and
+needs access not everyone on the desk has, so the likely response to being burned once is to stop
+using the view rather than to report it — leaving a feature that is still maintained and quietly
+less used. Nothing in the inventory records whether this has happened; it is what the caveat would
+cost if it did.
 
 **What would fix it.** Not a new capability: a timestamp on the answer. The staleness is
 acceptable; the silence about it is not.
@@ -156,8 +176,9 @@ which it deliberately does not share.
 reads like a bug title, rewrite it. *"The export silently stops at a thousand rows"* is a defect
 report; *"I don't know whether I've got everything, so I run it twice and diff"* is a person.
 
-**About** — the lane, and the evidence mark. Never neither: the lane is what makes it a grievance
-rather than a duplicate, and the mark is what makes it a report rather than an assertion. For an
+**About** — the lane, its verification status from Appendix A, and the evidence mark. Never
+neither of the first and last: the lane is what makes it a grievance rather than a duplicate, and
+the mark is what makes it a report rather than an assertion. The mark says where its source stops. For an
 **expectation gap** the lane is replaced by the promise and where it is made — that kind exists
 precisely because the implied capability has no lane, so requiring one would force a fabricated
 citation or drop the most valuable entries on the page. Every other kind names a lane.
@@ -187,12 +208,16 @@ pass can find — say so at the end.
 _Adversarial pass over `<core document path>` (<date>). Reads that document and its appendix;
 changes nothing in it._
 
-**These are hypotheses unless marked otherwise.** Each grievance carries an `observed`, `inferred`
-or `invented` mark. <If all of them are invented, say so here in one sentence: this is a list of
+**Only the `observed` entries are reported complaints.** Each grievance carries an `observed`,
+`inferred` or `invented` mark, and the last two are both reconstructions — one reasoned from
+something real, one not. Each mark says which part of its entry the source covers and which part
+was reconstructed around it. <If none are observed, say so here in one sentence: this is a list of
 ways the subject would plausibly frustrate these personas, not a report of complaints anyone made.>
 
-**Coverage depth:** <Full or Light, copied from the core document — Light marks were not verified,
-so a grievance resting on one rests on an unverified reading of the lane.>
+**Coverage depth:** <Full or Light, copied from the core document. A scoped Full run leaves some
+lanes Light, so this is the run's depth and not any single lane's — each grievance names the
+status of the lane it cites. A grievance resting on a Light lane rests on a reading of
+documentation that nobody checked.>
 
 **Carried from the core document's Verification section:** <the Phase 7b findings, including the
 ones that the run disagreed with. Never dropped — the personas here are the ones that section may
