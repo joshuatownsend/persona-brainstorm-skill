@@ -1425,7 +1425,7 @@ STOPWORDS = {
 
 
 def core_verification(core_text: str) -> str:
-    m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
+    m = re.search(r"^#{2,3}\s*Verification\b[^\n]*\n(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
     return m.group(1) if m else ""
 
 
@@ -1447,8 +1447,15 @@ def verification_problem(core_text: str) -> str:
     # the shape this suite calls a claim satisfied by a non-claim.
     lines = [ln for ln in body.splitlines() if is_substantive(ln)]
     if len(lines) < 5:
-        return (f"has a Verification section of {len(lines)} substantive line(s). Phase 7b asks "
-                "five questions and requires the answers recorded, disagreements included")
+        filled = len([ln for ln in body.splitlines() if ln.strip()])
+        # "0 substantive of 5 present" and "0 substantive of 0 present" are
+        # different defects -- placeholders standing in for answers, versus a
+        # section nobody wrote -- and the author fixes them differently.
+        detail = (f" ({filled} non-empty line(s) present, none substantive)"
+                  if filled > len(lines) else "")
+        return (f"has a Verification section of {len(lines)} substantive line(s){detail}. "
+                "Phase 7b asks five questions and requires the answers recorded, "
+                "disagreements included")
     return ""
 
 
@@ -1476,10 +1483,35 @@ def shares_vocabulary(carried: str, source: str) -> bool:
     return len(distinctive(carried) & src) >= max(3, min(6, len(src) // 8))
 
 
+def appendix_section(core_text: str) -> str:
+    """The appendix that carries the inventory, or "" when there is none.
+
+    Scoped rather than whole-document, because both callers use the result as
+    proof that an inventory *exists*. Searching everywhere accepted any
+    lane-shaped text as that proof: a fenced example, or the Verification
+    section quoting the expected row syntax, satisfied the guard while the
+    appendix itself was gone. Fences are blanked first for the same reason --
+    an example of a lane row is not a lane.
+
+    The heading is matched loosely because the template only fixes the "Appendix
+    <letter>" prefix; a document is free to letter its appendices in any order,
+    and this run's own inventory is Appendix C.
+    """
+    body = blank_fences(core_text)
+    hits = [m for m in re.finditer(r"^#{2,3}\s*Appendix\s+[A-Z]\b[^\n]*$", body, re.M)]
+    for m in hits:
+        stop = re.search(r"^#{2}\s", body[m.end():], re.M)
+        section = body[m.end():m.end() + stop.start()] if stop else body[m.end():]
+        if re.search(r"\|\s*\*\*[A-Z]\s*[—\-–]", section):
+            return section
+    return ""
+
+
 def core_lanes(core_text: str) -> set[str]:
-    """Lane identifiers from Appendix A: the letter, and the name beside it."""
+    """Lane identifiers from the inventory appendix: the letter, and its name."""
     out: set[str] = set()
-    for m in re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–]\s*([^*|]+?)\*\*", core_text):
+    for m in re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–]\s*([^*|]+?)\*\*",
+                         appendix_section(core_text)):
         out.add(m.group(1))
         out.add(normalise(m.group(2).strip()))
     return out
@@ -1902,7 +1934,7 @@ def main() -> int:
         rep.fail(msg) if args.final else rep.warn(msg)
 
     if args.final:
-        m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
+        m = re.search(r"^#{2,3}\s*Verification\b[^\n]*\n(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
         if not m:
             rep.fail(
                 "no Verification section — Phase 7b was skipped or its findings were not "
@@ -1917,12 +1949,19 @@ def main() -> int:
             # bare line count while recording nothing at all. is_substantive is
             # the same bar every required field is already held to.
             body = [ln for ln in m.group(1).splitlines() if is_substantive(ln)]
+            filled = len([ln for ln in m.group(1).splitlines() if ln.strip()])
             if len(body) < 5:
+                # Say which of the two it is. A section of placeholder lines and
+                # a section nobody wrote both count zero, and the author fixes
+                # them differently -- one is a stub to fill in, the other is a
+                # phase that was skipped.
+                detail = (f", from {filled} non-empty placeholder line(s)"
+                          if filled > len(body) else "")
                 rep.fail(
-                    f"Verification section has {len(body)} substantive line(s). Phase 7b asks five "
-                    "questions and requires the answers recorded, disagreements included; a "
-                    "heading on its own, or five placeholder lines, passes a line count without "
-                    "carrying any of them."
+                    f"Verification section has {len(body)} substantive line(s){detail}. Phase 7b "
+                    "asks five questions and requires the answers recorded, disagreements "
+                    "included; a heading on its own, or placeholder lines, passes a bare line "
+                    "count without carrying any of them."
                 )
 
     for m in rep.notes:

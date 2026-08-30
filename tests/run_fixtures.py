@@ -989,12 +989,19 @@ FINAL_CASES = [
      lambda t: t[:t.index("## Verification (Phase 7)")]
      + "## Verification (Phase 7)\n\n"
      + t[t.index("## What the 60 imply"):],
-     "substantive line"),
+     "0 substantive line(s). Phase 7b"),
     # A graded document with its inventory removed. --final used to pass this at
     # exit 0 with a full tally still on the page: sixty coverage claims and no
     # evidence in the file for any of them.
     ("final-rejects-graded-document-with-no-appendix", "d_ok.md",
      lambda t: t[:t.index("## Appendix A")],
+     "no Appendix A lanes can be read"),
+    # Lane-shaped text is not an inventory. The guard searched the whole
+    # document, so a fenced example -- or the Verification section quoting the
+    # expected row syntax -- stood in for the appendix it was meant to prove.
+    ("final-rejects-lane-shaped-text-outside-the-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n```markdown\n| **A — Not an inventory** | example |\n```\n",
      "no Appendix A lanes can be read"),
     # Five lines cleared the old non-empty count while recording nothing. The
     # gate exists to require five recorded answers, so the bar is substance --
@@ -1003,7 +1010,7 @@ FINAL_CASES = [
      lambda t: t[:t.index("## Verification (Phase 7)")]
      + "## Verification (Phase 7)\n\nx\ny\nz\na\nb\n\n"
      + t[t.index("## What the 60 imply"):],
-     "1 substantive line"),
+     "from 5 non-empty placeholder line(s)"),
 ]
 
 

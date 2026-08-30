@@ -155,6 +155,16 @@ Establish seven things. Ask the user directly; don't guess.
 
    You are answering *what field is this in and who works in it* — not *what does it do*.
 
+   **Now, before you ask for anything else: check whether this subject already has a document.**
+   If it does, read `references/cross-run.md` here rather than at Phase 5, and offer the comparison
+   re-run explicitly. A comparison holds subject, frame *and its scope constraint*, budget,
+   archetype and coverage depth constant — so the very next question, the frame, is already one of
+   the five that can forfeit it, and every question after it is another. An operator who works
+   through these seven in the order written and reads `cross-run.md` afterwards has destroyed
+   comparability before reaching Phase 1, and will not find out until the synthesis. Both files are
+   individually correct; the defect lives in the order you read them, which is why the check belongs
+   here and not one step later.
+
 2. **The frame** — the sentence the whole document answers, built on that subject. A good frame
    carries a scope constraint that sharpens every downstream item: *"what would a network engineer
    ask a **read-only** interface over the IPAM estate, if it could answer anything?"*, *"what would
@@ -171,15 +181,6 @@ Establish seven things. Ask the user directly; don't guess.
    asks and out along the reach-further axes for your archetype. If a user doubles the number on a
    second pass, they are not asking for padding — they are asking you to reach further. 40–80 is a
    healthy band; 60 is a good default.
-
-   **Check for a prior document on this subject before you ask.** If one exists, read
-   `references/cross-run.md` now rather than at Phase 5, and offer the comparison re-run explicitly:
-   a comparison holds subject, frame, budget, archetype *and* coverage depth constant, so a budget
-   chosen freely here silently forfeits it. The operator who asks these seven questions in the order
-   written, takes a bigger number because reaching further sounds right, and reads `cross-run.md`
-   afterwards has already destroyed comparability and will not find out until the synthesis. That
-   ordering is the one this step exists to prevent — both files are individually correct, and the
-   defect lives in the order you read them.
 
 4. **The seed personas** — whoever the user already has in mind. Often incomplete, sometimes
    containing duplicates. Both get fixed in Phase 1.
