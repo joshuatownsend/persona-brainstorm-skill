@@ -914,7 +914,7 @@ def normalise(s: str) -> str:
     return s.translate(APOSTROPHES).lower()
 
 
-def check_enriched(items: list[Item], text: str, rep: Report) -> None:
+def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> None:
     """Check an enriched document against the core document it expands.
 
     Only the things a checker can settle: that every item is present exactly
@@ -1001,15 +1001,27 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
         # disagrees with the heading beside it is the contradiction the derived
         # heading exists to prevent, arriving through the other column.
         foot = re.search(r"^.*\btopics:.*$", body, re.M)
-        seen = [c for c in COVERAGE_MARKS if c in foot.group(0)] if foot else []
-        if graded and core[n] and not seen:
-            # An absent footer agrees with anything, so "the marks agree" is not
-            # a check until the mark is required to be there.
+        # Ordered, not the COVERAGE_MARKS set: set iteration order varies with
+        # the interpreter's hash seed, so a footer carrying two marks would
+        # report a different one run to run -- and pass or fail by luck.
+        seen = [c for c in ("✅", "◐", "○") if foot and c in foot.group(0)]
+        if len(seen) > 1:
+            cov_mismatch.append(
+                f"{n} carries {' and '.join(seen)} in one footer"
+            )
+        elif core[n] and not seen:
+            # An absent mark agrees with anything, so "the marks agree" is not a
+            # check until the mark is required to be there.
             no_mark.append(n)
-        elif graded and core[n] and seen and seen[0] != core[n]:
+        elif core[n] and seen and seen[0] != core[n]:
             cov_mismatch.append(f"{n} is {core[n]} in the core document, {seen[0]} here")
-        elif not graded and seen:
-            cov_mismatch.append(f"{n} carries {seen[0]} on a run with no coverage pass")
+        elif not core[n] and seen:
+            # Either the run graded nothing, or this item was left unmarked in a
+            # run that graded others. Both mean the footer has nothing to copy,
+            # and a mark appearing anyway was invented here.
+            where = "on a run with no coverage pass" if not graded else \
+                    "while the core document leaves it unmarked"
+            cov_mismatch.append(f"{n} carries {seen[0]} {where}")
 
     if no_mark:
         shown = ", ".join(str(n) for n in no_mark[:12])
@@ -1057,6 +1069,7 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
     # missing: a frequency pill reads as measurement, a coverage mark is
     # unreadable without its key, and the Phase 7b findings name the very items
     # this pass rewrites into their most persuasive form.
+    values: dict[str, str] = {}
     for label, key in (("Frequencies", "frequency basis"), ("Topics", "topic axis")):
         m = re.search(rf"^\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)$", header, re.M)
         if not m:
@@ -1066,6 +1079,22 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
             )
         elif not is_substantive(m.group(1).strip().strip("*").strip()):
             rep.fail(f"**{label}:** is present but declares nothing.")
+        else:
+            values[label] = m.group(1).strip().strip("*").strip()
+
+    # Copied, not restated. A core document declaring its frequencies estimated
+    # and an enrichment declaring them measured is the single most consequential
+    # disagreement the two can have: it changes how a reader takes every pill on
+    # every card, and the enriched file is the one that gets forwarded.
+    core_freq = claims.get("freq_basis")
+    if core_freq and "Frequencies" in values:
+        flat = lambda v: re.sub(r"\s+", " ", v).strip().rstrip(".").lower()
+        if flat(values["Frequencies"]) != flat(core_freq):
+            rep.fail(
+                "the enriched **Frequencies:** line does not match the core document's. It is "
+                f"copied rather than rewritten — the core says {core_freq!r}, this says "
+                f"{values['Frequencies']!r}."
+            )
 
     carried = re.search(
         r"Carried from the core document'?s Verification section:?\*{0,2}(.*)",
@@ -1087,11 +1116,13 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
             "stronger claim than the document is making."
         )
 
-    if "invented" not in header.lower():
+    if not re.search(r"\bscenes\b[^.]{0,40}\bare invented\b", header, re.I):
         rep.fail(
-            "the enriched header does not say the scenes are invented. Each situation is a "
-            "reconstruction of how the ask arises, and prose is read as reporting unless it "
-            "says otherwise once."
+            "the enriched header carries no affirmative statement that the scenes are invented "
+            "— expected a sentence of the form 'The scenes are invented.' The word appearing "
+            "somewhere is not the same declaration: 'the scenes are not invented' contains it "
+            "and says the opposite. Each situation is a reconstruction of how the ask arises, "
+            "and prose is read as reporting unless it says otherwise once."
         )
 
     key = re.search(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)
@@ -1117,6 +1148,12 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
             "coverage pass the key is replaced rather than deleted: a deleted line and an "
             "unassessed run look identical to a detached reader, and an unlabelled absence "
             "is read as a finding."
+        )
+    if key and unassessed:
+        rep.fail(
+            "the enriched header carries both a **Coverage key:** and a '**Coverage:** not "
+            "assessed' line. One replaces the other — together they tell a detached reader "
+            "that coverage was both assessed and not, and neither line says which is stale."
         )
 
 
@@ -1154,7 +1191,8 @@ def main() -> int:
         # rule worth checking is a relation between the two: the heading a mark
         # selects, the items that must all be present, the declarations copied
         # across. An enriched file has no meaning apart from what it expands.
-        check_enriched(parsed[1], open(args.enriched, encoding="utf-8").read(), rep)
+        check_enriched(parsed[1], parsed[3],
+                       open(args.enriched, encoding="utf-8").read(), rep)
     if args.final:
         m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
         if not m:

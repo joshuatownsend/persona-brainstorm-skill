@@ -319,6 +319,16 @@ def core_items(core_text):
     return out
 
 
+def core_freq(core_text):
+    """The core document's **Frequencies:** line, verbatim.
+
+    Copied rather than composed: the enriched header restates the core's basis,
+    and a generator inventing its own wording would make the base fail the very
+    check that requires them to agree.
+    """
+    return line_starting(core_text, FREQ)
+
+
 def enriched_from(core_text):
     """A conforming enrichment of a core document. Every mutation starts here."""
     rows = core_items(core_text)
@@ -327,7 +337,7 @@ def enriched_from(core_text):
             "_Enrichment of `PERSONAS.md` (2026-08-30)._", "",
             "**The scenes are invented.** Each situation is a plausible reconstruction of how "
             "the ask arises, not an observed incident.", "",
-            "**Frequencies:** estimated from the personas, not measured.", ""]
+            core_freq(core_text), ""]
     head += ["**Coverage key:** ✅ served well today · ◐ partially served · ○ not possible today.",
              ""] if graded else [
             "**Coverage:** not assessed — no coverage pass ran, so no item carries a mark.", ""]
@@ -394,6 +404,17 @@ def footer_drops_the_mark(text):
     return swap(text, block, re.sub(r"^(`daily` · )✅ · ", r"\1", block, flags=re.M))
 
 
+def footer_carries_two_marks(text):
+    """A stale mark left beside its replacement.
+
+    Whichever is compared first, one of them matches the core and the entry
+    passes -- and with the marks held in a set, which one that is varies with
+    the interpreter's hash seed.
+    """
+    block = _first(text, "✅")
+    return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1✅ · ○", block, flags=re.M))
+
+
 def heading_repeated(text):
     """The same valid heading twice. A set comparison passes this; a count does not."""
     block = _first(text, "○")
@@ -434,7 +455,13 @@ ENRICHED_MUTATIONS = [
      "Verification section is not carried"),
     ("enriched-no-invented-disclosure",
      lambda t: drop(t, "**The scenes are invented.**"),
-     "does not say the scenes are invented"),
+     "no affirmative statement that the scenes are invented"),
+    # The word appearing somewhere is not the declaration. This sentence
+    # contains "invented" and says the opposite of what is required.
+    ("enriched-disclosure-inverted",
+     lambda t: edit_line(t, "**The scenes are invented.**",
+                         "**The scenes are not invented.** Every one was observed."),
+     "no affirmative statement that the scenes are invented"),
     ("enriched-no-coverage-key", lambda t: drop(t, "**Coverage key:**"),
      "no **Coverage key:** line"),
     ("enriched-entry-for-unknown-item",
@@ -460,6 +487,18 @@ ENRICHED_MUTATIONS = [
      lambda t: edit_line(t, "**Coverage key:**",
                          "**Coverage key:** ✅ served well today · ◐ partially served."),
      "does not explain"),
+    # Copied from the core document, not restated. A core declaring its
+    # frequencies estimated and an enrichment declaring them measured changes
+    # how a reader takes every pill on every card.
+    ("enriched-frequencies-contradict-core",
+     lambda t: edit_line(t, FREQ, FREQ + " observed from six months of support tickets."),
+     "does not match the core document's"),
+    ("enriched-footer-carries-two-marks", footer_carries_two_marks,
+     "in one footer"),
+    ("enriched-both-coverage-lines",
+     lambda t: swap(t, "**Coverage key:**",
+                    "**Coverage:** not assessed — nobody looked.\n\n**Coverage key:**"),
+     "both a **Coverage key:** and"),
 ]
 
 # A no-coverage core takes the third heading form, and must not be given ○.
