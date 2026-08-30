@@ -1,6 +1,6 @@
 ---
 name: persona-brainstorm
-description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. An optional enrichment pass expands every ask into the situation that produced it and what answering it takes — "flesh out the personas doc", "write up the scenarios", "turn this into something I can share". Prefer it over an ad-hoc list when the answer is user needs, not features.
+description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. Two optional passes follow: enrichment expands every ask into the situation that produced it and what answering it takes ("flesh out the personas doc", "write up the scenarios", "turn this into something I can share"), and an adversarial pass collects what each persona dislikes, distrusts, works around, or believes they should be able to do and can't ("what do they hate about it", "what frustrates our users", "what are we getting wrong"). Prefer it over an ad-hoc list when the answer is user needs, not features.
 ---
 
 # Persona Brainstorm
@@ -689,26 +689,44 @@ If the run was abandoned before this point, nothing is written, which is the cor
 vocabulary entry for a primitive that never shipped invites a later subject to reuse a name that
 was never real.
 
-## Enrichment — an optional pass
+## Optional passes
 
-Runs **after** Phase 7, on request. It is not part of a default run: offer it once when the
-document is finished, do not run it uninvited, and treat a decline as final for the run.
+Two passes run **after** Phase 7, on request, and neither is part of a default run. Offer each once
+when the document is finished, do not run either uninvited, and treat a decline as final for the
+run. They are independent: either may run without the other, and in either order.
 
-Two rules make it safe to bolt onto a method whose whole discipline is demand before supply:
+Three rules are shared, and they are what make an optional pass safe to bolt onto a method whose
+whole discipline is demand before supply:
 
-- **It reads the finished document**, and — when re-enriching a subject it has enriched before —
-  the `**Topics:**` line of its own previous output, so the topic vocabulary survives a re-run.
-  Nothing else: not the subject, not the inventory directly, and not the prior run's scenes, which
-  would anchor the new ones. The verified document already carries whatever the coverage pass
-  found, which is what makes the pass indifferent to coverage depth: at depth **None** there is no
-  inventory and enrichment still runs, with every item taking the third form below.
-- **Nothing it produces flows backward.** It writes its own file. Not an ask, not a coverage mark,
-  not a tally, not a primitive. This is the containment Phase 3 works under, for the same reason:
-  a pass that can reach backwards will eventually be used to make the earlier work agree with it.
+- **The core document must have passed `--final` first.** Both passes amplify what is already
+  there, so an unverified document put through either is an unverified document that now reads
+  persuasively.
+- **Nothing they produce flows backward.** Each writes its own file. Not an ask, not a coverage
+  mark, not a tally, not a primitive. This is the containment Phase 3 works under, for the same
+  reason: a pass that can reach backwards will eventually be used to make the earlier work agree
+  with it. A pass that disagrees with the document reports the disagreement; it never resolves it.
+- **Whatever provenance the output relies on travels with it.** Each pass writes a standalone file
+  that gets forwarded, pasted into a deck, and read by someone who never saw `PERSONAS.md`, so
+  every value carried over from the core document brings the line that qualifies it: a frequency
+  pill brings the `**Frequencies:**` basis, a coverage mark brings the coverage key, a frontier
+  mark brings the frontier legend, and a claim resting on the inventory brings the coverage depth.
+  The Phase 7b Verification findings travel in both cases, because both passes rewrite the very
+  items that section may have questioned. An unlabelled absence in a detached document is read as a
+  finding, and a provenance mark left behind is a claim upgraded for free. What this comes to
+  differs per pass — each reference file lists it — because the two carry different things over.
 
-And one precondition: **the core document must have passed `--final` first.** The pass amplifies
-what is already there, so an unverified document enriched is an unverified document that now reads
-persuasively.
+Their preconditions differ, and the difference is not arbitrary — it follows from what each pass
+needs the document to already contain.
+
+### Enrichment — the story behind each ask
+
+Runs at **any coverage depth**, because it reads the finished document rather than the inventory,
+and the document already carries whatever the coverage pass found.
+
+It is also the one pass with an exception to the read rule above: when re-enriching a subject it
+has enriched before, it may read the `**Topics:**` line of its own previous output, so the topic
+vocabulary survives a re-run instead of a synonym being minted for a topic named two runs ago.
+That line and nothing else in the file — the prior run's scenes would anchor the new ones.
 
 Read `references/enrichment.md` and follow it. What the pass produces: a sibling of the core
 document — `<name>-enriched.md` beside whatever path Phase 6 wrote to — expanding **every** item
@@ -742,6 +760,44 @@ This is the `**Frequencies:**` rule again, two levels down. Enrichment is where 
 document turns into a case study, and a case study is a different claim — sixty scenes of confident
 prose are far more persuasive than sixty table rows, and nothing in the prose reveals which of them
 were observed.
+
+### Adversarial — what they can't stand about it
+
+**Requires coverage depth Full or Light, and something built to inspect.** This is a hard
+precondition, not a preference: a persona cannot resent *"a generic read-only interface over the
+estate"*. They can only resent the thing that exists. A depth-**None** run has no inventory and no
+subject to be disappointed by, so the pass has nothing to work from — say so and offer enrichment
+instead, which does run there.
+
+Read `references/adversarial.md` and follow it. What the pass produces: a sibling of the core
+document — `<name>-adversarial.md` — collecting what each persona **dislikes, distrusts, works
+around, or believes they should be able to do and can't**, grouped by the roster you already
+approved. An artifact is offered once, as with enrichment.
+
+The wish frame in Phase 2 has one blind spot, and this is it: **nobody phrases a grievance as a
+wish.** Someone who stopped trusting a view after it misled them during an incident does not
+appear in Phase 2 asking for a trustworthy view — they appear asking for something else, or not at
+all, having quietly routed around it. Those are the items the method cannot otherwise reach.
+
+Three things decide whether this pass is worth running:
+
+1. **A grievance is about presence, not absence.** `Today` and `○` already record what is missing;
+   this records what exists and is wrong, slow, misleading, refusing, or surprising. The gate is
+   mechanical: **every grievance names the Appendix A lane it is about, and that lane must exist.**
+   If nothing there carries it, the complaint is an unserved ask, it is already in the core
+   document, and repeating it here duplicates the page in a worse voice. The one exception is the
+   expectation gap — *"I should be able to do this"* — which names the promise that created the
+   belief instead, and where that promise came from is the finding.
+2. **Every grievance carries an `observed` / `inferred` / `invented` mark**, sourced for the first
+   two. The stakes are higher here than anywhere else in the method: a primitive marked `invented`
+   is an idea nobody has evidence for, while **an unmarked grievance is an accusation** — it
+   asserts in someone's voice that real people are unhappy with a real thing, to the person who
+   owns that thing. Most first-pass grievances are honestly `invented`, and a run where all of
+   them are says so in its header rather than in a footnote.
+3. **The roster is the approved one, and there is no budget.** No new personas — a roster that
+   grows during an optional pass has skipped the Phase 1 gate. Counts will be lopsided, and a
+   persona with *no* grievances is a real result: sometimes nobody complains because nobody got far
+   enough in to be disappointed.
 
 ## Re-running with a corrected frame
 
@@ -786,6 +842,12 @@ Check the draft against these before handing it over.
 - **An enriched item that reads better than its coverage mark.** If the story under an ○ item
   describes an answer arriving, the pass has quietly promoted a wish into a capability — which is
   the hard rule broken at the one place it is hardest to see, because the prose is good.
+- **An adversarial pass that is the ○ list again, annoyed.** If a grievance cannot name the lane it
+  is about, it is an absence, and absences are already on the page. The pass exists for the things
+  that exist and disappoint.
+- **Grievances with no evidence marks.** Unmarked, they read as reported complaints rather than as
+  the reconstructions they usually are — and unlike an invented primitive, an invented complaint
+  puts words in a named persona's mouth about someone's real work.
 - **An archetype forced to fit.** If you picked "read surface" for a library because it was the
   first row, every item will come out as a query and the real asks — migration, failure, escape
   hatches — never get written. Deriving the four columns from scratch is cheaper than a run spent
