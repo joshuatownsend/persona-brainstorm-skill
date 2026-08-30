@@ -100,6 +100,23 @@ TALLY = "**Tally:**"
 # (name, base, mutation, expected-substring). Expected substring is the message
 # the case's INTENT implies -- never merely the message it happens to emit.
 # ---------------------------------------------------------------------------
+def level4_subsection(text):
+    """A level-4 heading and a numbered row, inside the last persona's section.
+
+    The parse loop clears current_persona on "any other heading", but its
+    pattern stopped at ###. A #### subsection therefore left the persona open,
+    and the numbered row beneath it was charged to whoever was last -- the exact
+    miscount that line exists to prevent, at the one depth it did not cover.
+
+    Placed just above the tally, which is still inside P7's section: P7 promises
+    five items and would be credited with six.
+    """
+    tally = line_starting(text, TALLY)
+    row = ('| 61 | "An aside, not an ask." | Not a decision | Nothing | '
+           "per-run | | ○ |")
+    return swap(text, tally, "#### A note on P7's items\n\n" + row + "\n\n" + tally)
+
+
 MUTATIONS = [
     # -- header declarations must be present and must say something ----------
     ("freq-missing", "d_ok.md", lambda t: drop(t, FREQ),
@@ -257,6 +274,12 @@ POSITIVE_MUTATIONS = [
     ("evidence-source-may-contain-a-dash", "d_ok.md",
      lambda t: swap(t, "*(observed: Caveat 1 in this document's appendix)*",
                     "*(observed: RFC 9110 - HTTP Semantics)*")),
+    # A heading closes the persona section at every depth. This is a positive
+    # case rather than a negative one because the fix is an *absence*: after it,
+    # the row below the #### belongs to no persona and is never parsed, so the
+    # document is simply correct. Asserting the miscount instead would have
+    # pinned the bug in place -- the case would go red the moment it was fixed.
+    ("level4-heading-closes-the-persona-section", "d_ok.md", level4_subsection),
 ]
 
 # ---------------------------------------------------------------------------

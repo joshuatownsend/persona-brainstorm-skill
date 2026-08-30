@@ -233,7 +233,13 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
         # Any other heading closes the persona section. Without this, a numbered
         # table in the appendix is parsed as more items and charged to whichever
         # persona happened to be last.
-        if re.match(r"#{1,3}\s", raw):
+        #
+        # Every depth, not just the three the persona heading itself uses: a
+        # #### subsection under a persona left the section open, so the rows
+        # beneath it were charged to that persona -- the miscount this line
+        # exists to prevent, at the one depth it did not reach. Markdown has no
+        # level 7, so 1-6 is exhaustive.
+        if re.match(r"#{1,6}\s", raw):
             current_persona = None
         # Primitives are parsed only inside the synthesis section. Phase 7 asks the
         # adversarial reader to answer five numbered questions, which produces
