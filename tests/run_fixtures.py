@@ -696,7 +696,8 @@ def adversarial_from(core_text):
             mark = "observed: a support thread" if (i + k) % 3 == 0 else "invented"
             body += [f'#### {persona}-{k} — "I can never tell whether this answer is current."',
                      "",
-                     f"**About:** Lane {lane} — the read it serves. *({mark})*", "",
+                     f"**About:** Lane {lane} — the read it serves; Appendix A marks this "
+                     f"lane verified. *({mark})*", "",
                      f"**Kind:** {ADV_KINDS[(i + k) % len(ADV_KINDS)]}.", "",
                      "**What they expected.** That the answer would say how old it was.", "",
                      "**What it costs.** They confirm it elsewhere, which takes longer.", "",
@@ -817,6 +818,16 @@ ADVERSARIAL_MUTATIONS = [
      "cite no promise"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
+    ("adversarial-lane-without-status",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"; Appendix A marks this lane verified", "",
+                           _adv_first(t), count=1)),
+     "name no verification status"),
+    ("adversarial-block-empty",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^(\*\*What it costs\.\*\*).*$", r"\1", _adv_first(t),
+                           count=1, flags=re.M)),
+     "What it costs is empty"),
     ("adversarial-block-repeated",
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"^(\*\*Kind:\*\*.*)$", r"\1\n\n**Kind:** it refuses.",

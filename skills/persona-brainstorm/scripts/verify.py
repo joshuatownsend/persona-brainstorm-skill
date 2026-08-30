@@ -1407,7 +1407,10 @@ def verification_problem(core_text: str) -> str:
 
 
 def distinctive(s: str) -> set[str]:
-    return {w for w in re.findall(r"[a-z][a-z'-]{3,}", s.lower()) if w not in STOPWORDS}
+    # Apostrophes normalised first: a curly one in the source and a straight one
+    # in the summary are the same word, and tokenising them apart makes a
+    # faithful summary look like an unrelated sentence.
+    return {w for w in re.findall(r"[a-z][a-z'-]{3,}", normalise(s)) if w not in STOPWORDS}
 
 
 def shares_vocabulary(carried: str, source: str) -> bool:
@@ -1511,6 +1514,8 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
     unquoted: list[str] = []
     missing_blocks: list[str] = []
     duplicated_blocks: list[str] = []
+    empty_blocks: list[str] = []
+    statusless: list[str] = []
     bad_kind: list[str] = []
     no_mark: list[str] = []
     multi_mark: list[str] = []
@@ -1532,11 +1537,23 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         labels = {}
         spans = {}
         counts: dict[str, int] = {}
-        for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M):
+        found_labels = list(re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M))
+        for i, m in enumerate(found_labels):
             k = normalise(m.group(1)).strip(" .:")
             counts[k] = counts.get(k, 0) + 1
             labels.setdefault(k, m.group(2).strip())
             spans.setdefault(k, m.end(1))
+            # The block's content runs to the next label, so a label with an
+            # empty body is visible. Presence alone let an entry carry all five
+            # headings and no expectation, no cost and no remedy.
+            stop = found_labels[i + 1].start() if i + 1 < len(found_labels) else len(body)
+            if k in {normalise(b).strip(" .:") for b in ADVERSARIAL_BLOCKS[2:]}:
+                # The rest of the label's own line plus everything up to the
+                # next label: the template puts the block's first sentence on
+                # the label line, so reading only what follows the match finds
+                # nothing and fails every conforming document.
+                if not is_substantive(m.group(2) + " " + body[m.end():stop]):
+                    empty_blocks.append(f"{key}'s {m.group(1).strip(' .:')} is empty")
         # setdefault kept the first and ignored the rest, so a stale block sat
         # beside its replacement and the entry read as consistent -- the same
         # failure the two-marks rule already refuses one level down.
@@ -1589,9 +1606,18 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             if not (promise and where):
                 promiseless.append(key)
         elif kind:
-            if not any(re.search(rf"\bLane {re.escape(l)}\b", about) if len(l) == 1
+            # Case-insensitive: "lane B" names the same lane as "Lane B", and a
+            # rule that fails on the capital is failing valid documents.
+            if not any(re.search(rf"\blane {re.escape(l)}\b", about, re.I) if len(l) == 1
                        else l in normalise(about) for l in lanes):
                 laneless.append(key)
+            elif not re.search(r"\b(verified|proven|light|unverified|documented)\b",
+                               about, re.I):
+                # Shape, not truth: this cannot tell whether the status named is
+                # the one Appendix A records, only that the entry states one. A
+                # scoped Full run leaves some lanes Light, so an entry silent
+                # about its lane's status reads as resting on verified inventory.
+                statusless.append(key)
 
     for label, entries, message in (
         ("carry no quoted complaint", unquoted,
@@ -1608,6 +1634,10 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
          "implies has none — but it names the promise that created the belief and where that "
          "promise is made: a quotation, a backticked reference, a link, or a file. An "
          "expectation traced to nothing is a preference, and preferences are asks."),
+        ("name no verification status for the lane they cite", statusless,
+         "A scoped Full run leaves some lanes Light, so the run's depth says nothing about "
+         "the lane a given grievance rests on. Name it: verified, proven, Light, unverified, "
+         "or documented. This checks that a status is stated, not that it is the right one."),
         ("name no Appendix A lane", laneless,
          "A grievance is about something that exists. If nothing in the appendix carries it, the "
          "complaint is an unserved ask and is already in the core document. Only the expectation "
@@ -1619,6 +1649,8 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             rep.fail(f"{len(entries)} grievance(s) {label}: {shown}{more}. {message}")
 
     for group, message in (
+        (empty_blocks, "A heading with nothing under it satisfies a shape check while "
+                       "carrying none of what the block is for."),
         (duplicated_blocks, "One block, once. A stale one beside its replacement leaves a "
                             "reader two answers and no line saying which is current."),
         (missing_blocks, "Every entry carries all five blocks; the gap between expectation and "
