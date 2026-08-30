@@ -95,11 +95,15 @@ Run the checker against it at any time:
 python <skill-dir>/scripts/verify.py PERSONAS.md --final
 ```
 
-### Optionally, the story behind each ask
+### Optionally, two more passes
 
 Ask for an **enrichment pass** and every item expands into the situation that produced it, the pressure behind it, and what answering it takes — written to a sibling of the core document, with a topic axis that crosses the persona one. A shareable page is offered on top of that, once; decline it and the markdown is still written, which is the deliverable and the source of truth in either case.
 
 The format carries its honesty mechanically rather than by disclaimer: the coverage mark *chooses* the heading. A served item gets "How it's answered today" in the present tense; an assessed-and-absent one gets "What would have to exist"; and a run with no coverage pass gets "What answering this would take", because nobody looked and unknown is not the same as unserved. None of the three is a judgment call, and a reader can tell them apart without trusting the author. A served item may only claim what the inventory actually recorded, and names the appendix lane that carries it. This matters because enrichment is where a demand-side document turns into a case study — sixty scenes of confident prose are far more persuasive than sixty table rows, and nothing in the prose reveals which of them were observed.
+
+And an **adversarial pass** collects the other half of the picture: what each persona dislikes, distrusts, works around, or believes they should be able to do and can't. The wish frame has one blind spot — nobody phrases a grievance as a wish — so someone who stopped trusting a view after it misled them during an incident never turns up asking for a trustworthy view. They turn up asking for something else, or not at all.
+
+The gate that keeps it from being the unserved list in a bad mood: every grievance must name the thing it's about, and that thing has to exist. Absence is already on the page; this pass is for what exists and disappoints. It needs a coverage pass to have run, because a persona can't resent a hypothetical.
 
 This repo's own `PERSONAS.md` is a real run of the skill against itself — the worked output, not a template. `skills/persona-brainstorm/references/worked-example-ddi.md` walks through the DDI run the method was extracted from.
 
