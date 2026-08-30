@@ -56,7 +56,16 @@ a duration, a sequence of events, all reading as observation because they are to
 anything else.
 
 So: in a **How it's answered today** block, every capability claim must trace to something Phase 3
-actually found, and the block names the lane from Appendix A that carries it.
+actually found, and the block names the lane from Appendix A that carries it — **and says whether
+that lane's mark was proven or inferred.**
+
+That second half matters because the coverage column routinely mixes the two. A Light pass builds
+its marks from docs and manifests without verifying them, and Phase 0 explicitly allows a scoped
+Full run that proves the marks behind the primitives and leaves the rest Light. The core document
+keeps that distinction in Appendix A — which does not travel with the enriched file. A present-tense
+sentence built on an inferred mark reads to a detached reader as verified fact, which is this
+section's failure mode arriving by a different route. Where the mark was not proven, say so in the
+block: *"the lane is documented as doing this; the run did not verify it."*
 
 **When no lane carries it, the mark still wins.** Do not quietly switch the heading to the
 conditional form — the footer would still show ✅ and the item would contradict itself, which
