@@ -689,31 +689,30 @@ If the run was abandoned before this point, nothing is written, which is the cor
 vocabulary entry for a primitive that never shipped invites a later subject to reuse a name that
 was never real.
 
-## Optional passes
+## Enrichment — an optional pass
 
-Two passes run **after** Phase 7, on request, and neither is part of a default run. Offer them once
-when the document is finished; do not run either uninvited, and do not treat a decline as something
-to raise again.
+Runs **after** Phase 7, on request. It is not part of a default run: offer it once when the
+document is finished, do not run it uninvited, and treat a decline as final for the run.
 
-Both share three rules, and the rules are why they are safe to bolt onto a method whose whole
-discipline is demand before supply:
+Two rules make it safe to bolt onto a method whose whole discipline is demand before supply:
 
-- **They run after Phase 4, never before.** Each one needs the inventory to say anything at all.
-  Running either early would put the supply side in front of the imagining, which is the one
-  ordering this skill exists to prevent.
-- **Nothing they produce flows backward.** They read the finished document; they write their own
-  file. Not an ask, not a coverage mark, not a tally, not a primitive. This is the containment
-  Phase 3 works under, for the same reason: a pass that can reach backwards will eventually be
-  used to make the earlier work agree with it.
-- **The core document must have passed `--final` first.** These passes amplify what is already
-  there — an unverified document enriched is an unverified document that now reads persuasively.
+- **It reads the finished document and nothing else.** Not the subject, not the inventory
+  directly — the verified document, which already carries whatever the coverage pass found. That
+  is what makes the pass indifferent to coverage depth: at depth **None** there is no inventory and
+  enrichment still runs, with every item simply taking the conditional form below.
+- **Nothing it produces flows backward.** It writes its own file. Not an ask, not a coverage mark,
+  not a tally, not a primitive. This is the containment Phase 3 works under, for the same reason:
+  a pass that can reach backwards will eventually be used to make the earlier work agree with it.
 
-### Enrichment — the story behind each ask
+And one precondition: **the core document must have passed `--final` first.** The pass amplifies
+what is already there, so an unverified document enriched is an unverified document that now reads
+persuasively.
 
-Read `references/enrichment.md` and follow it. What the pass produces: `PERSONAS-enriched.md`
-beside the core document, expanding **every** item into a situation, the pressure behind it, and
-either how it is answered today or what would have to exist — plus a topic axis that crosses the
-persona one. Optionally an artifact, offered once.
+Read `references/enrichment.md` and follow it. What the pass produces: a sibling of the core
+document — `<name>-enriched.md` beside whatever path Phase 6 wrote to — expanding **every** item
+into a situation, the pressure behind it, and either how it is answered today or what would have to
+exist, plus a topic axis that crosses the persona one. An artifact is offered once on top of that,
+and the markdown stands on its own if the offer is declined.
 
 Three things decide whether this pass is honest, and all three are mechanical rather than matters
 of care:

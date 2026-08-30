@@ -1,7 +1,7 @@
 # Enrichment — the story behind each item
 
-Read this when the user asks for an enrichment pass. `SKILL.md` § Optional passes carries the rules
-that decide *whether* to run one; this file is the format.
+Read this when the user asks for an enrichment pass. `SKILL.md` § Enrichment carries the rules that
+decide *whether* to run one; this file is the format.
 
 The core document is a table. A table is the right shape for sixty asks — scannable, sortable,
 countable — and the wrong shape for persuading anyone that a single ask matters. A row says
@@ -49,9 +49,18 @@ a duration, a sequence of events, all reading as observation because they are to
 anything else.
 
 So: in a **How it's answered today** block, every capability claim must trace to something Phase 3
-actually found, and the block names the lane from Appendix A that carries it. If you cannot name
-the lane, the item does not get that heading — it drops to **What would have to exist**, which is
-an honest description of a capability nobody has verified.
+actually found, and the block names the lane from Appendix A that carries it.
+
+**When no lane carries it, the mark still wins.** Do not quietly switch the heading to the
+conditional form — the footer would still show ✅ and the item would contradict itself, which
+breaks the one thing rule 1 buys you. A served item whose capability cannot be traced to a lane is
+a finding about the *core document*: either the coverage mark is wrong or the appendix is
+incomplete. Write the block to the extent the inventory supports, say plainly which part is
+unverified, and record the item under **What this pass noticed**. Then let the user decide.
+
+That is the honest handling, and it is also the only one available: enrichment cannot edit the
+core document, so a mark it disagrees with is something to report, never something to route
+around.
 
 The situation and the stakes are yours to write. The capability is not.
 
@@ -68,9 +77,16 @@ becomes the honest default rather than a blanket.
 
 ## What enrichment may touch
 
-**It reads** the finished `PERSONAS.md` — the item tables, the coverage marks, and Appendix A.
+**It reads** the finished core document — the item tables, the coverage marks, and Appendix A.
 
-**It writes** `PERSONAS-enriched.md`, beside the core document, and optionally an artifact.
+**It writes** a sibling of it, and optionally an artifact.
+
+Take the core document's path from the run rather than assuming one. Phase 0 defaults to
+`PERSONAS.md` at the repo root but explicitly gives way to a repo's own docs convention, so a real
+run may have written `docs/platform-personas.md`. The enriched file is that path with `-enriched`
+before the extension, in the same directory — `docs/platform-personas-enriched.md`. Hard-coding
+`PERSONAS.md` here would send the pass to read a file that does not exist, or worse, a different
+project's file that does.
 
 **It changes nothing upstream.** Not an ask, not a coverage mark, not the tally, not a primitive.
 The core document passed `--final` before this pass began and it must still pass afterwards,
@@ -159,7 +175,7 @@ persona and primitive slugs are not. Every subject needs a different set — `DN
 ```markdown
 # <The core document's title> — the story behind each ask
 
-_Enrichment of `PERSONAS.md` (<date>, subject SHA `<sha>`). The core document is the record; this
+_Enrichment of `<core document path>` (<date>, subject SHA `<sha>`). The core document is the record; this
 one expands it and changes nothing in it._
 
 **The scenes are invented.** Each item's situation is a plausible reconstruction of how the ask
