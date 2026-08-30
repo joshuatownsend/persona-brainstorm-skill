@@ -1424,9 +1424,29 @@ STOPWORDS = {
 }
 
 
+def section_body(text: str, name: str) -> str | None:
+    """A named section's body, or None when the section is absent.
+
+    One home for a rule that was written twice and wrong both times: a heading
+    pattern accepting two depths must terminate at either of them. Accepting
+    "### Verification" and stopping only at the next "##" let an empty section
+    swallow its sibling headings and their paragraphs, which were then counted
+    as the answers the section did not contain. The appendix parser had the
+    identical defect, and fixing it there without sweeping for siblings is why
+    this one survived a round longer.
+
+    Returning None rather than "" keeps "no such section" distinguishable from
+    "the section is empty" -- different defects, different messages.
+    """
+    m = re.search(r"^(#{2,3})\s*" + name + r"\b[^\n]*\n", text, re.M)
+    if not m:
+        return None
+    stop = re.search(r"^#{2,%d}\s" % len(m.group(1)), text[m.end():], re.M)
+    return text[m.end():m.end() + stop.start()] if stop else text[m.end():]
+
+
 def core_verification(core_text: str) -> str:
-    m = re.search(r"^#{2,3}\s*Verification\b[^\n]*\n(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
-    return m.group(1) if m else ""
+    return section_body(core_text, "Verification") or ""
 
 
 def verification_problem(core_text: str) -> str:
@@ -1558,10 +1578,20 @@ def verification_answers(body: str) -> list[str]:
     contributes its header and its data rows and not its underline.
     """
     entry_start = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+|^\s*\|")
+    ruler = re.compile(r"^\s*\|?[\s:|-]+\|[\s:|-]*$")
     out: list[str] = []
     for block in re.split(r"\n\s*\n", body):
+        lines = block.splitlines()
+        # A table's header row names the columns; it is a label, not an answer.
+        # Counting it let a header plus four data rows read as five answers with
+        # one Phase 7b question unanswered. The ruler is what identifies the row
+        # above it as a header -- and the ruler itself carries no letters, so it
+        # already falls out at is_substantive.
+        skip = {i - 1 for i, ln in enumerate(lines) if i and ruler.match(ln)}
         entries: list[str] = []
-        for line in block.splitlines():
+        for i, line in enumerate(lines):
+            if i in skip:
+                continue
             if entry_start.match(line) or not entries:
                 entries.append(line)
             else:
@@ -1998,8 +2028,8 @@ def main() -> int:
         rep.fail(msg) if args.final else rep.warn(msg)
 
     if args.final:
-        m = re.search(r"^#{2,3}\s*Verification\b[^\n]*\n(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
-        if not m:
+        m = section_body(text, "Verification")
+        if m is None:
             rep.fail(
                 "no Verification section — Phase 7b was skipped or its findings were not "
                 "recorded. An absent verification section reads as a passed one, which is why "
@@ -2015,8 +2045,8 @@ def main() -> int:
             # Blocks, not lines -- one answer wrapped over five lines is one
             # answer. See core_verification_problem for why blocks rather than
             # bullets.
-            body = verification_answers(m.group(1))
-            filled = len([b for b in re.split(r"\n\s*\n", m.group(1)) if b.strip()])
+            body = verification_answers(m)
+            filled = len([b for b in re.split(r"\n\s*\n", m) if b.strip()])
             if len(body) < 5:
                 # Say which of the two it is. A section of placeholder lines and
                 # a section nobody wrote both count zero, and the author fixes

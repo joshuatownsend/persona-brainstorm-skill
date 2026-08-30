@@ -1031,6 +1031,31 @@ FINAL_CASES = [
      + "- A practitioner would question the frequency column's basis first.\n\n"
      + t[t.index("## What the 60 imply"):],
      None),
+    # The same heading-level defect as the appendix parser, in the sibling
+    # function: "### Verification" matched, but the body ended only at the next
+    # H2, so an empty section absorbed its sibling headings and their paragraphs
+    # were counted as the answers it did not contain. Fixing one boundary and
+    # not sweeping for the other is why this survived a round longer.
+    ("final-rejects-an-h3-verification-absorbing-siblings", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Review\n\n### Verification\n\n### Other notes\n\n"
+     + "The roster was approved without changes on the first pass.\n\n"
+     + "The budget was set at sixty before any item existed.\n\n"
+     + "The archetype was chosen from the table in Phase 0.\n\n"
+     + "The inventory was built after the items were written.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "substantive block"),
+    # A table's header row names the columns. Counting it let a header plus four
+    # data rows read as five answers with one question unanswered.
+    ("final-rejects-a-table-header-counted-as-an-answer", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\n| Question | Answer |\n|---|---|\n"
+     + "| Generic items | Items 4 and 11 apply to any subject in this category. |\n"
+     + "| Indistinct personas | P2 and P5 cannot be told apart by their asks. |\n"
+     + "| Inferred marks | The marks on items 7 and 19 read as inferred. |\n"
+     + "| Missing decisions | Items 22 and 30 restate their asks. |\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "4 substantive block"),
     # Appendices written as H3 siblings under an H2. The search accepts an H3
     # appendix heading, so terminating the section only at the next H2 let an
     # empty inventory absorb the appendices after it, and their lane rows then
