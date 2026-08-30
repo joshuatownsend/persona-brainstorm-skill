@@ -696,10 +696,12 @@ document is finished, do not run it uninvited, and treat a decline as final for 
 
 Two rules make it safe to bolt onto a method whose whole discipline is demand before supply:
 
-- **It reads the finished document and nothing else.** Not the subject, not the inventory
-  directly — the verified document, which already carries whatever the coverage pass found. That
-  is what makes the pass indifferent to coverage depth: at depth **None** there is no inventory and
-  enrichment still runs, with every item simply taking the conditional form below.
+- **It reads the finished document**, and — when re-enriching a subject it has enriched before —
+  the `**Topics:**` line of its own previous output, so the topic vocabulary survives a re-run.
+  Nothing else: not the subject, not the inventory directly, and not the prior run's scenes, which
+  would anchor the new ones. The verified document already carries whatever the coverage pass
+  found, which is what makes the pass indifferent to coverage depth: at depth **None** there is no
+  inventory and enrichment still runs, with every item taking the third form below.
 - **Nothing it produces flows backward.** It writes its own file. Not an ask, not a coverage mark,
   not a tally, not a primitive. This is the containment Phase 3 works under, for the same reason:
   a pass that can reach backwards will eventually be used to make the earlier work agree with it.

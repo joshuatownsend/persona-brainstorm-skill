@@ -212,8 +212,12 @@ Where a scene came from something real it says so on the item. Capability claims
 SOURCE>.
 
 **Coverage key:** <copied from the core document: ✅ served well today · ◐ partially served ·
-○ not possible today. **⚡ marks the frontier** — the frontier class for this subject. Delete this
-line on a run with no coverage pass, where the footers carry no marks.>
+○ not possible today. Delete this line on a run with no coverage pass, where the footers carry no
+marks.>
+
+**⚡ marks the frontier** — <the frontier class for this subject, copied from the core document.
+This line stays at every coverage depth: the frontier is a property of the items, not of the
+coverage pass, so a depth-None run's footers carry ⚡ and need it explained.>
 
 **Topics:** `<slug>` · `<slug>` · … <one line on what the axis is here>
 
