@@ -238,6 +238,16 @@ coverage pass, so a depth-None run's footers carry ⚡ and need it explained.>
 
 **Topics:** `<slug>` · `<slug>` · … <one line on what the axis is here>
 
+**Carried from the core document's Verification section:** <the Phase 7b findings, verbatim or
+tightly summarised, including the ones the run disagreed with and why it disagreed. Never dropped.>
+
+That last block is not optional politeness. `--final` refuses to pass a document without a
+Verification section, and what it holds is the adversarial reader's list of what is wrong: items
+that would apply unchanged to any subject, personas indistinguishable by their asks, coverage marks
+that read inferred. Enrichment then takes those exact items and writes them into their most
+persuasive form. A standalone file that carries the scenes but not the warnings has inverted the
+point of the phase that produced them.
+
 ---
 
 ## P1 — <Role>
@@ -276,8 +286,8 @@ Structure, in order:
 
 1. **Header** — the question as the title, one paragraph on how to read the page, and one line on
    what the frontier mark means for this subject.
-2. **The honesty note, the `**Frequencies:**` line, and the coverage key**, all from the markdown
-   header and all in full. They are more necessary here, not less: the artifact is the version that
+2. **The honesty note, the `**Frequencies:**` line, the coverage key, and the carried Verification
+   findings**, all from the markdown header and all in full. They are more necessary here, not less: the artifact is the version that
    gets shared onward, detached from this conversation and from the core document. Every card shows
    a frequency pill, and `many/day` on sixty cards reads as measurement unless the page says
    otherwise once — and a reader who cannot tell ◐ from ○ cannot read the coverage pills at all.
