@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>persona-brainstorm — social card</title>
+<style>
+  /* Source for assets/social-card.png. Render at exactly 1280x640.
+     See assets/README.md for the regeneration command. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:       #0b0e13;
+    --panel:    #10141b;
+    --line:     #1e2530;
+    --text:     #e6edf3;
+    --muted:    #7d8899;
+    --dim:      #4d5768;
+    --accent:   #d97757;  /* prompt caret, frontier */
+    --demand:   #8ab4f8;  /* what they would ask */
+    --supply:   #e3b341;  /* what exists today */
+    --served:   #7ee0b8;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  html, body { width: 1280px; height: 640px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-variant-ligatures: none;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Faint scan-grid + corner glow: texture without noise at thumbnail size. */
+  body::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px);
+    background-size: 100% 32px;
+    opacity: 0.35;
+  }
+  body::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 420px at 88% 8%, rgba(217,119,87,0.10), transparent 65%),
+      radial-gradient(700px 400px at 4% 96%, rgba(138,180,248,0.07), transparent 60%);
+  }
+
+  .card { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; padding: 60px 72px 0; }
+
+  .prompt { font-size: 24px; letter-spacing: 0.01em; color: var(--muted); display: flex; align-items: center; gap: 12px; }
+  .prompt .sigil { color: var(--accent); }
+  .prompt .cmd   { color: var(--text); }
+  .prompt .caret { width: 12px; height: 24px; background: var(--accent); opacity: 0.85; margin-left: 2px; }
+
+  /* 18 characters at -0.05em tracking is ~9.9em wide; 96px keeps it inside the
+     1136px content box with room to spare. Raising this will overflow. */
+  .wordmark {
+    margin-top: 26px;
+    font-size: 96px;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .tagline {
+    margin-top: 20px;
+    font-size: 36px;
+    line-height: 1.28;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    max-width: 800px;
+  }
+
+  /* ---- pipeline ---- */
+  .rule {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+  .rule-label { font-size: 17px; color: var(--dim); letter-spacing: 0.02em; }
+
+  /* Two rows, not one: the flow and the coverage vocabulary together overrun
+     the 1136px content box by ~260px at this font size. Splitting them also
+     separates the method from the marks it produces, which reads better small. */
+  .pipeline {
+    margin-top: 16px;
+    margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-size: 19px;
+  }
+
+  .flow { display: flex; align-items: center; gap: 20px; }
+
+  /* Row height + gap here must stay in sync with the connector SVG geometry
+     below: dot centres land at y=13 and y=57 in a 70px box. */
+  .sides { display: flex; flex-direction: column; gap: 18px; }
+  .side { display: flex; align-items: center; gap: 10px; height: 26px; white-space: nowrap; }
+  .side .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .side.demand .dot { background: var(--demand); box-shadow: 0 0 14px rgba(138,180,248,0.55); }
+  .side.supply .dot { background: var(--supply); box-shadow: 0 0 14px rgba(227,179,65,0.50); }
+  .side .label { color: var(--text); }
+  .side .note { color: var(--dim); }
+
+  .join { flex: none; }
+
+  .cut {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 12px 18px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .cut b { color: var(--text); font-weight: 600; }
+
+  .marks { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  /* The coverage glyphs are drawn rather than typed: the document's own marks
+     are emoji, and emoji rasterise differently on every renderer this card
+     might be regenerated on. */
+  .chip .glyph { flex: none; }
+  .chip.served    { color: var(--served); border-color: rgba(126,224,184,0.34); }
+  .chip.partial   { color: var(--supply); border-color: rgba(227,179,65,0.30); }
+  .chip.frontier  { color: var(--accent); border-color: rgba(217,119,87,0.40); background: rgba(217,119,87,0.08); }
+
+  /* ---- footer ---- */
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--line);
+    padding: 22px 72px 26px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    color: var(--muted);
+    background: rgba(11,14,19,0.6);
+  }
+  .footer .sep { color: var(--dim); margin: 0 12px; }
+  .footer .repo { color: var(--text); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="prompt">
+      <span class="sigil">$</span><span class="cmd">/persona-brainstorm</span><span class="caret"></span>
+    </div>
+
+    <div class="wordmark">persona-brainstorm</div>
+
+    <div class="tagline">
+      What would people ask this,<br>if it could answer anything?
+    </div>
+
+    <div class="rule">
+      <div class="rule-label">// the unserved items are the deliverable</div>
+    </div>
+
+    <div class="pipeline">
+      <div class="flow">
+      <div class="sides">
+        <div class="side demand">
+          <span class="dot"></span><span class="label">demand</span><span class="note">what they'd ask</span>
+        </div>
+        <div class="side supply">
+          <span class="dot"></span><span class="label">supply</span><span class="note">what exists today</span>
+        </div>
+      </div>
+
+      <svg class="join" width="56" height="70" viewBox="0 0 56 70" fill="none" aria-hidden="true">
+        <path d="M0 13 H16 Q26 13 26 23 V35" stroke="#8ab4f8" stroke-width="1.5" opacity="0.75"/>
+        <path d="M0 57 H16 Q26 57 26 47 V35" stroke="#e3b341" stroke-width="1.5" opacity="0.75"/>
+        <path d="M26 35 H48" stroke="#4d5768" stroke-width="1.5"/>
+        <path d="M48 30 L56 35 L48 40 Z" fill="#4d5768"/>
+      </svg>
+
+      <div class="cut"><b>coverage annotates</b> &nbsp;·&nbsp; never gates</div>
+      </div>
+
+      <div class="marks">
+        <span class="chip served">
+          <svg class="glyph" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5.5" fill="currentColor"/>
+          </svg>served
+        </span>
+        <span class="chip partial">
+          <svg class="glyph" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M6.5 1 A5.5 5.5 0 0 0 6.5 12 Z" fill="currentColor"/>
+          </svg>partial
+        </span>
+        <span class="chip">
+          <svg class="glyph" width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          </svg>not possible
+        </span>
+        <span class="chip frontier">
+          <svg class="glyph" width="11" height="14" viewBox="0 0 11 14" aria-hidden="true">
+            <path d="M6.6 0 L0 8.1 H4.2 L3.9 14 L11 5.6 H6.3 Z" fill="currentColor"/>
+          </svg>frontier
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>A Claude Code skill<span class="sep">·</span>MIT</div>
+    <div class="repo">github.com/joshuatownsend/persona-brainstorm-skill</div>
+  </div>
+</body>
+</html>

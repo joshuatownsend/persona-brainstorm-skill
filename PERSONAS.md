@@ -207,7 +207,7 @@ before a single item was graded: its frontier is migration and failure injection
 
 ## Verification (Phase 7)
 
-**7a — the checker.** `python scripts/verify.py PERSONAS.md` passes. Numbering is continuous 1–60,
+**7a — the checker.** `python skills/persona-brainstorm/scripts/verify.py PERSONAS.md` passes. Numbering is continuous 1–60,
 per-persona counts match the roster, the frontier count is 26, and the coverage tally matches the
 table. The arithmetic in this document is sound; what follows is about everything arithmetic cannot
 reach.
