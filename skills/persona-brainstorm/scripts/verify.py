@@ -973,6 +973,7 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
     misplaced: list[str] = []
     cov_mismatch: list[str] = []
     no_mark: list[int] = []
+    no_footer: list[int] = []
     for n in sorted(set(core) & set(entries)):
         start, end = entries[n]
         body = text[start:end]
@@ -1005,7 +1006,13 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         # the interpreter's hash seed, so a footer carrying two marks would
         # report a different one run to run -- and pass or fail by luck.
         seen = [c for c in ("✅", "◐", "○") if foot and c in foot.group(0)]
-        if len(seen) > 1:
+        if not foot:
+            # The footer is the fourth required part, and on a run with no
+            # coverage pass nothing else proves it exists: every branch below is
+            # reached through a mark, and an entry with no mark to carry would
+            # otherwise be free to drop the frequency and topics with it.
+            no_footer.append(n)
+        elif len(seen) > 1:
             cov_mismatch.append(
                 f"{n} carries {' and '.join(seen)} in one footer"
             )
@@ -1023,6 +1030,14 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
                     "while the core document leaves it unmarked"
             cov_mismatch.append(f"{n} carries {seen[0]} {where}")
 
+    if no_footer:
+        shown = ", ".join(str(n) for n in no_footer[:12])
+        more = f" (+{len(no_footer) - 12} more)" if len(no_footer) > 12 else ""
+        rep.fail(
+            f"{len(no_footer)} entr(y/ies) have no footer line: {shown}{more}. The footer is the "
+            "fourth required part — frequency, the frontier mark, the coverage mark and the "
+            "topics — and it is the only place an entry says what it is about."
+        )
     if no_mark:
         shown = ", ".join(str(n) for n in no_mark[:12])
         more = f" (+{len(no_mark) - 12} more)" if len(no_mark) > 12 else ""
@@ -1071,6 +1086,15 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
     # this pass rewrites into their most persuasive form.
     values: dict[str, str] = {}
     for label, key in (("Frequencies", "frequency basis"), ("Topics", "topic axis")):
+        all_of = re.findall(rf"^\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)$", header, re.M)
+        if len(all_of) > 1:
+            # One address, as everywhere else in this method. Two declarations
+            # give a detached reader both bases for the same pills, and neither
+            # line says which of them is stale.
+            rep.fail(
+                f"{len(all_of)} **{label}:** lines in the enriched header. A declaration read "
+                "from two places is read from neither."
+            )
         m = re.search(rf"^\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)$", header, re.M)
         if not m:
             rep.fail(
@@ -1096,9 +1120,12 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
                 f"{values['Frequencies']!r}."
             )
 
+    # Anchored to the start of a line, like every other canonical declaration in
+    # this method: unanchored, a sentence merely *mentioning* the Verification
+    # section satisfies the requirement to carry it.
     carried = re.search(
-        r"Carried from the core document'?s Verification section:?\*{0,2}(.*)",
-        header, re.I)
+        r"^\*{0,2}Carried from the core document'?s Verification section:?\*{0,2}(.*)",
+        header, re.I | re.M)
     if not carried:
         rep.fail(
             "the core document's Verification section is not carried into the enriched header. "
@@ -1123,6 +1150,16 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
             "somewhere is not the same declaration: 'the scenes are not invented' contains it "
             "and says the opposite. Each situation is a reconstruction of how the ask arises, "
             "and prose is read as reporting unless it says otherwise once."
+        )
+
+    # The frontier legend travels at every coverage depth, because the frontier
+    # is a property of the items rather than of the coverage pass: a depth-None
+    # run's footers still carry ⚡ and still need it explained.
+    if any(it.frontier for it in items) and "⚡" not in header:
+        rep.fail(
+            "the enriched header does not explain ⚡, which the entries carry. The frontier "
+            "class is specific to this subject, and a reader who does not know it reads every "
+            "frontier entry as wishful thinking."
         )
 
     key = re.search(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)

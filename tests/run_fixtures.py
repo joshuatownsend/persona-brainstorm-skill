@@ -415,6 +415,18 @@ def footer_carries_two_marks(text):
     return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1✅ · ○", block, flags=re.M))
 
 
+def drop_a_footer(text):
+    """An entry with no footer at all.
+
+    On a run with no coverage pass there is no mark to compare, so nothing else
+    proves the fourth part exists -- and the frequency and topics would go with
+    it. Applied to the graded base too, where the missing-mark check is what
+    catches it; both paths lead to a fail, which is the point.
+    """
+    block = _first(text, "○")
+    return swap(text, block, re.sub(r"^`daily`.*$", "", block, count=1, flags=re.M))
+
+
 def heading_repeated(text):
     """The same valid heading twice. A set comparison passes this; a count does not."""
     block = _first(text, "○")
@@ -499,6 +511,21 @@ ENRICHED_MUTATIONS = [
      lambda t: swap(t, "**Coverage key:**",
                     "**Coverage:** not assessed — nobody looked.\n\n**Coverage key:**"),
      "both a **Coverage key:** and"),
+    ("enriched-frequencies-declared-twice",
+     lambda t: swap(t, line_starting(t, FREQ),
+                    line_starting(t, FREQ) + "\n\n**Frequencies:** observed from tickets."),
+     "**Frequencies:** lines in the enriched header"),
+    ("enriched-no-frontier-legend",
+     lambda t: drop(t, "**⚡ marks the frontier**"),
+     "does not explain ⚡"),
+    # Unanchored, a sentence merely mentioning the section satisfied the
+    # requirement to carry it.
+    ("enriched-verification-mentioned-not-carried",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "The core document's Verification section is worth a read; "
+                         "carried from the core document's Verification section it is not."),
+     "Verification section is not carried"),
+    ("enriched-entry-without-a-footer", drop_a_footer, "have no footer line"),
 ]
 
 # A no-coverage core takes the third heading form, and must not be given ○.
