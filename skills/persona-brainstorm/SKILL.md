@@ -1,6 +1,6 @@
 ---
 name: persona-brainstorm
-description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. Prefer it over an ad-hoc list when the answer is user needs, not features.
+description: Run an unconstrained, demand-side persona and use-case brainstorm — what would real users want from a system if it could do anything, rather than a catalogue of what ships. Derives the personas, captures each ask in their own words plus the decision it feeds, then synthesizes the capability primitives and gaps. Use for personas, user research, use cases, wish lists, gap analysis, feature discovery, whitespace analysis, or roadmap input — and when the user describes that goal without naming it — "who would use this and what would they want", "who are the users of this repo", "what would a developer want from this library that it doesn't do", "what should this MCP server be able to answer", "what are we missing", "brainstorm use cases for X". Runs against any repo (the subject comes from the repo's domain, not its implementation) and against subjects with no repo — a product, service, API, dataset, or team process. An optional enrichment pass expands every ask into the situation that produced it and what answering it takes — "flesh out the personas doc", "write up the scenarios", "turn this into something I can share". Prefer it over an ad-hoc list when the answer is user needs, not features.
 ---
 
 # Persona Brainstorm
@@ -689,6 +689,60 @@ If the run was abandoned before this point, nothing is written, which is the cor
 vocabulary entry for a primitive that never shipped invites a later subject to reuse a name that
 was never real.
 
+## Enrichment — an optional pass
+
+Runs **after** Phase 7, on request. It is not part of a default run: offer it once when the
+document is finished, do not run it uninvited, and treat a decline as final for the run.
+
+Two rules make it safe to bolt onto a method whose whole discipline is demand before supply:
+
+- **It reads the finished document**, and — when re-enriching a subject it has enriched before —
+  the `**Topics:**` line of its own previous output, so the topic vocabulary survives a re-run.
+  Nothing else: not the subject, not the inventory directly, and not the prior run's scenes, which
+  would anchor the new ones. The verified document already carries whatever the coverage pass
+  found, which is what makes the pass indifferent to coverage depth: at depth **None** there is no
+  inventory and enrichment still runs, with every item taking the third form below.
+- **Nothing it produces flows backward.** It writes its own file. Not an ask, not a coverage mark,
+  not a tally, not a primitive. This is the containment Phase 3 works under, for the same reason:
+  a pass that can reach backwards will eventually be used to make the earlier work agree with it.
+
+And one precondition: **the core document must have passed `--final` first.** The pass amplifies
+what is already there, so an unverified document enriched is an unverified document that now reads
+persuasively.
+
+Read `references/enrichment.md` and follow it. What the pass produces: a sibling of the core
+document — `<name>-enriched.md` beside whatever path Phase 6 wrote to — expanding **every** item
+into a situation, the pressure behind it, and either how it is answered today or what would have to
+exist, plus a topic axis that crosses the persona one. An artifact is offered once on top of that,
+and the markdown stands on its own if the offer is declined.
+
+Three things decide whether this pass is honest, and all three are mechanical rather than matters
+of care:
+
+1. **The coverage mark chooses the third block's heading.** ✅ and ◐ get *"How it's answered
+   today"*, present tense. ○ gets *"What would have to exist"*, conditional. A run at coverage
+   depth **None** has no marks and takes a third form, *"What answering this would take"* — because
+   nobody looked, so coverage is unknown, and unknown is not unserved. Asserting absence there
+   would make exactly the claim ○ makes, on a run that never assessed anything. The heading is
+   derived, never chosen, which is what makes the forms impossible to confuse and makes the rule
+   checkable later.
+2. **A served item may only claim what Phase 3 recorded**, and names the Appendix A lane that
+   carries it. The heading rule catches past tense on an unserved item; it does not catch invented
+   specificity on a served one — a plausible number, a named field, a duration, all reading as
+   observation because they are too particular to be anything else. When no lane carries it, the
+   mark still wins — switching the heading would leave the item disagreeing with its own footer.
+   Write what the inventory supports, say which part is unverified, and record it as a finding:
+   a served mark you cannot trace is a problem with the core document, and this pass reports one
+   rather than routing around it. `references/enrichment.md` carries the handling.
+3. **The scenes are declared invented, once, in the header.** They are hypotheses about how each
+   ask arises, written concretely because a hedged scene teaches nothing. Where one came from
+   something real, name the source on that item.
+
+This is the `**Frequencies:**` rule again, two levels down. Enrichment is where a demand-side
+document turns into a case study, and a case study is a different claim — sixty scenes of confident
+prose are far more persuasive than sixty table rows, and nothing in the prose reveals which of them
+were observed.
+
 ## Re-running with a corrected frame
 
 Expect the first run to come out narrower than the user wanted, and expect them to say so — often
@@ -729,6 +783,9 @@ Check the draft against these before handing it over.
   or onto the subject's existing subsystems, no clustering happened.
 - **Hedging the ⚡ items.** The hard, "we could never build that" entries are why anyone reads the
   page. Write them at full strength and let the coverage column say ○.
+- **An enriched item that reads better than its coverage mark.** If the story under an ○ item
+  describes an answer arriving, the pass has quietly promoted a wish into a capability — which is
+  the hard rule broken at the one place it is hardest to see, because the prose is good.
 - **An archetype forced to fit.** If you picked "read surface" for a library because it was the
   first row, every item will come out as a query and the real asks — migration, failure, escape
   hatches — never get written. Deriving the four columns from scratch is cheaper than a run spent
