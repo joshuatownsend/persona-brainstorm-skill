@@ -1015,6 +1015,32 @@ FINAL_CASES = [
      + "question the frequency column before anything else on the page.\n\n"
      + t[t.index("## What the 60 imply"):],
      "1 substantive block"),
+    # ...and the fix for that must not reject the other legitimate shape. Five
+    # answers as an ordinary Markdown list share one blank-line-separated block,
+    # so counting blocks turned a false pass into a false failure -- the same
+    # class as the About-block defect this PR opened with, reintroduced while
+    # fixing something else. Neither the prose fixtures nor the shipped
+    # documents caught it, because both happen to use paragraphs.
+    ("final-accepts-five-answers-as-adjacent-bullets", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\n"
+     + "- Items 4 and 11 would apply unchanged to any other subject here.\n"
+     + "- P2 and P5 are indistinguishable once the persona names are covered.\n"
+     + "- The coverage marks on items 7 and 19 read as inferred, not verified.\n"
+     + "- Items 22 and 30 restate their asks instead of naming a decision.\n"
+     + "- A practitioner would question the frequency column's basis first.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     None),
+    # Appendices written as H3 siblings under an H2. The search accepts an H3
+    # appendix heading, so terminating the section only at the next H2 let an
+    # empty inventory absorb the appendices after it, and their lane rows then
+    # proved the missing inventory existed.
+    ("final-rejects-an-h3-inventory-absorbing-later-appendices", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "## Appendices\n\n### Appendix B - Current coverage\n\n"
+     + "### Appendix C - Run comparison\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A - Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
     # A lane-shaped row in the wrong appendix is not an inventory either.
     # Documents carry several appendices -- this repo's own dogfood run has a
     # movement appendix beside its inventory -- so selecting the first one that

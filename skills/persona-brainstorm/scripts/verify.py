@@ -1452,7 +1452,7 @@ def verification_problem(core_text: str) -> str:
     # for one answer that does not also dictate the section's format; requiring
     # five bullets would reject a section written as prose, which the method
     # nowhere forbids.
-    lines = [b for b in re.split(r"\n\s*\n", body) if is_substantive(b)]
+    lines = verification_answers(body)
     if len(lines) < 5:
         filled = len([b for b in re.split(r"\n\s*\n", body) if b.strip()])
         # "0 substantive of 5 present" and "0 substantive of 0 present" are
@@ -1513,20 +1513,61 @@ def appendix_section(core_text: str) -> str:
     "Current coverage".
     """
     body = blank_fences(core_text)
-    for m in re.finditer(r"^#{2,3}\s*Appendix\s+[A-Z]\b([^\n]*)$", body, re.M):
+    for m in re.finditer(r"^(#{2,3})\s*Appendix\s+[A-Z]\b([^\n]*)$", body, re.M):
         # Exactly the two words output-template.md documents. "lanes" was in
         # this list and is not in that rule, and the gap was reachable: an
         # appendix headed "Lanes moved" -- a movement table, not an inventory --
         # satisfied the guard while the inventory itself was deleted. Both
         # reviewers found it independently, which is what a whitelist wider than
         # its own documentation earns.
-        if not re.search(r"\b(coverage|inventory)\b", m.group(1), re.I):
+        if not re.search(r"\b(coverage|inventory)\b", m.group(2), re.I):
             continue
-        stop = re.search(r"^#{2}\s", body[m.end():], re.M)
+        # Stop at the next heading of the same level or higher. The search above
+        # accepts an H3 appendix, so terminating only at the next H2 let an H3
+        # inventory swallow its sibling appendices -- an empty
+        # "### Appendix B - Current coverage" absorbed a later
+        # "### Appendix C - Run comparison", whose lane row then proved the
+        # missing inventory existed. Matching two heading depths and stopping at
+        # one is the same rule read two ways.
+        level = len(m.group(1))
+        stop = re.search(r"^#{2,%d}\s" % level, body[m.end():], re.M)
         section = body[m.end():m.end() + stop.start()] if stop else body[m.end():]
         if re.search(r"\|\s*\*\*[A-Z]\s*[—\-–]", section):
             return section
     return ""
+
+
+def verification_answers(body: str) -> list[str]:
+    """The distinct answers recorded in a Verification section.
+
+    Phase 7b asks five questions, so the count standing in for "five answers
+    were recorded" has to track answers rather than typography. Two shapes both
+    have to work, and counting either unit alone breaks the other:
+
+    - counting physical lines let ONE answer hard-wrapped over five lines pass
+      while four questions went unanswered;
+    - counting blank-line-separated blocks then rejected five answers written
+      as an ordinary Markdown list, because adjacent list items share a block.
+
+    So: split on blank lines, then split each block again at list markers and
+    table rows, joining soft-wrapped continuation lines into the entry above.
+    Nothing here dictates the section's format, which is the point -- the method
+    nowhere requires bullets, or prose, or a table.
+
+    Table rulers carry no letters and fall out at is_substantive, so a table
+    contributes its header and its data rows and not its underline.
+    """
+    entry_start = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+|^\s*\|")
+    out: list[str] = []
+    for block in re.split(r"\n\s*\n", body):
+        entries: list[str] = []
+        for line in block.splitlines():
+            if entry_start.match(line) or not entries:
+                entries.append(line)
+            else:
+                entries[-1] += " " + line.strip()
+        out.extend(e for e in entries if is_substantive(e))
+    return out
 
 
 def core_lanes(core_text: str) -> set[str]:
@@ -1974,7 +2015,7 @@ def main() -> int:
             # Blocks, not lines -- one answer wrapped over five lines is one
             # answer. See core_verification_problem for why blocks rather than
             # bullets.
-            body = [b for b in re.split(r"\n\s*\n", m.group(1)) if is_substantive(b)]
+            body = verification_answers(m.group(1))
             filled = len([b for b in re.split(r"\n\s*\n", m.group(1)) if b.strip()])
             if len(body) < 5:
                 # Say which of the two it is. A section of placeholder lines and
