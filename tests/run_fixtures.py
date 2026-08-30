@@ -645,8 +645,11 @@ ADV_KINDS = ("it's wrong", "it's expensive", "it refuses", "it surprises")
 
 def core_lane_letters(core_text):
     """The Appendix A lane letters, in document order."""
+    # Every dash the checker accepts. Matching only the em dash meant a core
+    # document written with a hyphen would break the generator rather than the
+    # thing it generates for, which is the wrong failure.
     out = [m.group(1) for m in
-           re.finditer(r"\|\s*\*\*([A-Z])\s*—[^*|]+\*\*", core_text)]
+           re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–][^*|]+\*\*", core_text)]
     require(out, "no Appendix A lanes found in the core base")
     return out
 
@@ -685,6 +688,25 @@ def _adv_first(text):
     require(m, "no grievance entries in the generated base")
     end = text.find("\n#### ", m.end())
     return text[m.start():end if end > 0 else len(text)]
+
+
+def _as_expectation_gap(text, about):
+    """Turn the first entry into an expectation gap with the given About."""
+    block = _adv_first(text)
+    out = re.sub(r"^\*\*About:\*\*.*$", about, block, count=1, flags=re.M)
+    out = re.sub(r"^\*\*Kind:\*\*.*$", "**Kind:** the expectation gap.", out,
+                 count=1, flags=re.M)
+    require(out != block, "the entry was already an expectation gap")
+    return swap(text, block, out)
+
+
+def expectation_gap_with_promise(text):
+    return _as_expectation_gap(
+        text, '**About:** the promise in `README.md` that it "answers anything". *(invented)*')
+
+
+def expectation_gap_without_promise(text):
+    return _as_expectation_gap(text, "**About:** the thing generally. *(invented)*")
 
 
 ADVERSARIAL_MUTATIONS = [
@@ -741,7 +763,7 @@ ADVERSARIAL_MUTATIONS = [
      lambda t: drop(t, "**Coverage depth:**"), "no **Coverage depth:** line"),
     ("adversarial-coverage-depth-neither",
      lambda t: edit_line(t, "**Coverage depth:**", "**Coverage depth:** thorough."),
-     "names neither Full nor Light"),
+     "does not open with Full or Light"),
     ("adversarial-two-coverage-depths",
      lambda t: twice(t, "**Coverage depth:**"), "**Coverage depth:** lines"),
     ("adversarial-no-verification-carry",
@@ -753,6 +775,30 @@ ADVERSARIAL_MUTATIONS = [
     ("adversarial-all-invented-undisclosed",
      lambda t: t.replace("*(observed: a support thread)*", "*(invented)*"),
      "no grievance is marked observed, and the header does not say so"),
+    # The word appearing is not the declaration, here as in the enriched header.
+    ("adversarial-disclosure-negated",
+     lambda t: edit_line(t, "**Only the `observed` entries are reported complaints.**",
+                         "**The `observed` entries are not reported complaints.**"),
+     "does not say which entries are reported complaints"),
+    # "None, not Full or Light" declares the one depth this pass refuses, and
+    # passed on the word it used to refuse it.
+    ("adversarial-depth-discusses-rather-than-states",
+     lambda t: edit_line(t, "**Coverage depth:**",
+                         "**Coverage depth:** None, not Full or Light."),
+     "does not open with Full or Light"),
+    ("adversarial-verification-replaced",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "**Carried from the core document's Verification section:** "
+                         "everything passed."),
+     "no vocabulary in common"),
+    ("adversarial-expectation-gap-cites-nothing", expectation_gap_without_promise,
+     "cite no promise"),
+]
+
+# Must still pass: the expectation gap is the one kind exempt from the lane
+# rule, and an exemption nothing asserts is an exemption nobody knows is there.
+ADVERSARIAL_POSITIVES = [
+    ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
 ]
 
 # ---------------------------------------------------------------------------
@@ -992,6 +1038,20 @@ def main():
                            f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
                 else:
                     report(True, name)
+
+            for name, mutate in ADVERSARIAL_POSITIVES:
+                try:
+                    text = mutate(base)
+                except (BrokenFixture, ValueError) as exc:
+                    report(False, name, f"mutation no longer applies: {exc}")
+                    continue
+                path = os.path.join(tmp, name + ".md")
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                rc, out = run(core_path, "--adversarial", path)
+                fails = failures_in(out)
+                report(rc == 0, name,
+                       "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
 
         print("\nsecond pass (--final):")
         for name, base, mutate, needle in FINAL_CASES:

@@ -1359,6 +1359,36 @@ ADVERSARIAL_BLOCKS = ("About", "Kind", "What they expected", "What it costs",
                       "What would fix it")
 
 
+STOPWORDS = {
+    "the", "and", "that", "this", "with", "from", "which", "were", "was", "are",
+    "for", "not", "its", "it's", "their", "them", "they", "have", "has", "had",
+    "than", "then", "into", "onto", "over", "under", "each", "every", "some",
+    "any", "all", "one", "two", "three", "found", "read", "does", "did", "but",
+    "section", "document", "core", "verification", "findings", "finding",
+}
+
+
+def core_verification(core_text: str) -> str:
+    m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", core_text, re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def shares_vocabulary(carried: str, source: str, floor: int = 2) -> bool:
+    """True when the carried text and the source share distinctive words.
+
+    Deliberately weak. The reference allows the findings verbatim or tightly
+    summarised, so the strong comparison the frequency basis gets would be
+    wrong here — but a summary of a text shares words with it, and a sentence
+    written over the findings instead of from them shares none. With no source
+    to compare against, this passes rather than inventing a verdict.
+    """
+    if not source.strip():
+        return True
+    words = lambda s: {w for w in re.findall(r"[a-z][a-z'-]{3,}", s.lower())
+                       if w not in STOPWORDS}
+    return len(words(carried) & words(source)) >= floor
+
+
 def core_lanes(core_text: str) -> set[str]:
     """Lane identifiers from Appendix A: the letter, and the name beside it."""
     out: set[str] = set()
@@ -1386,6 +1416,17 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
 
     text = blank_fences(text)
     lanes = core_lanes(core_text)
+    if not lanes:
+        # Not permission to skip the rule. An unreadable appendix means the one
+        # gate this pass exists for cannot run, and a checker that quietly
+        # stops checking is worse than one that refuses: the document passes and
+        # nobody learns that nothing was verified.
+        rep.fail(
+            "no Appendix A lanes could be read from the core document, so the rule this pass "
+            "turns on — every grievance names the lane it is about — cannot be checked at all. "
+            "Lanes are read from rows of the form '| **A — The documented path** | …'."
+        )
+        return
 
     starts = []
     heads: dict[str, str] = {}
@@ -1435,6 +1476,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
     unsourced: list[str] = []
     sourced_invention: list[str] = []
     laneless: list[str] = []
+    promiseless: list[str] = []
     observed_count = 0
 
     for key in sorted(seen):
@@ -1445,8 +1487,12 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
 
         # The label's trailing period lives inside the bold — "**What it
         # costs.**" — so it has to come off the key or no block ever matches.
-        labels = {normalise(m.group(1)).strip(" .:"): m.group(2).strip()
-                  for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M)}
+        labels = {}
+        spans = {}
+        for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M):
+            k = normalise(m.group(1)).strip(" .:")
+            labels.setdefault(k, m.group(2).strip())
+            spans.setdefault(k, m.end(1))
         absent = [b for b in ADVERSARIAL_BLOCKS if normalise(b).strip(" .:") not in labels]
         if absent:
             missing_blocks.append(f"{key} is missing {', '.join(absent)}")
@@ -1456,11 +1502,12 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             bad_kind.append(f"{key} says {labels['kind'].strip() or '(nothing)'!r}")
 
         about = labels.get("about", "")
-        # The mark is read from the About block, which is where the reference
-        # puts it. Anchoring to the block rather than scanning the entry keeps a
-        # mark quoted in the prose below from standing in for a missing one.
-        about_block = body[body.find(about):] if about else ""
-        about_block = about_block.split("\n\n", 1)[0] if about_block else ""
+        # The mark is read from the About block, anchored at the label's own
+        # position rather than found by searching for its text: the About text
+        # can occur earlier in the entry — quoted in the complaint, say — and a
+        # find() then slices from the wrong place and reports a missing mark.
+        about_block = (body[spans["about"]:].split("\n\n", 1)[0]
+                       if "about" in spans else "")
         marks = re.findall(r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", about_block)
         if not marks:
             no_mark.append(key)
@@ -1477,7 +1524,15 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             if kindname == "observed":
                 observed_count += 1
 
-        if kind and kind != normalise("the expectation gap") and lanes:
+        if kind == normalise("the expectation gap"):
+            # The one laneless kind, and it is not exempt from citing anything:
+            # it names the promise and where it is made. An expectation traced
+            # to nothing is a preference, and belongs in the core document.
+            stripped = re.sub(r"\*\([^)]*\)\*", "", about)
+            if not re.search(r"[\"“][^\"”]+[\"”]|`[^`]+`|\[[^\]]+\]\([^)]+\)|https?://"
+                             r"|\b\w+\.(md|html|txt)\b|:\d+", stripped):
+                promiseless.append(key)
+        elif kind:
             if not any(re.search(rf"\bLane {re.escape(l)}\b", about) if len(l) == 1
                        else l in normalise(about) for l in lanes):
                 laneless.append(key)
@@ -1492,6 +1547,11 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         ("carry more than one evidence mark", multi_mark,
          "Keeping the first would let a stale mark sit beside its replacement and read as "
          "consistent."),
+        ("cite no promise", promiseless,
+         "An expectation gap is the one kind that may skip the lane, because the capability it "
+         "implies has none — but it names the promise that created the belief and where that "
+         "promise is made: a quotation, a backticked reference, a link, or a file. An "
+         "expectation traced to nothing is a preference, and preferences are asks."),
         ("name no Appendix A lane", laneless,
          "A grievance is about something that exists. If nothing in the appendix carries it, the "
          "complaint is an unserved ask and is already in the core document. Only the expectation "
@@ -1527,10 +1587,14 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         )
     elif len(depth) > 1:
         rep.fail(f"{len(depth)} **Coverage depth:** lines in the adversarial header.")
-    elif not re.search(r"\b(full|light)\b", depth[0], re.I):
+    elif not re.match(r"\s*\*{0,2}(full|light)\b", depth[0], re.I):
+        # The value, not a mention of it. Searching anywhere accepted
+        # "None, not Full or Light" — a line declaring the one depth this pass
+        # refuses, passing on the word it used to refuse it.
         rep.fail(
-            f"**Coverage depth:** says {depth[0].strip()!r}, which names neither Full nor Light. "
-            "Those are the two depths this pass can run at."
+            f"**Coverage depth:** says {depth[0].strip()!r}, which does not open with Full or "
+            "Light. Those are the two depths this pass can run at, and the line states one of "
+            "them rather than discussing them."
         )
 
     carried = re.search(
@@ -1542,10 +1606,29 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             "header. Phase 7b may have questioned the very personas this pass writes complaints "
             "for, and a file carrying the grievances without those findings inverts it."
         )
-    elif not is_substantive(carried_block(header, carried.start(1))):
-        rep.fail("the carried Verification line is present but records no findings.")
+    else:
+        block = carried_block(header, carried.start(1))
+        if not is_substantive(block):
+            rep.fail("the carried Verification line is present but records no findings.")
+        elif not shares_vocabulary(block, core_verification(core_text)):
+            # A floor, not a match. The reference allows the findings verbatim
+            # *or* tightly summarised, so an exact comparison would be wrong —
+            # but a summary of a document shares words with it, and "everything
+            # passed" written over three recorded findings shares none.
+            rep.fail(
+                "the carried Verification findings have no vocabulary in common with the core "
+                "document's Verification section. A tight summary is allowed; replacing the "
+                "findings with something reassuring is the failure this line exists to prevent."
+            )
 
-    if not re.search(r"^\*\*[^*]*\bobserved\b[^*]*\*\*", header, re.M):
+    # Negation-checked, like the enriched disclosure: a bold sentence saying the
+    # observed entries are *not* reported complaints contains the word and
+    # asserts the opposite of the rule it is standing in for.
+    disclosed = any(
+        not re.search(r"\b(no|not|never|nothing|none)\b", m.group(0), re.I)
+        for m in re.finditer(r"^\*\*[^*]*\bobserved\b[^*]*\*\*", header, re.M)
+    )
+    if not disclosed:
         rep.fail(
             "the adversarial header does not say which entries are reported complaints — "
             "expected a declaration of the form '**Only the `observed` entries are reported "
