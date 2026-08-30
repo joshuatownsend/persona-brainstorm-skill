@@ -211,6 +211,10 @@ Where a scene came from something real it says so on the item. Capability claims
 **Frequencies:** <copied verbatim from the core document's header — estimated, or observed from
 SOURCE>.
 
+**Coverage key:** <copied from the core document: ✅ served well today · ◐ partially served ·
+○ not possible today. **⚡ marks the frontier** — the frontier class for this subject. Delete this
+line on a run with no coverage pass, where the footers carry no marks.>
+
 **Topics:** `<slug>` · `<slug>` · … <one line on what the axis is here>
 
 ---
@@ -251,10 +255,11 @@ Structure, in order:
 
 1. **Header** — the question as the title, one paragraph on how to read the page, and one line on
    what the frontier mark means for this subject.
-2. **The honesty note and the `**Frequencies:**` line from the markdown header**, both in full.
-   They are more necessary here, not less: the artifact is the version that gets shared onward,
-   detached from this conversation and from the core document. Every card shows a frequency pill,
-   and `many/day` on sixty cards reads as measurement unless the page says otherwise once.
+2. **The honesty note, the `**Frequencies:**` line, and the coverage key**, all from the markdown
+   header and all in full. They are more necessary here, not less: the artifact is the version that
+   gets shared onward, detached from this conversation and from the core document. Every card shows
+   a frequency pill, and `many/day` on sixty cards reads as measurement unless the page says
+   otherwise once — and a reader who cannot tell ◐ from ○ cannot read the coverage pills at all.
 3. **Topic chips** — click to filter. `n of N` visible.
 4. **Topic mix by persona** — one stacked bar per persona, segmented by each item's **primary**
    topic, with the item count. Primary, because items carry up to three topics and a bar counting
