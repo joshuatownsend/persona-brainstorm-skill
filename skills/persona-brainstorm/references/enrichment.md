@@ -282,6 +282,37 @@ row by row, and that line is where they land.
 
 ---
 
+## Verify it
+
+```bash
+python "<skill-dir>/scripts/verify.py" <core document> --enriched <enriched document>
+```
+
+The checker reads the core document, then holds the enriched one to it. It settles the things that
+are relations between the two and can therefore be settled mechanically:
+
+- **the heading rule** — every entry's third-block heading is the one its item's coverage mark
+  selects, and exactly one of the three;
+- **completeness** — every item has an entry, no entry names an item that does not exist, and no
+  item has two;
+- **the footer's coverage mark** agrees with the core document's, and a run with no coverage pass
+  carries none at all;
+- **the header declarations** — the frequency basis, the topic axis, the coverage key (or the
+  *not assessed* line that replaces it), the invented-scenes disclosure, and the carried
+  Verification findings.
+
+That last group is checked rather than trusted for the same reason the core document's tally is:
+each of those lines was added to this format because a review found it missing, and every one of
+them goes missing silently — the document still reads well, and the reader it misleads is the one
+who never saw the core file.
+
+**What it cannot check is whether the prose is honest.** A scene invented wholesale and a scene
+drawn from a real incident are the same shape, and so are a capability claim traced to a lane and
+one that merely sounds like it. The heading rule closes the gap that is mechanical; the rest is
+Phase 7b's job, on this document as much as on the core one.
+
+---
+
 ## The artifact
 
 The markdown is the deliverable and the source of truth. The artifact is an offer — ask once, and

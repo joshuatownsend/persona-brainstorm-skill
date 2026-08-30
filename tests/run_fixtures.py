@@ -283,6 +283,155 @@ POSITIVE_MUTATIONS = [
 ]
 
 # ---------------------------------------------------------------------------
+# Enrichment. The base is generated from a core document rather than stored,
+# because a stored one would need sixty hand-written entries and would rot the
+# moment the core base changed -- the same rot the mutation design exists to
+# avoid, at sixty times the size.
+# ---------------------------------------------------------------------------
+ENRICHED_HEADINGS = {"✅": "How it's answered today",
+                     "◐": "How it's answered today",
+                     "○": "What would have to exist",
+                     "": "What answering this would take"}
+
+
+def core_items(core_text):
+    """(number, coverage mark) for every item row, in document order.
+
+    Reads the same rows verify.py reads, by the same shape: a leading number and
+    a coverage mark in a trailing cell. Deliberately not an import of the
+    checker -- a fixture that parses with the code under test cannot disagree
+    with it, and disagreeing is the entire job.
+    """
+    out = []
+    persona = None
+    for line in core_text.split("\n"):
+        if re.match(r"#{1,6}\s", line):
+            persona = re.match(r"###\s+(P\d+)\b", line)
+            persona = persona.group(1) if persona else None
+            continue
+        if not persona or not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 5 and cells[0].isdigit():
+            mark = next((c for c in cells[3:] if c in ENRICHED_HEADINGS and c), "")
+            out.append((int(cells[0]), mark, persona))
+    require(out, "no item rows found in the core base")
+    return out
+
+
+def enriched_from(core_text):
+    """A conforming enrichment of a core document. Every mutation starts here."""
+    rows = core_items(core_text)
+    graded = any(m for _, m, _ in rows)
+    head = ["# What someone would want — the story behind each ask", "",
+            "_Enrichment of `PERSONAS.md` (2026-08-30)._", "",
+            "**The scenes are invented.** Each situation is a plausible reconstruction of how "
+            "the ask arises, not an observed incident.", "",
+            "**Frequencies:** estimated from the personas, not measured.", ""]
+    head += ["**Coverage key:** ✅ served well today · ◐ partially served · ○ not possible today.",
+             ""] if graded else [
+            "**Coverage:** not assessed — no coverage pass ran, so no item carries a mark.", ""]
+    head += ["**⚡ marks the frontier** — reads that feel like writes.", "",
+             "**Topics:** `identity` · `provenance` · `agent-surface`.", "",
+             "**Carried from the core document's Verification section:** the adversarial read "
+             "found three coverage marks contradicting the document's own text.", "", "---", ""]
+
+    body = []
+    seen = set()
+    for n, mark, persona in rows:
+        if persona not in seen:
+            seen.add(persona)
+            body += [f"## {persona} — Role", ""]
+        body += [f'#### {n} — "An ask."', "",
+                 "**The situation.** A moment that produces the ask.", "",
+                 "**Why it matters.** What goes wrong without an answer.", "",
+                 f"**{ENRICHED_HEADINGS[mark]}.** What the capability comes to.", "",
+                 f"`daily` · {mark + ' · ' if mark else ''}topics: `identity`", ""]
+    return "\n".join(head + body)
+
+
+def _first(text, mark):
+    """The first entry whose footer carries `mark`. Raises if the base has none."""
+    for m in re.finditer(r'^####\s+(\d+)\s+—', text, re.M):
+        end = text.find("\n#### ", m.end())
+        block = text[m.start():end if end > 0 else len(text)]
+        if re.search(rf"^`daily`.*{re.escape(mark)}", block, re.M):
+            return block
+    raise BrokenFixture(f"no entry marked {mark!r} in the generated base")
+
+
+def wrong_heading(text):
+    """Give a served item the heading its mark does not select."""
+    block = _first(text, "✅")
+    return swap(text, block, block.replace("**How it's answered today.**",
+                                           "**What would have to exist.**"))
+
+
+def drop_an_entry(text):
+    block = _first(text, "○")
+    return swap(text, block, "")
+
+
+def two_headings(text):
+    block = _first(text, "○")
+    return swap(text, block, block.replace(
+        "**What would have to exist.**",
+        "**How it's answered today.** Something.\n\n**What would have to exist.**"))
+
+
+def footer_mark_disagrees(text):
+    block = _first(text, "✅")
+    return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1○", block, flags=re.M))
+
+
+# (name, mutation, expected-substring). All run against d_ok.md as the core.
+ENRICHED_MUTATIONS = [
+    ("enriched-heading-contradicts-mark", wrong_heading,
+     "third-block heading does not match the coverage mark"),
+    ("enriched-item-missing", drop_an_entry, "have no enriched entry"),
+    ("enriched-two-headings", two_headings, "more than one third-block heading"),
+    ("enriched-footer-mark-disagrees", footer_mark_disagrees,
+     "coverage mark disagrees with the core document"),
+    ("enriched-no-frequencies", lambda t: drop(t, "**Frequencies:**"),
+     "no **Frequencies:** line in the enriched header"),
+    ("enriched-no-topics", lambda t: drop(t, "**Topics:**"),
+     "no **Topics:** line in the enriched header"),
+    ("enriched-frequencies-placeholder",
+     lambda t: edit_line(t, "**Frequencies:**", "**Frequencies:** TBD"),
+     "**Frequencies:** is present but declares nothing"),
+    ("enriched-no-verification-carry",
+     lambda t: drop(t, "**Carried from the core document's Verification section:**"),
+     "Verification section is not carried"),
+    ("enriched-no-invented-disclosure",
+     lambda t: drop(t, "**The scenes are invented.**"),
+     "does not say the scenes are invented"),
+    ("enriched-no-coverage-key", lambda t: drop(t, "**Coverage key:**"),
+     "no **Coverage key:** line"),
+    ("enriched-entry-for-unknown-item",
+     lambda t: t + '\n#### 999 — "An ask."\n\n**What would have to exist.** Nothing.\n\n'
+                   "`daily` · ○ · topics: `identity`\n",
+     "which the core document does not contain"),
+    ("enriched-duplicate-entry",
+     lambda t: t + "\n" + _first(t, "○"),
+     "have more than one enriched entry"),
+    ("enriched-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
+     "no enriched entries found"),
+]
+
+# A no-coverage core takes the third heading form, and must not be given ○.
+ENRICHED_NOCOV_MUTATIONS = [
+    ("enriched-nocov-asserts-absence",
+     lambda t: t.replace("**What answering this would take.**",
+                         "**What would have to exist.**", 1),
+     "third-block heading does not match the coverage mark"),
+    ("enriched-nocov-invents-a-mark",
+     lambda t: re.sub(r"^(`daily` · )topics:", r"\1○ · topics:", t, count=1, flags=re.M),
+     "carries ○ on a run with no coverage pass"),
+    ("enriched-nocov-deletes-the-key", lambda t: drop(t, "**Coverage:** not assessed"),
+     "not assessed' line in the enriched header"),
+]
+
+# ---------------------------------------------------------------------------
 # Statics: defects a mutation cannot express, because they are damage to the
 # body of the document rather than to one declaration.
 # ---------------------------------------------------------------------------
@@ -431,6 +580,48 @@ def main():
                 report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
             else:
                 report(True, name)
+
+        print("\nenrichment (--enriched):")
+        for core_name, cases in (("d_ok.md", ENRICHED_MUTATIONS),
+                                 ("nocov.md", ENRICHED_NOCOV_MUTATIONS)):
+            core_path = os.path.join(FIXTURES, core_name)
+            try:
+                base = enriched_from(load(core_name))
+            except (BrokenFixture, ValueError) as exc:
+                report(False, f"enriched base from {core_name}", str(exc))
+                continue
+            # The generated base must pass before any mutation of it means
+            # anything: a base that already fails makes every negative below
+            # green for the wrong reason, which is the rot this suite exists
+            # to prevent, introduced by its own generator.
+            ok_path = os.path.join(tmp, f"enriched_ok_{core_name}")
+            with open(ok_path, "w", encoding="utf-8") as fh:
+                fh.write(base)
+            rc, out = run(core_path, "--enriched", ok_path)
+            fails = failures_in(out)
+            report(rc == 0, f"generated enrichment of {core_name} passes",
+                   "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
+
+            for name, mutate, needle in cases:
+                try:
+                    text = mutate(base)
+                except (BrokenFixture, ValueError) as exc:
+                    report(False, name, f"mutation no longer applies: {exc}")
+                    continue
+                require(text != base, f"{name} changed nothing")
+                path = os.path.join(tmp, name + ".md")
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                rc, out = run(core_path, "--enriched", path)
+                fails = failures_in(out)
+                if rc == 0:
+                    report(False, name, "document passed; the defect was not caught")
+                elif needle.lower() not in fails.lower():
+                    first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
+                    report(False, name,
+                           f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
+                else:
+                    report(True, name)
 
         print("\nsecond pass (--final):")
         for name, base, mutate, needle in FINAL_CASES:

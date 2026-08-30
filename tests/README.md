@@ -44,6 +44,26 @@ Retiring is not deletion. `unquoted.md` still describes a real check — asks
 that do not read as speech — which happens to emit a warning rather than a
 failure, and the suite has no warning cases yet. It is waiting for one.
 
+## The enrichment base is generated, not stored
+
+`--enriched` cases need an enriched document *and* the core document it expands.
+A stored one would need sixty hand-written entries and would rot the moment the
+core base changed — the rot the mutation design exists to avoid, at sixty times
+the size. So `enriched_from()` builds a conforming enrichment from any core
+base, reading its items the same way the checker does but by its own code: a
+fixture that parses with the code under test cannot disagree with it, and
+disagreeing is the entire job.
+
+The generated base is asserted to pass **before** any mutation of it runs. A
+base that already fails makes every negative below it green for the wrong
+reason — the suite's own generator introducing exactly the rot the suite exists
+to catch.
+
+Two cores are used, because the heading rule has a case that only appears
+without coverage: `d_ok.md` exercises the ✅/◐/○ forms, and `nocov.md` exercises
+*"What answering this would take"* and the rule that a run which assessed
+nothing may not carry `○`.
+
 ## Both passes are covered
 
 `verify.py` has a second pass behind `--final`, which adds the Phase 7b

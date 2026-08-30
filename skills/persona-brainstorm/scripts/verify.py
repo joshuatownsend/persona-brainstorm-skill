@@ -890,6 +890,186 @@ def check(roster, items, primitives, claims, slugs, rep: Report) -> None:
             rep.fail(f"duplicate {kind} slugs: {dupes}")
 
 
+# The three forms an enriched item's third block may take, keyed by the coverage
+# mark that selects it. The mapping is the whole point of the enrichment format:
+# a heading derived from a mark cannot drift the way a judgement call does, and
+# it is checkable precisely because it is derived. See references/enrichment.md.
+#
+# "" is the no-coverage case -- not a stylistic variant of ○ but a different
+# claim. ○ means assessed and absent; a run that assessed nothing has not earned
+# it, and writing "what would have to exist" there asserts it anyway.
+ENRICHED_HEADINGS = {
+    "✅": "How it's answered today",
+    "◐": "How it's answered today",
+    "○": "What would have to exist",
+    "": "What answering this would take",
+}
+# Apostrophes are the one character an author is most likely to smarten, and a
+# heading rule that rejects a curly one would fail the documents most carefully
+# written. Normalise rather than demand.
+APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'", "´": "'"})
+
+
+def normalise(s: str) -> str:
+    return s.translate(APOSTROPHES).lower()
+
+
+def check_enriched(items: list[Item], text: str, rep: Report) -> None:
+    """Check an enriched document against the core document it expands.
+
+    Only the things a checker can settle: that every item is present exactly
+    once, that each one's third-block heading is the one its coverage mark
+    selects, and that the header carries the declarations a detached reader
+    needs. Whether the prose is any good is Phase 7b's job, not this one's.
+    """
+    entries: dict[int, tuple[int, int]] = {}
+    dupes: list[int] = []
+    starts = [(int(m.group(1)), m.start()) for m in
+              re.finditer(r"^####\s+(\d+)\s*[—\-–]", text, re.M)]
+    if not starts:
+        rep.fail(
+            "no enriched entries found. Each item gets a '#### <n> — \"<the ask>\"' heading; "
+            "without them there is nothing to check against the core document."
+        )
+        return
+    # The header is everything before the first entry. Bounding it matters for
+    # the same reason the core reads its claims only before the first table: a
+    # declaration quoted inside an entry is discussion, not the document's own.
+    header = text[: starts[0][1]]
+    for idx, (n, pos) in enumerate(starts):
+        end = starts[idx + 1][1] if idx + 1 < len(starts) else len(text)
+        if n in entries:
+            dupes.append(n)
+        else:
+            entries[n] = (pos, end)
+
+    if dupes:
+        rep.fail(
+            f"item(s) {sorted(set(dupes))} have more than one enriched entry. Two entries for "
+            "one ask means a reader gets whichever they scroll to first."
+        )
+
+    core = {it.n: it.coverage.strip() for it in items}
+    missing = sorted(set(core) - set(entries))
+    extra = sorted(set(entries) - set(core))
+    if missing:
+        shown = ", ".join(str(n) for n in missing[:12])
+        more = f" (+{len(missing) - 12} more)" if len(missing) > 12 else ""
+        rep.fail(
+            f"{len(missing)} item(s) have no enriched entry: {shown}{more}. Enrichment covers "
+            "every item — enriching forty of sixty makes the other twenty look rejected."
+        )
+    if extra:
+        rep.fail(
+            f"enriched entries for item(s) {extra}, which the core document does not contain. "
+            "An entry with no item behind it cites nothing a reader can check."
+        )
+
+    graded = any(core.values())
+    wrong: list[str] = []
+    unheaded: list[int] = []
+    two: list[int] = []
+    cov_mismatch: list[str] = []
+    for n in sorted(set(core) & set(entries)):
+        start, end = entries[n]
+        body = text[start:end]
+        want = ENRICHED_HEADINGS[core[n]]
+        found = [h for h in re.findall(
+            r"^\*\*([^*]+?)\.?\*\*", body, re.M)
+            if normalise(h) in {normalise(v) for v in ENRICHED_HEADINGS.values()}]
+        if not found:
+            unheaded.append(n)
+        elif len(set(normalise(f) for f in found)) > 1:
+            two.append(n)
+        elif normalise(found[0]) != normalise(want):
+            mark = core[n] or "no coverage pass"
+            wrong.append(f"{n} is {mark} and needs '{want}', not '{found[0]}'")
+        # The footer copies the coverage mark from the core document. A mark that
+        # disagrees with the heading beside it is the contradiction the derived
+        # heading exists to prevent, arriving through the other column.
+        foot = re.search(r"^.*\btopics:.*$", body, re.M)
+        if foot:
+            seen = [c for c in COVERAGE_MARKS if c in foot.group(0)]
+            if graded and core[n] and seen and seen[0] != core[n]:
+                cov_mismatch.append(f"{n} is {core[n]} in the core document, {seen[0]} here")
+            elif not graded and seen:
+                cov_mismatch.append(
+                    f"{n} carries {seen[0]} on a run with no coverage pass"
+                )
+
+    if unheaded:
+        shown = ", ".join(str(n) for n in unheaded[:12])
+        more = f" (+{len(unheaded) - 12} more)" if len(unheaded) > 12 else ""
+        rep.fail(
+            f"{len(unheaded)} entr(y/ies) carry none of the three third-block headings: "
+            f"{shown}{more}. Expected one of "
+            + " / ".join(f"'{v}'" for v in dict.fromkeys(ENRICHED_HEADINGS.values()))
+            + "."
+        )
+    if two:
+        rep.fail(
+            f"entr(y/ies) {two} carry more than one third-block heading. The heading is derived "
+            "from the coverage mark, so exactly one of the three can be right."
+        )
+    for w in wrong:
+        rep.fail(
+            f"third-block heading does not match the coverage mark: {w}. The mark selects the "
+            "heading; a served item described in the conditional understates it, and an unserved "
+            "one described in the present tense claims a capability that does not exist."
+        )
+    for c in cov_mismatch:
+        rep.fail(
+            f"coverage mark disagrees with the core document: {c}. The enriched footer copies "
+            "the mark rather than restating it — ○ is a finding, and a run that assessed nothing "
+            "has not earned one."
+        )
+
+    # Header declarations. These are what a detached reader has instead of the
+    # core document, and every one of them was added because it was found
+    # missing: a frequency pill reads as measurement, a coverage mark is
+    # unreadable without its key, and the Phase 7b findings name the very items
+    # this pass rewrites into their most persuasive form.
+    for label, key in (("Frequencies", "frequency basis"), ("Topics", "topic axis")):
+        m = re.search(rf"^\*{{0,2}}{label}\*{{0,2}}:\*{{0,2}}(.*)$", header, re.M)
+        if not m:
+            rep.fail(
+                f"no **{label}:** line in the enriched header. It is copied from the core "
+                f"document so the {key} survives the file being read on its own."
+            )
+        elif not is_substantive(m.group(1).strip().strip("*").strip()):
+            rep.fail(f"**{label}:** is present but declares nothing.")
+
+    if not re.search(r"Carried from the core document'?s Verification section", header, re.I):
+        rep.fail(
+            "the core document's Verification section is not carried into the enriched header. "
+            "Phase 7b records what is wrong with these items; this pass rewrites those same "
+            "items into their most persuasive form, and a file carrying the scenes without the "
+            "warnings inverts the point of the phase that produced them."
+        )
+
+    if "invented" not in header.lower():
+        rep.fail(
+            "the enriched header does not say the scenes are invented. Each situation is a "
+            "reconstruction of how the ask arises, and prose is read as reporting unless it "
+            "says otherwise once."
+        )
+
+    key = re.search(r"^\*{0,2}Coverage key\*{0,2}:", header, re.M)
+    unassessed = re.search(r"^\*{0,2}Coverage\*{0,2}:\*{0,2}\s*not assessed", header, re.M | re.I)
+    if graded and not key:
+        rep.fail(
+            "no **Coverage key:** line in the enriched header, but the entries carry coverage "
+            "marks. A reader who cannot tell ◐ from ○ cannot read them."
+        )
+    if not graded and not unassessed:
+        rep.fail(
+            "no '**Coverage:** not assessed' line in the enriched header. On a run with no "
+            "coverage pass the key is replaced rather than deleted: a deleted line and an "
+            "unassessed run look identical to a detached reader, and an unlabelled absence "
+            "is read as a finding."
+        )
+
+
 def main() -> int:
     # This method's vocabulary is not ASCII -- the frontier mark is in almost
     # every message -- and a console that cannot encode it must still get the
@@ -908,11 +1088,23 @@ def main() -> int:
         action="store_true",
         help="also require the Phase 7b Verification section (run after the adversarial read)",
     )
+    ap.add_argument(
+        "--enriched",
+        metavar="PATH",
+        help="also check an enrichment pass output against this core document",
+    )
     args = ap.parse_args()
 
     text = open(args.path, encoding="utf-8").read()
     rep = Report()
-    check(*parse(text), rep)
+    parsed = parse(text)
+    check(*parsed, rep)
+    if args.enriched:
+        # Checked against the core document rather than alone, because every
+        # rule worth checking is a relation between the two: the heading a mark
+        # selects, the items that must all be present, the declarations copied
+        # across. An enriched file has no meaning apart from what it expands.
+        check_enriched(parsed[1], open(args.enriched, encoding="utf-8").read(), rep)
     if args.final:
         m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
         if not m:
