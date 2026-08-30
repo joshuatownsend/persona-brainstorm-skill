@@ -1445,15 +1445,22 @@ def verification_problem(core_text: str) -> str:
     # lines satisfy a gate whose whole job is recording five answers -- the
     # check fired on an empty section and passed a meaningless one, which is
     # the shape this suite calls a claim satisfied by a non-claim.
-    lines = [ln for ln in body.splitlines() if is_substantive(ln)]
+    # Blocks, not lines. Phase 7b asks five questions and this is standing in
+    # for "five answers are recorded" -- so a single answer hard-wrapped across
+    # five physical lines used to satisfy it while four questions went
+    # unanswered. A blank-line-separated block is the closest structural proxy
+    # for one answer that does not also dictate the section's format; requiring
+    # five bullets would reject a section written as prose, which the method
+    # nowhere forbids.
+    lines = [b for b in re.split(r"\n\s*\n", body) if is_substantive(b)]
     if len(lines) < 5:
-        filled = len([ln for ln in body.splitlines() if ln.strip()])
+        filled = len([b for b in re.split(r"\n\s*\n", body) if b.strip()])
         # "0 substantive of 5 present" and "0 substantive of 0 present" are
         # different defects -- placeholders standing in for answers, versus a
         # section nobody wrote -- and the author fixes them differently.
-        detail = (f" ({filled} non-empty line(s) present, none substantive)"
+        detail = (f" ({filled} non-empty block(s) present, none substantive)"
                   if filled > len(lines) else "")
-        return (f"has a Verification section of {len(lines)} substantive line(s){detail}. "
+        return (f"has a Verification section of {len(lines)} substantive block(s){detail}. "
                 "Phase 7b asks five questions and requires the answers recorded, "
                 "disagreements included")
     return ""
@@ -1507,7 +1514,13 @@ def appendix_section(core_text: str) -> str:
     """
     body = blank_fences(core_text)
     for m in re.finditer(r"^#{2,3}\s*Appendix\s+[A-Z]\b([^\n]*)$", body, re.M):
-        if not re.search(r"\b(coverage|inventory|lanes)\b", m.group(1), re.I):
+        # Exactly the two words output-template.md documents. "lanes" was in
+        # this list and is not in that rule, and the gap was reachable: an
+        # appendix headed "Lanes moved" -- a movement table, not an inventory --
+        # satisfied the guard while the inventory itself was deleted. Both
+        # reviewers found it independently, which is what a whitelist wider than
+        # its own documentation earns.
+        if not re.search(r"\b(coverage|inventory)\b", m.group(1), re.I):
             continue
         stop = re.search(r"^#{2}\s", body[m.end():], re.M)
         section = body[m.end():m.end() + stop.start()] if stop else body[m.end():]
@@ -1958,17 +1971,20 @@ def main() -> int:
             # Substantive, not merely non-empty: a body of "x/y/z/a/b" cleared a
             # bare line count while recording nothing at all. is_substantive is
             # the same bar every required field is already held to.
-            body = [ln for ln in m.group(1).splitlines() if is_substantive(ln)]
-            filled = len([ln for ln in m.group(1).splitlines() if ln.strip()])
+            # Blocks, not lines -- one answer wrapped over five lines is one
+            # answer. See core_verification_problem for why blocks rather than
+            # bullets.
+            body = [b for b in re.split(r"\n\s*\n", m.group(1)) if is_substantive(b)]
+            filled = len([b for b in re.split(r"\n\s*\n", m.group(1)) if b.strip()])
             if len(body) < 5:
                 # Say which of the two it is. A section of placeholder lines and
                 # a section nobody wrote both count zero, and the author fixes
                 # them differently -- one is a stub to fill in, the other is a
                 # phase that was skipped.
-                detail = (f", from {filled} non-empty placeholder line(s)"
+                detail = (f", from {filled} non-empty placeholder block(s)"
                           if filled > len(body) else "")
                 rep.fail(
-                    f"Verification section has {len(body)} substantive line(s){detail}. Phase 7b "
+                    f"Verification section has {len(body)} substantive block(s){detail}. Phase 7b "
                     "asks five questions and requires the answers recorded, disagreements "
                     "included; a heading on its own, or placeholder lines, passes a bare line "
                     "count without carrying any of them."

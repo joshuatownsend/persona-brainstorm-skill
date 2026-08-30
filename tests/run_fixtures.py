@@ -989,13 +989,32 @@ FINAL_CASES = [
      lambda t: t[:t.index("## Verification (Phase 7)")]
      + "## Verification (Phase 7)\n\n"
      + t[t.index("## What the 60 imply"):],
-     "0 substantive line(s). Phase 7b"),
+     "0 substantive block(s). Phase 7b"),
     # A graded document with its inventory removed. --final used to pass this at
     # exit 0 with a full tally still on the page: sixty coverage claims and no
     # evidence in the file for any of them.
     ("final-rejects-graded-document-with-no-appendix", "d_ok.md",
      lambda t: t[:t.index("## Appendix A")],
      "no inventory lanes can be read"),
+    # "Lanes moved" is a movement appendix, not an inventory. The heading
+    # whitelist accepted "lanes" while output-template.md documented only
+    # coverage and inventory -- a whitelist wider than its own documentation.
+    ("final-rejects-a-lanes-headed-analysis-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n## Appendix B — Lanes moved\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A — Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
+    # One answer hard-wrapped over five lines is one answer. Counting physical
+    # lines let it stand in for five, with four Phase 7b questions unanswered.
+    ("final-rejects-one-answer-wrapped-over-five-lines", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nA fresh agent read the document and found\n"
+     + "the roster holds up under the distinctness test, that several coverage\n"
+     + "marks read as inferred rather than verified, that two items restate\n"
+     + "their asks rather than naming a decision, and that a practitioner would\n"
+     + "question the frequency column before anything else on the page.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "1 substantive block"),
     # A lane-shaped row in the wrong appendix is not an inventory either.
     # Documents carry several appendices -- this repo's own dogfood run has a
     # movement appendix beside its inventory -- so selecting the first one that
@@ -1018,9 +1037,9 @@ FINAL_CASES = [
     # a claim satisfied by a non-claim is the failure this whole suite is for.
     ("final-rejects-five-placeholder-lines", "d_ok.md",
      lambda t: t[:t.index("## Verification (Phase 7)")]
-     + "## Verification (Phase 7)\n\nx\ny\nz\na\nb\n\n"
+     + "## Verification (Phase 7)\n\nx\n\ny\n\nz\n\na\n\nb\n\n"
      + t[t.index("## What the 60 imply"):],
-     "from 5 non-empty placeholder line(s)"),
+     "from 5 non-empty placeholder block(s)"),
 ]
 
 
