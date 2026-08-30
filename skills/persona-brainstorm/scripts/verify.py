@@ -1493,13 +1493,22 @@ def appendix_section(core_text: str) -> str:
     appendix itself was gone. Fences are blanked first for the same reason --
     an example of a lane row is not a lane.
 
-    The heading is matched loosely because the template only fixes the "Appendix
-    <letter>" prefix; a document is free to letter its appendices in any order,
-    and this run's own inventory is Appendix C.
+    The appendix is identified by what its heading says it is, not by whether it
+    happens to contain lane-shaped rows. Selecting on shape accepted the wrong
+    appendix entirely: a document may carry several, and one of them holding a
+    row that looks like a lane is not evidence that the inventory survived. A
+    movement or comparison appendix tabulating lanes will do it, which is not
+    hypothetical -- the run that found this has exactly that pair.
+
+    The letter is deliberately not fixed. The template writes "Appendix A" but a
+    document letters its appendices in the order it uses them, and this run's
+    own inventory is Appendix C. What the template does fix is the subject:
+    "Current coverage".
     """
     body = blank_fences(core_text)
-    hits = [m for m in re.finditer(r"^#{2,3}\s*Appendix\s+[A-Z]\b[^\n]*$", body, re.M)]
-    for m in hits:
+    for m in re.finditer(r"^#{2,3}\s*Appendix\s+[A-Z]\b([^\n]*)$", body, re.M):
+        if not re.search(r"\b(coverage|inventory|lanes)\b", m.group(1), re.I):
+            continue
         stop = re.search(r"^#{2}\s", body[m.end():], re.M)
         section = body[m.end():m.end() + stop.start()] if stop else body[m.end():]
         if re.search(r"\|\s*\*\*[A-Z]\s*[—\-–]", section):
@@ -1541,9 +1550,10 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         # stops checking is worse than one that refuses: the document passes and
         # nobody learns that nothing was verified.
         rep.fail(
-            "no Appendix A lanes could be read from the core document, so the rule this pass "
+            "no inventory lanes could be read from the core document, so the rule this pass "
             "turns on — every grievance names the lane it is about — cannot be checked at all. "
-            "Lanes are read from rows of the form '| **A — The documented path** | …'."
+            "Lanes are read from rows of the form '| **A — The documented path** | …' in the "
+            "appendix that carries them; any appendix letter will do."
         )
         return
 
@@ -1748,7 +1758,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
          "A scoped Full run leaves some lanes Light, so the run's depth says nothing about "
          "the lane a given grievance rests on. Name it: verified, proven, Light, unverified, "
          "or documented. This checks that a status is stated, not that it is the right one."),
-        ("name no Appendix A lane", laneless,
+        ("name no inventory lane", laneless,
          "A grievance is about something that exists. If nothing in the appendix carries it, the "
          "complaint is an unserved ask and is already in the core document. Only the expectation "
          "gap is exempt, and it names the promise instead."),
@@ -1925,11 +1935,11 @@ def main() -> int:
     # has both. The two are told apart by what the document already carries,
     # which costs no new required field and cannot go stale.
     if any(it.coverage.strip() for it in parsed[1]) and not core_lanes(text):
-        msg = ("this document grades coverage but no Appendix A lanes can be read from it. "
+        msg = ("this document grades coverage but no inventory lanes can be read from it. "
                "Every coverage mark is a claim about what the subject serves today, and the "
                "inventory is what grounds them — without it the tally is sixty findings with no "
                "evidence behind any of them. Lanes are read from rows of the form "
-               "'| **A — The documented path** | …'. A run at coverage depth None has no marks "
+               "'| **A — The documented path** | …', in an appendix whose heading names coverage or the inventory — the letter is free, the subject is not, because a movement or comparison appendix carrying a lane-shaped row is not an inventory. A run at coverage depth None has no marks "
                "and needs no appendix; this one has marks.")
         rep.fail(msg) if args.final else rep.warn(msg)
 

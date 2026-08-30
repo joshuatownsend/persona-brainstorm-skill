@@ -749,7 +749,7 @@ ADVERSARIAL_MUTATIONS = [
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"^\*\*About:\*\*.*$", "**About:** the thing generally. *(invented)*",
                            _adv_first(t), count=1, flags=re.M)),
-     "name no Appendix A lane"),
+     "name no inventory lane"),
     ("adversarial-no-evidence-mark",
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"\s*\*\([^)]*\)\*", "", _adv_first(t), count=1)),
@@ -995,14 +995,24 @@ FINAL_CASES = [
     # evidence in the file for any of them.
     ("final-rejects-graded-document-with-no-appendix", "d_ok.md",
      lambda t: t[:t.index("## Appendix A")],
-     "no Appendix A lanes can be read"),
+     "no inventory lanes can be read"),
+    # A lane-shaped row in the wrong appendix is not an inventory either.
+    # Documents carry several appendices -- this repo's own dogfood run has a
+    # movement appendix beside its inventory -- so selecting the first one that
+    # contains a lane row accepts an analysis table as proof the inventory
+    # survived. The heading says which appendix it is.
+    ("final-rejects-lanes-in-a-non-inventory-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n## Appendix B — Run comparison\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A — Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
     # Lane-shaped text is not an inventory. The guard searched the whole
     # document, so a fenced example -- or the Verification section quoting the
     # expected row syntax -- stood in for the appendix it was meant to prove.
     ("final-rejects-lane-shaped-text-outside-the-appendix", "d_ok.md",
      lambda t: t[:t.index("## Appendix A")]
      + "\n```markdown\n| **A — Not an inventory** | example |\n```\n",
-     "no Appendix A lanes can be read"),
+     "no inventory lanes can be read"),
     # Five lines cleared the old non-empty count while recording nothing. The
     # gate exists to require five recorded answers, so the bar is substance --
     # a claim satisfied by a non-claim is the failure this whole suite is for.
