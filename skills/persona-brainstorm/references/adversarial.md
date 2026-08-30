@@ -156,8 +156,11 @@ which it deliberately does not share.
 reads like a bug title, rewrite it. *"The export silently stops at a thousand rows"* is a defect
 report; *"I don't know whether I've got everything, so I run it twice and diff"* is a person.
 
-**About** — the lane, and the evidence mark. Both, always. The lane is what makes it a grievance
-rather than a duplicate; the mark is what makes it a report rather than an assertion.
+**About** — the lane, and the evidence mark. Never neither: the lane is what makes it a grievance
+rather than a duplicate, and the mark is what makes it a report rather than an assertion. For an
+**expectation gap** the lane is replaced by the promise and where it is made — that kind exists
+precisely because the implied capability has no lane, so requiring one would force a fabricated
+citation or drop the most valuable entries on the page. Every other kind names a lane.
 
 **Kind** — one of the five. If it takes two, it is probably two grievances.
 
@@ -192,8 +195,13 @@ ways the subject would plausibly frustrate these personas, not a report of compl
 so a grievance resting on one rests on an unverified reading of the lane.>
 
 **Carried from the core document's Verification section:** <the Phase 7b findings, including the
-ones that run disagreed with. Never dropped — the personas here are the ones that section may have
-questioned.>
+ones that the run disagreed with. Never dropped — the personas here are the ones that section may
+have questioned.>
+
+<Those two lines are what the shared provenance rule comes to for this pass. It carries no
+frequency, coverage or frontier marks on its entries, so the corresponding legends stay behind:
+what travels is what the output actually rests on, which here is the depth the lane marks were
+assessed at.>
 
 ---
 
@@ -232,8 +240,13 @@ deterministically is what makes a re-run replace the page instead of leaving a s
 it.
 
 Two things must be visible on every card and must survive filtering: **the evidence mark** and
-**the lane**. A page of grievances with the marks hidden is a page of assertions about real
-people's opinions, and it is the copy most likely to be read by whoever owns the subject.
+**what the grievance is about** — the lane, or for an expectation gap the promise it cites. A page
+of grievances with the marks hidden is a page of assertions about real people's opinions, and it is
+the copy most likely to be read by whoever owns the subject.
+
+Carry the header's **coverage depth** line and the **Verification findings** onto the page too.
+Those are what this pass relies on from the core document; it shows no frequency, coverage or
+frontier marks per entry, so those legends would be noise rather than provenance.
 
 Group by persona, filter by kind. The kind filter is the one worth having: reading all the
 *it's wrong* complaints together, across personas, is how a trust problem becomes visible as one

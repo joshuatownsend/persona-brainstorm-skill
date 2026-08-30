@@ -705,11 +705,15 @@ whole discipline is demand before supply:
   mark, not a tally, not a primitive. This is the containment Phase 3 works under, for the same
   reason: a pass that can reach backwards will eventually be used to make the earlier work agree
   with it. A pass that disagrees with the document reports the disagreement; it never resolves it.
-- **Whatever the core document says in its header, the pass carries forward.** Its output is a
-  standalone file that gets forwarded, pasted into a deck, and read by someone who never saw
-  `PERSONAS.md` — so the frequency basis, the coverage key and depth, the frontier legend, and the
-  Phase 7b Verification findings all travel with it. An unlabelled absence in a detached document
-  is read as a finding, and a provenance mark left behind is a claim upgraded for free.
+- **Whatever provenance the output relies on travels with it.** Each pass writes a standalone file
+  that gets forwarded, pasted into a deck, and read by someone who never saw `PERSONAS.md`, so
+  every value carried over from the core document brings the line that qualifies it: a frequency
+  pill brings the `**Frequencies:**` basis, a coverage mark brings the coverage key, a frontier
+  mark brings the frontier legend, and a claim resting on the inventory brings the coverage depth.
+  The Phase 7b Verification findings travel in both cases, because both passes rewrite the very
+  items that section may have questioned. An unlabelled absence in a detached document is read as a
+  finding, and a provenance mark left behind is a claim upgraded for free. What this comes to
+  differs per pass — each reference file lists it — because the two carry different things over.
 
 Their preconditions differ, and the difference is not arbitrary — it follows from what each pass
 needs the document to already contain.
@@ -718,6 +722,11 @@ needs the document to already contain.
 
 Runs at **any coverage depth**, because it reads the finished document rather than the inventory,
 and the document already carries whatever the coverage pass found.
+
+It is also the one pass with an exception to the read rule above: when re-enriching a subject it
+has enriched before, it may read the `**Topics:**` line of its own previous output, so the topic
+vocabulary survives a re-run instead of a synonym being minted for a topic named two runs ago.
+That line and nothing else in the file — the prior run's scenes would anchor the new ones.
 
 Read `references/enrichment.md` and follow it. What the pass produces: a sibling of the core
 document — `<name>-enriched.md` beside whatever path Phase 6 wrote to — expanding **every** item
