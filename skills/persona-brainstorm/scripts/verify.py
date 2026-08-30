@@ -1349,6 +1349,219 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         )
 
 
+# The five kinds a grievance may be. Closed, like the frequency vocabulary and
+# the evidence marks, and for the same reason: an open one accumulates synonyms
+# until the field sorts nothing.
+ADVERSARIAL_KINDS = ("it's wrong", "it's expensive", "it refuses", "it surprises",
+                     "the expectation gap")
+# The blocks an entry carries, in the order the reference sets out.
+ADVERSARIAL_BLOCKS = ("About", "Kind", "What they expected", "What it costs",
+                      "What would fix it")
+
+
+def core_lanes(core_text: str) -> set[str]:
+    """Lane identifiers from Appendix A: the letter, and the name beside it."""
+    out: set[str] = set()
+    for m in re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–]\s*([^*|]+?)\*\*", core_text):
+        out.add(m.group(1))
+        out.add(normalise(m.group(2).strip()))
+    return out
+
+
+def check_adversarial(roster: dict, items: list[Item], core_text: str,
+                      text: str, rep: Report) -> None:
+    """Check an adversarial pass output against the core document it reads.
+
+    The gate this exists for: a grievance is about something that exists, so it
+    names the Appendix A lane it is about. Without that the pass regenerates the
+    unserved list in an irritated tone, and a well-written duplicate reads fine.
+    """
+    if not any(it.coverage.strip() for it in items):
+        rep.fail(
+            "the core document has no coverage marks, so this pass has nothing to run against. "
+            "A persona cannot resent a hypothetical — only the thing that exists — which is why "
+            "adversarial mode requires coverage depth Full or Light."
+        )
+        return
+
+    text = blank_fences(text)
+    lanes = core_lanes(core_text)
+
+    starts = []
+    heads: dict[str, str] = {}
+    for m in re.finditer(r"^####\s+(P\d+)-(\d+)\s*[—\-–]\s*(.*)$", text, re.M):
+        key = f"{m.group(1)}-{m.group(2)}"
+        starts.append((key, m.group(1), m.start()))
+        # The heading wraps in the reference's own example, so the complaint is
+        # read from the heading plus its continuation, not from one line.
+        tail = text[m.end():].split("\n\n", 1)[0]
+        heads.setdefault(key, m.group(3) + " " + tail.replace("\n", " "))
+    if not starts:
+        rep.fail(
+            "no grievance entries found. Each one gets a '#### P<n>-<k> — \"<the complaint>\"' "
+            "heading, numbered per persona; without them there is nothing to check."
+        )
+        return
+
+    header = text[: starts[0][2]]
+    seen: dict[str, tuple[int, int]] = {}
+    dupes: list[str] = []
+    for idx, (key, pid, pos) in enumerate(starts):
+        end = starts[idx + 1][2] if idx + 1 < len(starts) else len(text)
+        if key in seen:
+            dupes.append(key)
+        else:
+            seen[key] = (pos, end)
+    if dupes:
+        rep.fail(
+            f"duplicate grievance id(s): {sorted(set(dupes))}. Numbering is per persona and has "
+            "to identify one entry, or a reader following a reference gets whichever comes first."
+        )
+
+    off_roster = sorted({pid for _, pid, _ in starts if pid not in roster})
+    if off_roster:
+        rep.fail(
+            f"grievances for {off_roster}, who are not on the approved roster. This pass reuses "
+            "the roster the user approved at Phase 1; a roster that grows during an optional "
+            "pass has skipped that gate."
+        )
+
+    unquoted: list[str] = []
+    missing_blocks: list[str] = []
+    bad_kind: list[str] = []
+    no_mark: list[str] = []
+    multi_mark: list[str] = []
+    off_vocab: list[str] = []
+    unsourced: list[str] = []
+    sourced_invention: list[str] = []
+    laneless: list[str] = []
+    observed_count = 0
+
+    for key in sorted(seen):
+        start, end = seen[key]
+        body = text[start:end]
+        if not re.search(r"[\"“](.+?)[\"”]", heads.get(key, ""), re.S):
+            unquoted.append(key)
+
+        # The label's trailing period lives inside the bold — "**What it
+        # costs.**" — so it has to come off the key or no block ever matches.
+        labels = {normalise(m.group(1)).strip(" .:"): m.group(2).strip()
+                  for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M)}
+        absent = [b for b in ADVERSARIAL_BLOCKS if normalise(b).strip(" .:") not in labels]
+        if absent:
+            missing_blocks.append(f"{key} is missing {', '.join(absent)}")
+
+        kind = normalise(labels.get("kind", "")).strip(" .")
+        if "kind" in labels and kind not in {normalise(k) for k in ADVERSARIAL_KINDS}:
+            bad_kind.append(f"{key} says {labels['kind'].strip() or '(nothing)'!r}")
+
+        about = labels.get("about", "")
+        # The mark is read from the About block, which is where the reference
+        # puts it. Anchoring to the block rather than scanning the entry keeps a
+        # mark quoted in the prose below from standing in for a missing one.
+        about_block = body[body.find(about):] if about else ""
+        about_block = about_block.split("\n\n", 1)[0] if about_block else ""
+        marks = re.findall(r"\*\(\s*([A-Za-z-]+)\s*(?::\s*([^)]*))?\)\*", about_block)
+        if not marks:
+            no_mark.append(key)
+        elif len(marks) > 1:
+            multi_mark.append(key)
+        else:
+            kindname, source = marks[0][0].lower(), (marks[0][1] or "").strip()
+            if kindname not in EVIDENCE:
+                off_vocab.append(f"{key} is marked {kindname!r}")
+            elif kindname in ("observed", "inferred") and not is_source(source):
+                unsourced.append(f"{key} is {kindname} and names no source")
+            elif kindname == "invented" and source:
+                sourced_invention.append(f"{key} is invented and names a source")
+            if kindname == "observed":
+                observed_count += 1
+
+        if kind and kind != normalise("the expectation gap") and lanes:
+            if not any(re.search(rf"\bLane {re.escape(l)}\b", about) if len(l) == 1
+                       else l in normalise(about) for l in lanes):
+                laneless.append(key)
+
+    for label, entries, message in (
+        ("carry no quoted complaint", unquoted,
+         "The complaint is a sentence the persona would say out loud, held to the same standard "
+         "as an ask. A bug title is not one."),
+        ("carry no evidence mark", no_mark,
+         "An unmarked grievance is an accusation: it asserts in someone's voice that real people "
+         "are unhappy with a real thing, to the person who owns that thing."),
+        ("carry more than one evidence mark", multi_mark,
+         "Keeping the first would let a stale mark sit beside its replacement and read as "
+         "consistent."),
+        ("name no Appendix A lane", laneless,
+         "A grievance is about something that exists. If nothing in the appendix carries it, the "
+         "complaint is an unserved ask and is already in the core document. Only the expectation "
+         "gap is exempt, and it names the promise instead."),
+    ):
+        if entries:
+            shown = ", ".join(entries[:12])
+            more = f" (+{len(entries) - 12} more)" if len(entries) > 12 else ""
+            rep.fail(f"{len(entries)} grievance(s) {label}: {shown}{more}. {message}")
+
+    for group, message in (
+        (missing_blocks, "Every entry carries all five blocks; the gap between expectation and "
+                         "behaviour is the actionable part and it lives in two of them."),
+        (bad_kind, "One of: " + ", ".join(repr(k) for k in ADVERSARIAL_KINDS) +
+                   ". An open vocabulary accumulates synonyms until the field sorts nothing."),
+        (off_vocab, "One of: " + ", ".join(EVIDENCE) + "."),
+        (unsourced, "observed and inferred name what they rest on; invented needs nothing and is "
+                    "not a lesser mark."),
+        (sourced_invention, "invented means there is no artifact behind it. A source beside it "
+                            "says the mark is wrong, not that the claim is stronger."),
+    ):
+        for entry in group:
+            rep.fail(f"{entry}. {message}")
+
+    # Header declarations, held to the rules --enriched arrived at one round at
+    # a time: anchored, counted, and required to say something.
+    depth = re.findall(r"^\*{0,2}Coverage depth\*{0,2}:\*{0,2}(.*)", header, re.M)
+    if not depth:
+        rep.fail(
+            "no **Coverage depth:** line in the adversarial header. A grievance resting on a "
+            "Light lane rests on a reading of documentation nobody checked, and this file is "
+            "read detached from the core document that recorded the depth."
+        )
+    elif len(depth) > 1:
+        rep.fail(f"{len(depth)} **Coverage depth:** lines in the adversarial header.")
+    elif not re.search(r"\b(full|light)\b", depth[0], re.I):
+        rep.fail(
+            f"**Coverage depth:** says {depth[0].strip()!r}, which names neither Full nor Light. "
+            "Those are the two depths this pass can run at."
+        )
+
+    carried = re.search(
+        r"^\*{0,2}Carried from the core document'?s Verification section:?\*{0,2}(.*)",
+        header, re.I | re.M)
+    if not carried:
+        rep.fail(
+            "the core document's Verification section is not carried into the adversarial "
+            "header. Phase 7b may have questioned the very personas this pass writes complaints "
+            "for, and a file carrying the grievances without those findings inverts it."
+        )
+    elif not is_substantive(carried_block(header, carried.start(1))):
+        rep.fail("the carried Verification line is present but records no findings.")
+
+    if not re.search(r"^\*\*[^*]*\bobserved\b[^*]*\*\*", header, re.M):
+        rep.fail(
+            "the adversarial header does not say which entries are reported complaints — "
+            "expected a declaration of the form '**Only the `observed` entries are reported "
+            "complaints.**'. inferred and invented are both reconstructions, and a source named "
+            "beside inferred reads as established unless the header says otherwise."
+        )
+    if not observed_count and not re.search(
+            r"\b(no|none|nothing|not)\b[^.]{0,60}\bobserved\b", header, re.I):
+        rep.fail(
+            "no grievance is marked observed, and the header does not say so. A run where every "
+            "entry is a reconstruction is a list of ways the subject would plausibly frustrate "
+            "these personas, not a report of complaints anyone made — and that belongs in the "
+            "header rather than inferred from the marks."
+        )
+
+
 def main() -> int:
     # This method's vocabulary is not ASCII -- the frontier mark is in almost
     # every message -- and a console that cannot encode it must still get the
@@ -1372,6 +1585,11 @@ def main() -> int:
         metavar="PATH",
         help="also check an enrichment pass output against this core document",
     )
+    ap.add_argument(
+        "--adversarial",
+        metavar="PATH",
+        help="also check an adversarial pass output against this core document",
+    )
     args = ap.parse_args()
 
     text = open(args.path, encoding="utf-8").read()
@@ -1385,6 +1603,11 @@ def main() -> int:
         # across. An enriched file has no meaning apart from what it expands.
         check_enriched(parsed[1], parsed[3],
                        open(args.enriched, encoding="utf-8").read(), rep)
+    if args.adversarial:
+        # The core text as well as its parse: the lane identifiers a grievance
+        # has to cite live in Appendix A, which the item tables do not carry.
+        check_adversarial(parsed[0], parsed[1], text,
+                          open(args.adversarial, encoding="utf-8").read(), rep)
     if args.final:
         m = re.search(r"^#{2,3}\s*Verification\b(.*?)(?=^#{2}\s|\Z)", text, re.M | re.S)
         if not m:

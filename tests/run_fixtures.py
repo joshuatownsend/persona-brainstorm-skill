@@ -636,6 +636,126 @@ ENRICHED_NOCOV_MUTATIONS = [
 ]
 
 # ---------------------------------------------------------------------------
+# Adversarial. Generated from a core document for the same reason the enriched
+# base is: the entries cite that document's personas and its Appendix A lanes,
+# so a stored one goes stale the moment either changes.
+# ---------------------------------------------------------------------------
+ADV_KINDS = ("it's wrong", "it's expensive", "it refuses", "it surprises")
+
+
+def core_lane_letters(core_text):
+    """The Appendix A lane letters, in document order."""
+    out = [m.group(1) for m in
+           re.finditer(r"\|\s*\*\*([A-Z])\s*—[^*|]+\*\*", core_text)]
+    require(out, "no Appendix A lanes found in the core base")
+    return out
+
+
+def adversarial_from(core_text):
+    """A conforming adversarial pass over a core document."""
+    rows = core_items(core_text)
+    personas = list(dict.fromkeys(r.persona for r in rows))
+    lanes = core_lane_letters(core_text)
+    head = ["# What someone would want — what they can't stand about it", "",
+            "_Adversarial pass over `PERSONAS.md` (2026-08-30)._", "",
+            "**Only the `observed` entries are reported complaints.** inferred and invented are "
+            "both reconstructions.", "",
+            "**Coverage depth:** Full, copied from the core document.", "",
+            "**Carried from the core document's Verification section:** the adversarial read "
+            "found three coverage marks contradicting the document's own text.", "", "---", ""]
+    body = []
+    for i, persona in enumerate(personas):
+        body += [f"## {persona} — Role", ""]
+        for k in (1, 2):
+            lane = lanes[(i + k) % len(lanes)]
+            mark = "observed: a support thread" if (i + k) % 3 == 0 else "invented"
+            body += [f'#### {persona}-{k} — "I can never tell whether this answer is current."',
+                     "",
+                     f"**About:** Lane {lane} — the read it serves. *({mark})*", "",
+                     f"**Kind:** {ADV_KINDS[(i + k) % len(ADV_KINDS)]}.", "",
+                     "**What they expected.** That the answer would say how old it was.", "",
+                     "**What it costs.** They confirm it elsewhere, which takes longer.", "",
+                     "**What would fix it.** A timestamp on the answer.", ""]
+    return "\n".join(head + body)
+
+
+def _adv_first(text):
+    """The first grievance entry, as a block."""
+    m = re.search(r"^####\s+P\d+-\d+\s+—", text, re.M)
+    require(m, "no grievance entries in the generated base")
+    end = text.find("\n#### ", m.end())
+    return text[m.start():end if end > 0 else len(text)]
+
+
+ADVERSARIAL_MUTATIONS = [
+    ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
+     "no grievance entries found"),
+    ("adversarial-everything-fenced",
+     lambda t: "~~~markdown\n" + t + "\n~~~\n", "no grievance entries found"),
+    ("adversarial-persona-not-on-roster",
+     lambda t: t.replace("#### P1-1", "#### P99-1", 1), "not on the approved roster"),
+    ("adversarial-duplicate-id",
+     lambda t: t + "\n" + _adv_first(t), "duplicate grievance id"),
+    ("adversarial-complaint-not-quoted",
+     lambda t: re.sub(r'^(####\s+P\d+-\d+\s+—).*$', r"\1 the answer is stale",
+                      t, count=1, flags=re.M),
+     "carry no quoted complaint"),
+    ("adversarial-no-lane",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*About:\*\*.*$", "**About:** the thing generally. *(invented)*",
+                           _adv_first(t), count=1, flags=re.M)),
+     "name no Appendix A lane"),
+    ("adversarial-no-evidence-mark",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"\s*\*\([^)]*\)\*", "", _adv_first(t), count=1)),
+     "carry no evidence mark"),
+    ("adversarial-two-evidence-marks",
+     lambda t: swap(t, _adv_first(t),
+                    _adv_first(t).replace("*(observed: a support thread)*",
+                                          "*(observed: a support thread)* *(invented)*", 1)
+                    if "*(observed" in _adv_first(t)
+                    else _adv_first(t).replace("*(invented)*",
+                                               "*(invented)* *(observed: a note)*", 1)),
+     "carry more than one evidence mark"),
+    ("adversarial-mark-off-vocabulary",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"\*\(\s*[A-Za-z-]+", "*(probable", _adv_first(t), count=1)),
+     "is marked 'probable'"),
+    ("adversarial-observed-without-source",
+     lambda t: t.replace("*(observed: a support thread)*", "*(observed)*", 1),
+     "names no source"),
+    ("adversarial-invented-with-source",
+     lambda t: t.replace("*(invented)*", "*(invented: a support thread)*", 1),
+     "invented and names a source"),
+    ("adversarial-kind-off-vocabulary",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*Kind:\*\*.*$", "**Kind:** annoying.",
+                           _adv_first(t), count=1, flags=re.M)),
+     "says 'annoying.'"),
+    ("adversarial-block-missing",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^\*\*What it costs\.\*\*.*$", "",
+                           _adv_first(t), count=1, flags=re.M)),
+     "is missing What it costs"),
+    ("adversarial-no-coverage-depth",
+     lambda t: drop(t, "**Coverage depth:**"), "no **Coverage depth:** line"),
+    ("adversarial-coverage-depth-neither",
+     lambda t: edit_line(t, "**Coverage depth:**", "**Coverage depth:** thorough."),
+     "names neither Full nor Light"),
+    ("adversarial-two-coverage-depths",
+     lambda t: twice(t, "**Coverage depth:**"), "**Coverage depth:** lines"),
+    ("adversarial-no-verification-carry",
+     lambda t: drop(t, "**Carried from the core document's Verification section:**"),
+     "Verification section is not carried"),
+    ("adversarial-no-observed-disclosure",
+     lambda t: drop(t, "**Only the `observed` entries are reported complaints.**"),
+     "does not say which entries are reported complaints"),
+    ("adversarial-all-invented-undisclosed",
+     lambda t: t.replace("*(observed: a support thread)*", "*(invented)*"),
+     "no grievance is marked observed, and the header does not say so"),
+]
+
+# ---------------------------------------------------------------------------
 # Statics: defects a mutation cannot express, because they are damage to the
 # body of the document rather than to one declaration.
 # ---------------------------------------------------------------------------
@@ -817,6 +937,52 @@ def main():
                 with open(path, "w", encoding="utf-8") as fh:
                     fh.write(text)
                 rc, out = run(core_path, "--enriched", path)
+                fails = failures_in(out)
+                if rc == 0:
+                    report(False, name, "document passed; the defect was not caught")
+                elif needle.lower() not in fails.lower():
+                    first = fails.splitlines()[0] if fails else "(no [FAIL] line)"
+                    report(False, name,
+                           f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
+                else:
+                    report(True, name)
+
+        print("\nadversarial (--adversarial):")
+        core_path = os.path.join(FIXTURES, "d_ok.md")
+        try:
+            base = adversarial_from(load("d_ok.md"))
+        except (BrokenFixture, ValueError) as exc:
+            report(False, "adversarial base", str(exc))
+            base = None
+        if base is not None:
+            ok_path = os.path.join(tmp, "adversarial_ok.md")
+            with open(ok_path, "w", encoding="utf-8") as fh:
+                fh.write(base)
+            rc, out = run(core_path, "--adversarial", ok_path)
+            fails = failures_in(out)
+            report(rc == 0, "generated adversarial pass over d_ok.md passes",
+                   "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
+
+            # The precondition, which no mutation of the document can express:
+            # it is a property of the core document, not of this one.
+            rc, out = run(os.path.join(FIXTURES, "nocov.md"), "--adversarial", ok_path)
+            fails = failures_in(out)
+            report("nothing to run against" in fails,
+                   "a core with no coverage pass is refused",
+                   "" if "nothing to run against" in fails
+                   else (fails.splitlines() or ["(passed)"])[0].strip()[:80])
+
+            for name, mutate, needle in ADVERSARIAL_MUTATIONS:
+                try:
+                    text = mutate(base)
+                except (BrokenFixture, ValueError) as exc:
+                    report(False, name, f"mutation no longer applies: {exc}")
+                    continue
+                require(text != base, f"{name} changed nothing")
+                path = os.path.join(tmp, name + ".md")
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                rc, out = run(core_path, "--adversarial", path)
                 fails = failures_in(out)
                 if rc == 0:
                     report(False, name, "document passed; the defect was not caught")
