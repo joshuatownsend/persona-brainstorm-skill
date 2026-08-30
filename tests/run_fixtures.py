@@ -1031,6 +1031,31 @@ FINAL_CASES = [
      + "- A practitioner would question the frequency column's basis first.\n\n"
      + t[t.index("## What the 60 imply"):],
      None),
+    # A fenced example quoting the template is not a Verification section.
+    # section_body() searched raw text, so a document that merely quoted
+    # "## Verification" satisfied the gate the real section proves -- the same
+    # blank-fences-first rule the appendix parser already applied, in the
+    # sibling function that did not.
+    ("final-rejects-a-fenced-verification-example", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + t[t.index("## What the 60 imply"):]
+     + "\n```markdown\n## Verification\n\nFirst answer paragraph here.\n\n"
+     + "Second answer paragraph here.\n\nThird answer paragraph here.\n\n"
+     + "Fourth answer paragraph here.\n\nFifth answer paragraph here.\n```\n",
+     "no Verification section"),
+    # Outer pipes are optional in Markdown. Requiring them meant a valid table
+    # of five answers was seen as one block and the document rejected -- a false
+    # failure, the defect class this checker exists not to produce.
+    ("final-accepts-a-table-without-outer-pipes", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nQuestion | Answer\n---|---\n"
+     + "Generic items | Items 4 and 11 apply to any subject in this category.\n"
+     + "Indistinct personas | P2 and P5 cannot be told apart by their asks.\n"
+     + "Inferred marks | The marks on items 7 and 19 read as inferred.\n"
+     + "Missing decisions | Items 22 and 30 restate their asks.\n"
+     + "Practitioner check | The frequency column's basis would be questioned.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     None),
     # The same heading-level defect as the appendix parser, in the sibling
     # function: "### Verification" matched, but the body ended only at the next
     # H2, so an empty section absorbed its sibling headings and their paragraphs

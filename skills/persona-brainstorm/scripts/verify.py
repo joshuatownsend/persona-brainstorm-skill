@@ -1438,6 +1438,13 @@ def section_body(text: str, name: str) -> str | None:
     Returning None rather than "" keeps "no such section" distinguishable from
     "the section is empty" -- different defects, different messages.
     """
+    # Fences blanked first, and the body taken from the blanked copy. A document
+    # that merely quotes the template -- "## Verification" inside a fenced
+    # example -- satisfied the gate the real section was supposed to prove,
+    # which is the whole failure the gate exists to catch. Blanking preserves
+    # offsets, so slicing the blanked copy is safe, and it also stops a fenced
+    # example *inside* a real section from being counted as answers.
+    text = blank_fences(text)
     m = re.search(r"^(#{2,3})\s*" + name + r"\b[^\n]*\n", text, re.M)
     if not m:
         return None
@@ -1578,24 +1585,30 @@ def verification_answers(body: str) -> list[str]:
     contributes its header and its data rows and not its underline.
     """
     entry_start = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+|^\s*\|")
-    ruler = re.compile(r"^\s*\|?[\s:|-]+\|[\s:|-]*$")
+    # The divider identifies a table, and outer pipes are optional in Markdown:
+    # "Question | Answer" over "---|---" is a valid table whose rows begin with
+    # a letter. Requiring a leading pipe meant none of its rows were recognised,
+    # the whole table collapsed into one block, and a document carrying five
+    # real answers was rejected -- a false failure, which is the defect class
+    # this checker exists to avoid producing.
+    ruler = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?\s*$")
     out: list[str] = []
     for block in re.split(r"\n\s*\n", body):
         lines = block.splitlines()
-        # A table's header row names the columns; it is a label, not an answer.
-        # Counting it let a header plus four data rows read as five answers with
-        # one Phase 7b question unanswered. The ruler is what identifies the row
-        # above it as a header -- and the ruler itself carries no letters, so it
-        # already falls out at is_substantive.
-        skip = {i - 1 for i, ln in enumerate(lines) if i and ruler.match(ln)}
-        entries: list[str] = []
-        for i, line in enumerate(lines):
-            if i in skip:
-                continue
-            if entry_start.match(line) or not entries:
-                entries.append(line)
-            else:
-                entries[-1] += " " + line.strip()
+        rulers = [i for i, ln in enumerate(lines) if ruler.match(ln)]
+        if rulers:
+            # A table: every line is a row. Drop the dividers and the header
+            # above each -- a header names the columns, it does not answer a
+            # question, and counting it let four answers read as five.
+            skip = set(rulers) | {i - 1 for i in rulers if i}
+            entries = [ln for i, ln in enumerate(lines) if i not in skip]
+        else:
+            entries = []
+            for line in lines:
+                if entry_start.match(line) or not entries:
+                    entries.append(line)
+                else:
+                    entries[-1] += " " + line.strip()
         out.extend(e for e in entries if is_substantive(e))
     return out
 
@@ -1603,8 +1616,12 @@ def verification_answers(body: str) -> list[str]:
 def core_lanes(core_text: str) -> set[str]:
     """Lane identifiers from the inventory appendix: the letter, and its name."""
     out: set[str] = set()
-    for m in re.finditer(r"\|\s*\*\*([A-Z])\s*[—\-–]\s*([^*|]+?)\*\*",
-                         appendix_section(core_text)):
+    # Line start counts as a cell boundary, not only a pipe: Markdown's outer
+    # pipes are optional, so a lane table written without them had no row this
+    # matched, and the inventory read as absent. Same shape as the Verification
+    # table rows, swept here rather than waiting for it to be reported.
+    for m in re.finditer(r"(?:^|\|)\s*\*\*([A-Z])\s*[—\-–]\s*([^*|]+?)\*\*",
+                         appendix_section(core_text), re.M):
         out.add(m.group(1))
         out.add(normalise(m.group(2).strip()))
     return out
