@@ -914,6 +914,42 @@ def normalise(s: str) -> str:
     return s.translate(APOSTROPHES).lower()
 
 
+def carried_block(header: str, pos: int) -> str:
+    """The carried findings: the rest of the line plus the block beneath it.
+
+    The reference calls this a block and allows the findings verbatim or
+    summarised, which in Markdown is most naturally a bullet list under the
+    label. Reading only the declaration's own line rejected the shape the
+    format actually invites.
+    """
+    rest = [header[pos:].split("\n", 1)[0]]
+    for line in header[pos:].split("\n")[1:]:
+        # Stops at the next canonical declaration or a rule, not at a blank:
+        # a list separated from its label by one blank line is still its block.
+        if re.match(r"\s*(\*\*[^*]+:\*\*|---|##)", line):
+            break
+        rest.append(line)
+    return " ".join(rest).strip().strip("*").strip()
+
+
+def blank_fences(text: str) -> str:
+    """Replace fenced-block lines with blanks, keeping line and offset counts.
+
+    Blanked rather than removed so every position computed against the result
+    still lines up with the original — the alternative silently shifts every
+    reported offset once a document contains one example.
+    """
+    out = []
+    in_fence = False
+    for line in text.split("\n"):
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            out.append(" " * len(line))
+            continue
+        out.append(" " * len(line) if in_fence else line)
+    return "\n".join(out)
+
+
 def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> None:
     """Check an enriched document against the core document it expands.
 
@@ -922,10 +958,19 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
     selects, and that the header carries the declarations a detached reader
     needs. Whether the prose is any good is Phase 7b's job, not this one's.
     """
+    # Fenced blocks are examples, not entries. The core parser has skipped them
+    # since it was written; this one scanned raw text, so a document with every
+    # entry inside one fence -- which renders as a code sample and contains no
+    # headings at all -- was read as a conforming enrichment.
+    text = blank_fences(text)
+
     entries: dict[int, tuple[int, int]] = {}
     dupes: list[int] = []
-    starts = [(int(m.group(1)), m.start()) for m in
-              re.finditer(r"^####\s+(\d+)\s*[—\-–]", text, re.M)]
+    heads: dict[int, str] = {}
+    starts = []
+    for m in re.finditer(r"^####\s+(\d+)\s*[—\-–]\s*(.*)$", text, re.M):
+        starts.append((int(m.group(1)), m.start()))
+        heads.setdefault(int(m.group(1)), m.group(2).strip())
     if not starts:
         rep.fail(
             "no enriched entries found. Each item gets a '#### <n> — \"<the ask>\"' heading; "
@@ -967,6 +1012,13 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
 
     graded = any(core.values())
     known = {normalise(v) for v in ENRICHED_HEADINGS.values()}
+    item_ask = {it.n: it.ask.strip().strip("\"“”'‘’«»") for it in items}
+    item_freq = {it.n: it.freq.strip() for it in items}
+    item_frontier = {it.n: it.frontier for it in items}
+    askless: list[int] = []
+    mismatched_ask: list[int] = []
+    freq_off: list[str] = []
+    frontier_off: list[str] = []
     wrong: list[str] = []
     unheaded: list[int] = []
     two: list[int] = []
@@ -1001,7 +1053,23 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         # The footer copies the coverage mark from the core document. A mark that
         # disagrees with the heading beside it is the contradiction the derived
         # heading exists to prevent, arriving through the other column.
-        foot = re.search(r"^.*\btopics:.*$", body, re.M)
+        # The heading carries the ask, so a reader knows what the scene expands
+        # without holding the core document open beside it. Compared loosely —
+        # an enriched heading may shorten a long ask — but a heading carrying
+        # someone else's ask, or none, is not a shortening.
+        head = heads.get(n, "")
+        quoted = re.search(r"[\"“'‘«](.+)[\"”'’»]", head, re.S)
+        if not quoted:
+            askless.append(n)
+        elif SequenceMatcher(
+                None, normalise(quoted.group(1)), normalise(item_ask.get(n, ""))
+        ).ratio() < 0.5:
+            mismatched_ask.append(n)
+
+        # The prescribed footer, not any line mentioning topics: a prose
+        # sentence containing the word satisfied the loose form while the
+        # frequency and frontier mark it is supposed to copy were gone.
+        foot = re.search(r"^`([^`]+)`\s*·.*\btopics:.*$", body, re.M)
         # Ordered, not the COVERAGE_MARKS set: set iteration order varies with
         # the interpreter's hash seed, so a footer carrying two marks would
         # report a different one run to run -- and pass or fail by luck.
@@ -1030,8 +1098,51 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
                     "while the core document leaves it unmarked"
             cov_mismatch.append(f"{n} carries {seen[0]} {where}")
 
+        if foot:
+            # Frequency and the frontier mark are copied like the coverage mark,
+            # and go wrong the same way. A frequency rewritten here is a claim
+            # about how often someone does something, made in the file that gets
+            # forwarded.
+            if normalise(foot.group(1)) != normalise(item_freq.get(n, "")):
+                freq_off.append(
+                    f"{n} is {item_freq.get(n, '')!r} in the core document, "
+                    f"{foot.group(1)!r} here"
+                )
+            if ("⚡" in foot.group(0)) != item_frontier.get(n, False):
+                frontier_off.append(
+                    f"{n} {'carries' if '⚡' in foot.group(0) else 'omits'} ⚡, "
+                    f"{'unlike' if '⚡' in foot.group(0) else 'unlike'} the core document"
+                )
+
+    if askless:
+        shown = ", ".join(str(n) for n in askless[:12])
+        more = f" (+{len(askless) - 12} more)" if len(askless) > 12 else ""
+        rep.fail(
+            f"{len(askless)} entry heading(s) carry no quoted ask: {shown}{more}. The heading "
+            "is '#### <n> — \"<the ask>\"' so a reader knows what the scene expands without "
+            "holding the core document open beside it."
+        )
+    if mismatched_ask:
+        shown = ", ".join(str(n) for n in mismatched_ask[:12])
+        more = f" (+{len(mismatched_ask) - 12} more)" if len(mismatched_ask) > 12 else ""
+        rep.fail(
+            f"{len(mismatched_ask)} entry heading(s) quote an ask unlike the core document's: "
+            f"{shown}{more}. Shortening a long ask is fine; carrying a different one means the "
+            "scene beneath it expands something the reader cannot find."
+        )
+    for f in freq_off:
+        rep.fail(
+            f"frequency disagrees with the core document: {f}. It is copied rather than "
+            "restated — a frequency rewritten here is a claim about how often someone does "
+            "something, made in the copy that gets forwarded."
+        )
+    for f in frontier_off:
+        rep.fail(
+            f"frontier mark disagrees with the core document: {f}. ⚡ is the class of ask this "
+            "subject makes hard and valuable; adding or dropping one here re-grades the item."
+        )
     if no_footer:
-        shown = ", ".join(str(n) for n in no_footer[:12])
+        shown =", ".join(str(n) for n in no_footer[:12])
         more = f" (+{len(no_footer) - 12} more)" if len(no_footer) > 12 else ""
         rep.fail(
             f"{len(no_footer)} entr(y/ies) have no footer line: {shown}{more}. The footer is the "
@@ -1133,7 +1244,7 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
             "items into their most persuasive form, and a file carrying the scenes without the "
             "warnings inverts the point of the phase that produced them."
         )
-    elif not is_substantive(carried.group(1).strip().strip("*").strip()):
+    elif not is_substantive(carried_block(header, carried.start(1))):
         # The label alone satisfies a label check while carrying nothing, which
         # is the same defect --final catches in the core document: an absent
         # verification reads as a passed one.
@@ -1155,11 +1266,16 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
     # The frontier legend travels at every coverage depth, because the frontier
     # is a property of the items rather than of the coverage pass: a depth-None
     # run's footers still carry ⚡ and still need it explained.
-    if any(it.frontier for it in items) and "⚡" not in header:
+    # The legend, not the character. A ⚡ appearing in a quoted footer or an
+    # aside satisfies a containment test while explaining nothing, and the
+    # diagnostic promises an explanation.
+    if any(it.frontier for it in items) and not re.search(
+            r"⚡[^\n]{0,30}\bfrontier\b|\bfrontier\b[^\n]{0,30}⚡", header, re.I):
         rep.fail(
-            "the enriched header does not explain ⚡, which the entries carry. The frontier "
-            "class is specific to this subject, and a reader who does not know it reads every "
-            "frontier entry as wishful thinking."
+            "the enriched header does not explain ⚡, which the entries carry — expected the "
+            "core document's '**⚡ marks the frontier** — …' legend. The frontier class is "
+            "specific to this subject, and a reader who does not know it reads every frontier "
+            "entry as wishful thinking."
         )
 
     key = re.search(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)

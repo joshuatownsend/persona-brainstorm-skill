@@ -17,6 +17,7 @@ mutating a known-good base document, so a schema change costs one edit to the
 base rather than one edit per fixture. Static files are kept only where a
 mutation cannot express the defect.
 """
+import collections
 import os
 import re
 import subprocess
@@ -292,10 +293,13 @@ ENRICHED_HEADINGS = {"✅": "How it's answered today",
                      "◐": "How it's answered today",
                      "○": "What would have to exist",
                      "": "What answering this would take"}
+FREQ_VOCAB = {"many/day", "daily", "weekly", "monthly", "quarterly", "annually",
+              "per-incident", "per-release", "per-run", "onboarding"}
+Row = collections.namedtuple("Row", "n mark persona ask freq frontier")
 
 
 def core_items(core_text):
-    """(number, coverage mark, persona id) for every item row, in document order.
+    """One Row per item row in the core document, in document order.
 
     Reads the same rows verify.py reads, by the same shape: a leading number and
     a coverage mark in a trailing cell. Deliberately not an import of the
@@ -314,7 +318,14 @@ def core_items(core_text):
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) >= 5 and cells[0].isdigit():
             mark = next((c for c in cells[3:] if c in ENRICHED_HEADINGS and c), "")
-            out.append((int(cells[0]), mark, persona))
+            # The frequency is the first cell holding a value from the
+            # vocabulary. Positional decoding would have to reimplement the
+            # checker's Today-column sniffing, and reimplementing it here is how
+            # a generator drifts from the thing it generates for.
+            freq = next((c for c in cells[3:] if c.lstrip("~") in FREQ_VOCAB), "")
+            out.append(Row(int(cells[0]), mark, persona,
+                           cells[1].strip().strip('"“”'), freq,
+                           any("⚡" in c for c in cells[3:])))
     require(out, "no item rows found in the core base")
     return out
 
@@ -332,7 +343,7 @@ def core_freq(core_text):
 def enriched_from(core_text):
     """A conforming enrichment of a core document. Every mutation starts here."""
     rows = core_items(core_text)
-    graded = any(m for _, m, _ in rows)
+    graded = any(r.mark for r in rows)
     head = ["# What someone would want — the story behind each ask", "",
             "_Enrichment of `PERSONAS.md` (2026-08-30)._", "",
             "**The scenes are invented.** Each situation is a plausible reconstruction of how "
@@ -348,16 +359,28 @@ def enriched_from(core_text):
 
     body = []
     seen = set()
-    for n, mark, persona in rows:
-        if persona not in seen:
-            seen.add(persona)
-            body += [f"## {persona} — Role", ""]
-        body += [f'#### {n} — "An ask."', "",
+    for r in rows:
+        if r.persona not in seen:
+            seen.add(r.persona)
+            body += [f"## {r.persona} — Role", ""]
+        # Ask, frequency and frontier mark are copied from the core row rather
+        # than composed: the checker compares all three, so a generator that
+        # invented them could not produce a base that passes.
+        bolt = "⚡ · " if r.frontier else ""
+        body += [f'#### {r.n} — "{r.ask}"', "",
                  "**The situation.** A moment that produces the ask.", "",
                  "**Why it matters.** What goes wrong without an answer.", "",
-                 f"**{ENRICHED_HEADINGS[mark]}.** What the capability comes to.", "",
-                 f"`daily` · {mark + ' · ' if mark else ''}topics: `identity`", ""]
+                 f"**{ENRICHED_HEADINGS[r.mark]}.** What the capability comes to.", "",
+                 f"`{r.freq}` · {bolt}{r.mark + ' · ' if r.mark else ''}topics: `identity`", ""]
     return "\n".join(head + body)
+
+
+def foot_sub(block, old, new):
+    """Rewrite part of an entry's footer, whatever frequency it opens with."""
+    m = re.search(r"^`[^`]+` ·.*$", block, re.M)
+    require(m, "no footer line in the entry")
+    require(old in m.group(0), f"{old!r} not in the footer to replace")
+    return block.replace(m.group(0), m.group(0).replace(old, new, 1), 1)
 
 
 def _first(text, mark):
@@ -365,7 +388,10 @@ def _first(text, mark):
     for m in re.finditer(r'^####\s+(\d+)\s+—', text, re.M):
         end = text.find("\n#### ", m.end())
         block = text[m.start():end if end > 0 else len(text)]
-        if re.search(rf"^`daily`.*{re.escape(mark)}", block, re.M):
+        # Any backticked frequency, not a literal one: the generated footer
+        # copies the core row's frequency, so pinning this to "daily" made every
+        # mutation vanish the moment the generator started copying properly.
+        if re.search(rf"^`[^`]+`.*{re.escape(mark)}", block, re.M):
             return block
     raise BrokenFixture(f"no entry marked {mark!r} in the generated base")
 
@@ -391,7 +417,7 @@ def two_headings(text):
 
 def footer_mark_disagrees(text):
     block = _first(text, "✅")
-    return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1○", block, flags=re.M))
+    return swap(text, block, foot_sub(block, "✅", "○"))
 
 
 def footer_drops_the_mark(text):
@@ -401,7 +427,7 @@ def footer_drops_the_mark(text):
     check until the mark was required to be present.
     """
     block = _first(text, "✅")
-    return swap(text, block, re.sub(r"^(`daily` · )✅ · ", r"\1", block, flags=re.M))
+    return swap(text, block, foot_sub(block, "✅ · ", ""))
 
 
 def footer_carries_two_marks(text):
@@ -412,7 +438,31 @@ def footer_carries_two_marks(text):
     the interpreter's hash seed.
     """
     block = _first(text, "✅")
-    return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1✅ · ○", block, flags=re.M))
+    return swap(text, block, foot_sub(block, "✅", "✅ · ○"))
+
+
+def rewrite_a_frequency(text):
+    """Swap one entry's frequency for a different valid one.
+
+    Not a fixed pair: the generated footer copies whatever the core row says, so
+    naming both sides pinned the case to one base's data.
+    """
+    block = _first(text, "○")
+    m = re.search(r"^`([^`]+)` ·", block, re.M)
+    require(m, "no footer frequency to rewrite")
+    other = next(f for f in sorted(FREQ_VOCAB) if f != m.group(1))
+    return swap(text, block, foot_sub(block, f"`{m.group(1)}`", f"`{other}`"))
+
+
+def no_bolt(text):
+    """The first entry whose footer carries no frontier mark."""
+    for m in re.finditer(r"^####\s+(\d+)\s+—", text, re.M):
+        end = text.find("\n#### ", m.end())
+        block = text[m.start():end if end > 0 else len(text)]
+        foot = re.search(r"^`[^`]+` ·.*$", block, re.M)
+        if foot and "⚡" not in foot.group(0):
+            return block
+    raise BrokenFixture("every entry in the generated base carries ⚡")
 
 
 def drop_a_footer(text):
@@ -424,7 +474,7 @@ def drop_a_footer(text):
     catches it; both paths lead to a fail, which is the point.
     """
     block = _first(text, "○")
-    return swap(text, block, re.sub(r"^`daily`.*$", "", block, count=1, flags=re.M))
+    return swap(text, block, re.sub(r"^`[^`]+` ·.*$", "", block, count=1, flags=re.M))
 
 
 def heading_repeated(text):
@@ -526,6 +576,27 @@ ENRICHED_MUTATIONS = [
                          "carried from the core document's Verification section it is not."),
      "Verification section is not carried"),
     ("enriched-entry-without-a-footer", drop_a_footer, "have no footer line"),
+    # The whole document inside one fence renders as a code sample and contains
+    # no headings at all. Scanned raw, it read as a conforming enrichment.
+    ("enriched-everything-fenced",
+     lambda t: "```markdown\n" + t + "\n```\n", "no enriched entries found"),
+    ("enriched-heading-without-an-ask",
+     lambda t: re.sub(r'^(####\s+\d+\s+—).*$', r"\1 an entry", t, flags=re.M),
+     "carry no quoted ask"),
+    ("enriched-heading-quotes-another-ask",
+     lambda t: re.sub(r'^(####\s+\d+\s+—).*$',
+                      r'\1 "Something else entirely, about nothing in this document."',
+                      t, count=1, flags=re.M),
+     "quote an ask unlike the core document's"),
+    ("enriched-footer-is-prose",
+     lambda t: swap(t, _first(t, "○").splitlines()[-1],
+                    "A prose sentence mentioning topics: identity."),
+     "have no footer line"),
+    ("enriched-frequency-disagrees", rewrite_a_frequency,
+     "frequency disagrees with the core document"),
+    ("enriched-frontier-mark-added",
+     lambda t: swap(t, no_bolt(t), foot_sub(no_bolt(t), "` · ", "` · ⚡ · ")),
+     "frontier mark disagrees with the core document"),
 ]
 
 # A no-coverage core takes the third heading form, and must not be given ○.
@@ -535,7 +606,7 @@ ENRICHED_NOCOV_MUTATIONS = [
                          "**What would have to exist.**", 1),
      "third-block heading does not match the coverage mark"),
     ("enriched-nocov-invents-a-mark",
-     lambda t: re.sub(r"^(`daily` · )topics:", r"\1○ · topics:", t, count=1, flags=re.M),
+     lambda t: re.sub(r"^(`[^`]+` · )topics:", r"\1○ · topics:", t, count=1, flags=re.M),
      "carries ○ on a run with no coverage pass"),
     ("enriched-nocov-deletes-the-key", lambda t: drop(t, "**Coverage:** not assessed"),
      "not assessed' line in the enriched header"),
