@@ -95,6 +95,12 @@ Run the checker against it at any time:
 python <skill-dir>/scripts/verify.py PERSONAS.md --final
 ```
 
+### Optionally, the story behind each ask
+
+Ask for an **enrichment pass** and every item expands into the situation that produced it, the pressure behind it, and either how it's answered today or what would have to exist — written to `PERSONAS-enriched.md`, with a topic axis that crosses the persona one, and offered as a shareable page.
+
+The format carries its honesty mechanically rather than by disclaimer: the coverage mark *chooses* the heading, so a served item gets "How it's answered today" in the present tense and an unserved one gets "What would have to exist" in the conditional. Neither is a judgment call, and a reader can tell them apart without trusting the author. A served item may only claim what the inventory actually recorded, and names the appendix lane that carries it. This matters because enrichment is where a demand-side document turns into a case study — sixty scenes of confident prose are far more persuasive than sixty table rows, and nothing in the prose reveals which of them were observed.
+
 This repo's own `PERSONAS.md` is a real run of the skill against itself — the worked output, not a template. `skills/persona-brainstorm/references/worked-example-ddi.md` walks through the DDI run the method was extracted from.
 
 ## Install
