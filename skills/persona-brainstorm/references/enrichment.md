@@ -212,8 +212,16 @@ Where a scene came from something real it says so on the item. Capability claims
 SOURCE>.
 
 **Coverage key:** <copied from the core document: ✅ served well today · ◐ partially served ·
-○ not possible today. Delete this line on a run with no coverage pass, where the footers carry no
-marks.>
+○ not possible today.>
+
+...or, on a run with no coverage pass, that line is *replaced* rather than deleted:
+
+**Coverage:** not assessed — no coverage pass ran, so no item carries a mark. An absent mark here
+means nobody looked, not that the ask is unserved.
+
+Replaced, because a deleted line and an unassessed run look identical to a reader holding only
+this file: no key, no pills, and no way to tell whether coverage was checked and omitted or never
+checked at all. Silence is the one thing that cannot say which.
 
 **⚡ marks the frontier** — <the frontier class for this subject, copied from the core document.
 This line stays at every coverage depth: the frontier is a property of the items, not of the
@@ -278,10 +286,11 @@ Structure, in order:
 7. **A dated source line** — what this is, what it was generated from, and when.
 
 Where there are coverage marks, keep them visible on every card. The mark is what tells a reader
-which third-block form they are reading, and a filtered view that hides it turns the
-page back into a case study. A depth-**None** run has no marks and shows no pills, which is honest
-for the same reason the footer omits them there — every item is in the conditional form, and the
-header says so.
+which third-block form they are reading, and a filtered view that hides it turns the page back into
+a case study. A depth-**None** run has no marks and shows no pills — and carries the header's
+**Coverage: not assessed** line to say so, for the same reason the markdown replaces that line
+instead of dropping it. This is the copy most likely to reach someone who never saw the core
+document, so an absence here has to be labelled or it will be read as a finding.
 
 The page must be **self-contained**: styles and behaviour inline, no external assets. Filtering and
 collapsing are the only interactions it needs, and both are a few lines of vanilla JavaScript.
