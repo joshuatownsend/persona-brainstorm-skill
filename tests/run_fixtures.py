@@ -815,6 +815,27 @@ ADVERSARIAL_MUTATIONS = [
      "no vocabulary in common"),
     ("adversarial-expectation-gap-cites-nothing", expectation_gap_without_promise,
      "cite no promise"),
+    # setdefault kept the first and ignored the rest, so a stale block sat
+    # beside its replacement and the entry read as consistent.
+    ("adversarial-block-repeated",
+     lambda t: swap(t, _adv_first(t),
+                    re.sub(r"^(\*\*Kind:\*\*.*)$", r"\1\n\n**Kind:** it refuses.",
+                           _adv_first(t), count=1, flags=re.M)),
+     "repeats Kind"),
+    # Without the blank line the heading continuation swallowed the About block,
+    # and the quoted text there stood in for the missing complaint.
+    ("adversarial-heading-runs-into-the-about",
+     lambda t: re.sub(r'^(####\s+P\d+-\d+\s+—).*\n\n', r"\1 the answer is stale\n",
+                      t, count=1, flags=re.M),
+     "carry no quoted complaint"),
+    # Advice to the author, not a statement about this run.
+    ("adversarial-no-observed-declared-as-advice",
+     lambda t: edit_line(
+         t.replace("*(observed: a support thread)*", "*(invented)*"),
+         "**Only the `observed` entries are reported complaints.**",
+         "**Only the `observed` entries are reported complaints.**\n\n"
+         "**Do not label invented entries observed.**"),
+     "no grievance is marked observed, and the header does not say so"),
 ]
 
 # Must still pass: the expectation gap is the one kind exempt from the lane
@@ -1039,6 +1060,28 @@ def main():
                    "a core with no coverage pass is refused",
                    "" if "nothing to run against" in fails
                    else (fails.splitlines() or ["(passed)"])[0].strip()[:80])
+
+            # The other precondition, and also a property of the core: these
+            # passes require it to have passed --final, and --final refuses a
+            # Verification section too short to hold Phase 7b's five answers.
+            # Both passes are checked, because both stated the precondition and
+            # only one of them enforced it.
+            thin = re.sub(r"(^#{2,3}\s*Verification\b.*?)(?=^##\s)",
+                          "## Verification (Phase 7)\n\ncoverage marks passed.\n\n",
+                          load("d_ok.md"), count=1, flags=re.M | re.S)
+            require(thin != load("d_ok.md"), "the Verification section was not thinned")
+            thin_path = os.path.join(tmp, "thin_core.md")
+            with open(thin_path, "w", encoding="utf-8") as fh:
+                fh.write(thin)
+            for flag, other in (("--adversarial", ok_path),
+                                ("--enriched",
+                                 os.path.join(tmp, "enriched_ok_d_ok.md"))):
+                rc, out = run(thin_path, flag, other)
+                fails = failures_in(out)
+                report("has not passed --final" in fails,
+                       f"{flag} refuses a core whose Verification is too thin",
+                       "" if "has not passed --final" in fails
+                       else (fails.splitlines() or ["(passed)"])[0].strip()[:80])
 
             for name, mutate, needle in ADVERSARIAL_MUTATIONS:
                 try:

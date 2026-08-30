@@ -1272,6 +1272,12 @@ def check_enriched(items: list[Item], claims: dict, core_text: str,
             "nothing after it reads as though the adversarial pass found nothing, which is a "
             "stronger claim than the document is making."
         )
+    elif verification_problem(core_text):
+        rep.fail(
+            f"the core document {verification_problem(core_text)}, so it has not passed --final "
+            "and there is nothing for this pass to carry. Run Phase 7b on the core document "
+            "first: these passes amplify what is already there."
+        )
     elif not shares_vocabulary(carried_block(header, carried.start(1)),
                                core_verification(core_text)):
         rep.fail(
@@ -1381,6 +1387,25 @@ def core_verification(core_text: str) -> str:
     return m.group(1) if m else ""
 
 
+def verification_problem(core_text: str) -> str:
+    """Why the core document's Verification section fails --final, or "".
+
+    One definition, used by --final and by both optional passes. Each had its
+    own approximation of "the core passed --final" and they disagreed: a
+    one-line Verification section was refused by --final and accepted by the
+    passes whose precondition is that --final passed.
+    """
+    body = core_verification(core_text)
+    if not body:
+        return ("has no Verification section — Phase 7b was skipped or its findings were not "
+                "recorded")
+    lines = [ln for ln in body.splitlines() if ln.strip()]
+    if len(lines) < 5:
+        return (f"has a Verification section of {len(lines)} non-empty line(s). Phase 7b asks "
+                "five questions and requires the answers recorded, disagreements included")
+    return ""
+
+
 def distinctive(s: str) -> set[str]:
     return {w for w in re.findall(r"[a-z][a-z'-]{3,}", s.lower()) if w not in STOPWORDS}
 
@@ -1448,7 +1473,10 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         starts.append((key, m.group(1), m.start()))
         # The heading wraps in the reference's own example, so the complaint is
         # read from the heading plus its continuation, not from one line.
-        tail = text[m.end():].split("\n\n", 1)[0]
+        # Stops at the first block as well as at a blank line: without the
+        # blank line the continuation swallowed the About block, and a quoted
+        # phrase there stood in for the complaint the heading was missing.
+        tail = re.split(r"\n\s*\n|\n\s*\*\*", text[m.end():], maxsplit=1)[0]
         heads.setdefault(key, m.group(3) + " " + tail.replace("\n", " "))
     if not starts:
         rep.fail(
@@ -1482,6 +1510,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
 
     unquoted: list[str] = []
     missing_blocks: list[str] = []
+    duplicated_blocks: list[str] = []
     bad_kind: list[str] = []
     no_mark: list[str] = []
     multi_mark: list[str] = []
@@ -1502,10 +1531,19 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         # costs.**" — so it has to come off the key or no block ever matches.
         labels = {}
         spans = {}
+        counts: dict[str, int] = {}
         for m in re.finditer(r"^\*\*([^*]+?):?\*\*:?(.*)$", body, re.M):
             k = normalise(m.group(1)).strip(" .:")
+            counts[k] = counts.get(k, 0) + 1
             labels.setdefault(k, m.group(2).strip())
             spans.setdefault(k, m.end(1))
+        # setdefault kept the first and ignored the rest, so a stale block sat
+        # beside its replacement and the entry read as consistent -- the same
+        # failure the two-marks rule already refuses one level down.
+        repeated = sorted(b for b in ADVERSARIAL_BLOCKS
+                          if counts.get(normalise(b).strip(" .:"), 0) > 1)
+        if repeated:
+            duplicated_blocks.append(f"{key} repeats {', '.join(repeated)}")
         absent = [b for b in ADVERSARIAL_BLOCKS if normalise(b).strip(" .:") not in labels]
         if absent:
             missing_blocks.append(f"{key} is missing {', '.join(absent)}")
@@ -1581,6 +1619,8 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             rep.fail(f"{len(entries)} grievance(s) {label}: {shown}{more}. {message}")
 
     for group, message in (
+        (duplicated_blocks, "One block, once. A stale one beside its replacement leaves a "
+                            "reader two answers and no line saying which is current."),
         (missing_blocks, "Every entry carries all five blocks; the gap between expectation and "
                          "behaviour is the actionable part and it lives in two of them."),
         (bad_kind, "One of: " + ", ".join(repr(k) for k in ADVERSARIAL_KINDS) +
@@ -1624,15 +1664,15 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             "header. Phase 7b may have questioned the very personas this pass writes complaints "
             "for, and a file carrying the grievances without those findings inverts it."
         )
-    elif not core_verification(core_text).strip():
-        # The precondition is that the core passed --final, which refuses a
-        # document with no Verification section. Reaching here means it did not,
-        # and an optional pass amplifying an unverified document is exactly what
-        # that precondition exists to prevent.
+    elif verification_problem(core_text):
+        # The precondition is that the core passed --final. Checking only that
+        # the section is non-empty was a weaker rule than --final's own, so a
+        # document --final refuses was accepted by the pass whose precondition
+        # is that --final accepted it.
         rep.fail(
-            "the core document has no Verification section, so it has not passed --final and "
-            "there is nothing for this pass to carry. Run Phase 7b on the core document first: "
-            "these passes amplify what is already there."
+            f"the core document {verification_problem(core_text)}, so it has not passed --final "
+            "and there is nothing for this pass to carry. Run Phase 7b on the core document "
+            "first: these passes amplify what is already there."
         )
     else:
         block = carried_block(header, carried.start(1))
@@ -1667,8 +1707,16 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             "complaints.**'. inferred and invented are both reconstructions, and a source named "
             "beside inferred reads as established unless the header says otherwise."
         )
-    if not observed_count and not re.search(
-            r"\b(no|none|nothing|not)\b[^.]{0,60}\bobserved\b", header, re.I):
+    # A declaration, not advice. "Do not label invented entries observed" is a
+    # negation near the word and instructs the author rather than telling the
+    # reader what this run contains, so the assertion has to be a bold
+    # declaration and must not be an imperative.
+    said_none_observed = any(
+        re.search(r"\b(no|none|nothing)\b", m.group(0), re.I)
+        and not re.match(r"\*\*\s*(do|don't|do not|never|avoid|always)\b", m.group(0), re.I)
+        for m in re.finditer(r"^\*\*[^*]*\bobserved\b[^*]*\*\*", header, re.M)
+    )
+    if not observed_count and not said_none_observed:
         rep.fail(
             "no grievance is marked observed, and the header does not say so. A run where every "
             "entry is a reconstruction is a list of ways the subject would plausibly frustrate "
