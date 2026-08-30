@@ -295,7 +295,7 @@ ENRICHED_HEADINGS = {"✅": "How it's answered today",
 
 
 def core_items(core_text):
-    """(number, coverage mark) for every item row, in document order.
+    """(number, coverage mark, persona id) for every item row, in document order.
 
     Reads the same rows verify.py reads, by the same shape: a leading number and
     a coverage mark in a trailing cell. Deliberately not an import of the
@@ -384,6 +384,36 @@ def footer_mark_disagrees(text):
     return swap(text, block, re.sub(r"^(`daily` · )✅", r"\1○", block, flags=re.M))
 
 
+def footer_drops_the_mark(text):
+    """A graded entry whose footer carries no mark at all.
+
+    An absent mark agrees with anything, so "the footer marks agree" was not a
+    check until the mark was required to be present.
+    """
+    block = _first(text, "✅")
+    return swap(text, block, re.sub(r"^(`daily` · )✅ · ", r"\1", block, flags=re.M))
+
+
+def heading_repeated(text):
+    """The same valid heading twice. A set comparison passes this; a count does not."""
+    block = _first(text, "○")
+    return swap(text, block, block.replace(
+        "**What would have to exist.**",
+        "**What would have to exist.** One thing.\n\n**What would have to exist.**"))
+
+
+def heading_not_third(text):
+    """The derived heading pushed to fourth by a block placed third.
+
+    Checking only that the heading exists somewhere leaves the position
+    unchecked, and the rule this checker advertises is positional.
+    """
+    block = _first(text, "○")
+    return swap(text, block, block.replace(
+        "**What would have to exist.**",
+        "**An aside.** Something else entirely.\n\n**What would have to exist.**"))
+
+
 # (name, mutation, expected-substring). All run against d_ok.md as the core.
 ENRICHED_MUTATIONS = [
     ("enriched-heading-contradicts-mark", wrong_heading,
@@ -416,6 +446,20 @@ ENRICHED_MUTATIONS = [
      "have more than one enriched entry"),
     ("enriched-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no enriched entries found"),
+    ("enriched-footer-drops-the-mark", footer_drops_the_mark,
+     "carry no coverage mark in their footer"),
+    ("enriched-same-heading-twice", heading_repeated,
+     "more than one third-block heading"),
+    ("enriched-heading-not-third", heading_not_third,
+     "third-block heading is not the third block"),
+    ("enriched-verification-carry-placeholder",
+     lambda t: edit_line(t, "**Carried from the core document's Verification section:**",
+                         "**Carried from the core document's Verification section:** TBD"),
+     "records no findings"),
+    ("enriched-coverage-key-omits-a-mark",
+     lambda t: edit_line(t, "**Coverage key:**",
+                         "**Coverage key:** ✅ served well today · ◐ partially served."),
+     "does not explain"),
 ]
 
 # A no-coverage core takes the third heading form, and must not be given ○.

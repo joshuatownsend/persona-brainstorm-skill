@@ -966,21 +966,34 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
         )
 
     graded = any(core.values())
+    known = {normalise(v) for v in ENRICHED_HEADINGS.values()}
     wrong: list[str] = []
     unheaded: list[int] = []
     two: list[int] = []
+    misplaced: list[str] = []
     cov_mismatch: list[str] = []
+    no_mark: list[int] = []
     for n in sorted(set(core) & set(entries)):
         start, end = entries[n]
         body = text[start:end]
         want = ENRICHED_HEADINGS[core[n]]
-        found = [h for h in re.findall(
-            r"^\*\*([^*]+?)\.?\*\*", body, re.M)
-            if normalise(h) in {normalise(v) for v in ENRICHED_HEADINGS.values()}]
+        labels = [m.group(1) for m in re.finditer(r"^\*\*([^*]+?)\.?\*\*", body, re.M)]
+        found = [h for h in labels if normalise(h) in known]
         if not found:
             unheaded.append(n)
-        elif len(set(normalise(f) for f in found)) > 1:
+        elif len(found) > 1:
+            # By count, not by distinct value. The same heading twice is as
+            # malformed as two different ones, and a set comparison passes it.
             two.append(n)
+        elif labels.index(found[0]) != 2:
+            # It is the *third* block, and checking only that the heading exists
+            # somewhere leaves the position unchecked -- an entry can put
+            # anything third and the derived heading fourth, and still satisfy a
+            # rule this checker advertises as positional.
+            at = labels.index(found[0]) + 1
+            misplaced.append(
+                f"{n} has '{found[0]}' as block {at} of {len(labels)}, not the third"
+            )
         elif normalise(found[0]) != normalise(want):
             mark = core[n] or "no coverage pass"
             wrong.append(f"{n} is {mark} and needs '{want}', not '{found[0]}'")
@@ -988,15 +1001,30 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
         # disagrees with the heading beside it is the contradiction the derived
         # heading exists to prevent, arriving through the other column.
         foot = re.search(r"^.*\btopics:.*$", body, re.M)
-        if foot:
-            seen = [c for c in COVERAGE_MARKS if c in foot.group(0)]
-            if graded and core[n] and seen and seen[0] != core[n]:
-                cov_mismatch.append(f"{n} is {core[n]} in the core document, {seen[0]} here")
-            elif not graded and seen:
-                cov_mismatch.append(
-                    f"{n} carries {seen[0]} on a run with no coverage pass"
-                )
+        seen = [c for c in COVERAGE_MARKS if c in foot.group(0)] if foot else []
+        if graded and core[n] and not seen:
+            # An absent footer agrees with anything, so "the marks agree" is not
+            # a check until the mark is required to be there.
+            no_mark.append(n)
+        elif graded and core[n] and seen and seen[0] != core[n]:
+            cov_mismatch.append(f"{n} is {core[n]} in the core document, {seen[0]} here")
+        elif not graded and seen:
+            cov_mismatch.append(f"{n} carries {seen[0]} on a run with no coverage pass")
 
+    if no_mark:
+        shown = ", ".join(str(n) for n in no_mark[:12])
+        more = f" (+{len(no_mark) - 12} more)" if len(no_mark) > 12 else ""
+        rep.fail(
+            f"{len(no_mark)} entr(y/ies) carry no coverage mark in their footer: {shown}{more}. "
+            "The mark is what tells a reader which of the three third-block forms they are "
+            "reading; without it the entry is a scene with no stated relation to what exists."
+        )
+    for m in misplaced:
+        rep.fail(
+            f"third-block heading is not the third block: {m}. The order is the situation, then "
+            "why it matters, then what answering it takes — a reader who finds the capability "
+            "before the stakes has been given the answer to a question not yet asked."
+        )
     if unheaded:
         shown = ", ".join(str(n) for n in unheaded[:12])
         more = f" (+{len(unheaded) - 12} more)" if len(unheaded) > 12 else ""
@@ -1039,12 +1067,24 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
         elif not is_substantive(m.group(1).strip().strip("*").strip()):
             rep.fail(f"**{label}:** is present but declares nothing.")
 
-    if not re.search(r"Carried from the core document'?s Verification section", header, re.I):
+    carried = re.search(
+        r"Carried from the core document'?s Verification section:?\*{0,2}(.*)",
+        header, re.I)
+    if not carried:
         rep.fail(
             "the core document's Verification section is not carried into the enriched header. "
             "Phase 7b records what is wrong with these items; this pass rewrites those same "
             "items into their most persuasive form, and a file carrying the scenes without the "
             "warnings inverts the point of the phase that produced them."
+        )
+    elif not is_substantive(carried.group(1).strip().strip("*").strip()):
+        # The label alone satisfies a label check while carrying nothing, which
+        # is the same defect --final catches in the core document: an absent
+        # verification reads as a passed one.
+        rep.fail(
+            "the carried Verification line is present but records no findings. A label with "
+            "nothing after it reads as though the adversarial pass found nothing, which is a "
+            "stronger claim than the document is making."
         )
 
     if "invented" not in header.lower():
@@ -1054,13 +1094,23 @@ def check_enriched(items: list[Item], text: str, rep: Report) -> None:
             "says otherwise once."
         )
 
-    key = re.search(r"^\*{0,2}Coverage key\*{0,2}:", header, re.M)
+    key = re.search(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)
     unassessed = re.search(r"^\*{0,2}Coverage\*{0,2}:\*{0,2}\s*not assessed", header, re.M | re.I)
     if graded and not key:
         rep.fail(
             "no **Coverage key:** line in the enriched header, but the entries carry coverage "
             "marks. A reader who cannot tell ◐ from ○ cannot read them."
         )
+    elif graded:
+        # A label is not a key. What can be checked is that every mark the
+        # entries use is explained; whether the explanations are the right way
+        # round is not mechanical, and the reference says so.
+        absent = [c for c in ("✅", "◐", "○") if c not in key.group(1)]
+        if absent:
+            rep.fail(
+                f"**Coverage key:** does not explain {' '.join(absent)}, which the entries use. "
+                "A key that omits a mark is worse than none: it reads as complete."
+            )
     if not graded and not unassessed:
         rep.fail(
             "no '**Coverage:** not assessed' line in the enriched header. On a run with no "
