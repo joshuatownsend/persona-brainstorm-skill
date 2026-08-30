@@ -30,15 +30,22 @@ mark already in the table:
 | Coverage | Third block heading | Mood |
 |---|---|---|
 | ✅ or ◐ | **How it's answered today** | present tense — describes something that runs |
-| ○ | **What would have to exist** | conditional — describes something that does not |
+| ○ | **What would have to exist** | conditional — describes something assessed and absent |
+| *no coverage pass* | **What answering this would take** | conditional — describes the capability, claims nothing about whether it is there |
 
-At coverage depth **None** there are no marks, so **every** item takes the second form. A run with
-no inventory cannot describe how anything is answered, and reaching for the first form there is
-the failure this table exists to prevent.
+The third row is not a stylistic variant of the second. At coverage depth **None** nobody looked,
+so coverage is **unknown** — and unknown is not the same as unserved. Writing *"what would have to
+exist"* over an unassessed item asserts that it does not exist, which is precisely the claim `○`
+makes and precisely the claim the footer rule below refuses to let that run make. Withholding the
+mark while asserting its meaning one line up would be the same error wearing a different hat.
+
+What a depth-None run can honestly say is what the ask *requires*. That is worth writing — it is
+the same capability-shaped reasoning Phase 5 does, one item at a time — and it commits to nothing
+about the subject.
 
 This is deliberately mechanical. A heading derived from a mark cannot drift the way a judgment
-call does, a reader can tell the two forms apart at a glance without trusting you, and a checker
-can verify it later with a join on the item number. A disclosure paragraph at the top of the
+call does, a reader can tell the forms apart at a glance without trusting you, and a checker can
+verify it later with a join on the item number. A disclosure paragraph at the top of the
 document achieves none of those things.
 
 ### A served item may only claim what the inventory records
@@ -244,8 +251,10 @@ Structure, in order:
 
 1. **Header** — the question as the title, one paragraph on how to read the page, and one line on
    what the frontier mark means for this subject.
-2. **The honesty note from the markdown header**, in full. It is more necessary here, not less:
-   the artifact is the version that gets shared onward, detached from this conversation.
+2. **The honesty note and the `**Frequencies:**` line from the markdown header**, both in full.
+   They are more necessary here, not less: the artifact is the version that gets shared onward,
+   detached from this conversation and from the core document. Every card shows a frequency pill,
+   and `many/day` on sixty cards reads as measurement unless the page says otherwise once.
 3. **Topic chips** — click to filter. `n of N` visible.
 4. **Topic mix by persona** — one stacked bar per persona, segmented by each item's **primary**
    topic, with the item count. Primary, because items carry up to three topics and a bar counting
@@ -260,7 +269,7 @@ Structure, in order:
 7. **A dated source line** — what this is, what it was generated from, and when.
 
 Where there are coverage marks, keep them visible on every card. The mark is what tells a reader
-which of the two third-block forms they are reading, and a filtered view that hides it turns the
+which third-block form they are reading, and a filtered view that hides it turns the
 page back into a case study. A depth-**None** run has no marks and shows no pills, which is honest
 for the same reason the footer omits them there — every item is in the conditional form, and the
 header says so.

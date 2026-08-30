@@ -719,9 +719,11 @@ of care:
 
 1. **The coverage mark chooses the third block's heading.** ✅ and ◐ get *"How it's answered
    today"*, present tense. ○ gets *"What would have to exist"*, conditional. A run at coverage
-   depth **None** has no marks, so every item takes the second form — an inventory-free run cannot
-   describe how anything is answered. The heading is derived, never chosen, which is what makes the
-   two forms impossible to confuse and makes the rule checkable later.
+   depth **None** has no marks and takes a third form, *"What answering this would take"* — because
+   nobody looked, so coverage is unknown, and unknown is not unserved. Asserting absence there
+   would make exactly the claim ○ makes, on a run that never assessed anything. The heading is
+   derived, never chosen, which is what makes the forms impossible to confuse and makes the rule
+   checkable later.
 2. **A served item may only claim what Phase 3 recorded**, and names the Appendix A lane that
    carries it. The heading rule catches past tense on an unserved item; it does not catch invented
    specificity on a served one — a plausible number, a named field, a duration, all reading as
