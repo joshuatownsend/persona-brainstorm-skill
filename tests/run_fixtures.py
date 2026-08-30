@@ -279,8 +279,7 @@ POSITIVE_MUTATIONS = [
     # the row below the #### belongs to no persona and is never parsed, so the
     # document is simply correct. Asserting the miscount instead would have
     # pinned the bug in place -- the case would go red the moment it was fixed.
-    ("level4-heading-closes-the-persona-section", "d_ok.md",
-     lambda t: level4_subsection(t)),
+    ("level4-heading-closes-the-persona-section", "d_ok.md", level4_subsection),
 ]
 
 # ---------------------------------------------------------------------------
