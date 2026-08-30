@@ -749,11 +749,18 @@ ADVERSARIAL_MUTATIONS = [
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"^\*\*About:\*\*.*$", "**About:** the thing generally. *(invented)*",
                            _adv_first(t), count=1, flags=re.M)),
-     "name no Appendix A lane"),
+     "name no inventory lane"),
     ("adversarial-no-evidence-mark",
      lambda t: swap(t, _adv_first(t),
                     re.sub(r"\s*\*\([^)]*\)\*", "", _adv_first(t), count=1)),
      "carry no evidence mark"),
+    # A mark that was written and did not parse is a third state. Reporting it
+    # as "no mark" sends the author to add one, which the two-marks rule then
+    # refuses -- a diagnostic that names the wrong cause steers the fix.
+    ("adversarial-unparseable-mark-is-not-a-missing-one",
+     lambda t: swap(t, _adv_first(t),
+                    _adv_first(t).replace("*(invented)*", "*(invented)", 1)),
+     "could not be read"),
     ("adversarial-two-evidence-marks",
      lambda t: swap(t, _adv_first(t),
                     _adv_first(t).replace("*(observed: a support thread)*",
@@ -851,8 +858,44 @@ ADVERSARIAL_MUTATIONS = [
 
 # Must still pass: the expectation gap is the one kind exempt from the lane
 # rule, and an exemption nothing asserts is an exemption nobody knows is there.
+def about_soft_wrapped(t):
+    """Wrap the first About block so its status word falls on line two.
+
+    Identical words, valid markdown, identical rendering -- and it used to FAIL.
+    The block value was read from the label's own physical line, so a wrap hid
+    the lane or the status; and a continuation line beginning with emphasis was
+    itself parsed as a new label, truncating the block. These lines carry a
+    lane, a status and a mark, so they are long, and the reference's own worked
+    example wraps its heading for the same reason.
+    """
+    first = _adv_first(t)
+    m = re.search(r"^\*\*About:\*\* (.*)$", first, re.M)
+    require(m is not None, "no About line in the first grievance")
+    line = m.group(1)
+    cut = line.rfind(" ", 0, len(line) // 2)
+    require(cut > 0, "About line too short to wrap")
+    return swap(t, first,
+                first.replace(m.group(0),
+                              "**About:** " + line[:cut] + "\n" + line[cut + 1:], 1))
+
+
+def mark_source_with_a_parenthesis(t):
+    """An observed source that quotes this checker's own output.
+
+    Those messages contain "primitive(s)", and the source capture used to stop
+    at the first ')' -- so the mark vanished and was reported as *absent*. The
+    most auditable source an observed mark can name was the one the rule broke
+    on.
+    """
+    first = _adv_first(t)
+    quoted = '*(observed: verify.py said "1 primitive(s) carry no mark")*'
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
 ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
+    ("adversarial-about-block-may-soft-wrap", about_soft_wrapped),
+    ("adversarial-mark-source-may-contain-a-parenthesis", mark_source_with_a_parenthesis),
 ]
 
 # ---------------------------------------------------------------------------
@@ -946,7 +989,133 @@ FINAL_CASES = [
      lambda t: t[:t.index("## Verification (Phase 7)")]
      + "## Verification (Phase 7)\n\n"
      + t[t.index("## What the 60 imply"):],
-     "non-empty line"),
+     "0 substantive block(s). Phase 7b"),
+    # A graded document with its inventory removed. --final used to pass this at
+    # exit 0 with a full tally still on the page: sixty coverage claims and no
+    # evidence in the file for any of them.
+    ("final-rejects-graded-document-with-no-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")],
+     "no inventory lanes can be read"),
+    # "Lanes moved" is a movement appendix, not an inventory. The heading
+    # whitelist accepted "lanes" while output-template.md documented only
+    # coverage and inventory -- a whitelist wider than its own documentation.
+    ("final-rejects-a-lanes-headed-analysis-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n## Appendix B — Lanes moved\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A — Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
+    # One answer hard-wrapped over five lines is one answer. Counting physical
+    # lines let it stand in for five, with four Phase 7b questions unanswered.
+    ("final-rejects-one-answer-wrapped-over-five-lines", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nA fresh agent read the document and found\n"
+     + "the roster holds up under the distinctness test, that several coverage\n"
+     + "marks read as inferred rather than verified, that two items restate\n"
+     + "their asks rather than naming a decision, and that a practitioner would\n"
+     + "question the frequency column before anything else on the page.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "1 substantive block"),
+    # ...and the fix for that must not reject the other legitimate shape. Five
+    # answers as an ordinary Markdown list share one blank-line-separated block,
+    # so counting blocks turned a false pass into a false failure -- the same
+    # class as the About-block defect this PR opened with, reintroduced while
+    # fixing something else. Neither the prose fixtures nor the shipped
+    # documents caught it, because both happen to use paragraphs.
+    ("final-accepts-five-answers-as-adjacent-bullets", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\n"
+     + "- Items 4 and 11 would apply unchanged to any other subject here.\n"
+     + "- P2 and P5 are indistinguishable once the persona names are covered.\n"
+     + "- The coverage marks on items 7 and 19 read as inferred, not verified.\n"
+     + "- Items 22 and 30 restate their asks instead of naming a decision.\n"
+     + "- A practitioner would question the frequency column's basis first.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     None),
+    # A fenced example quoting the template is not a Verification section.
+    # section_body() searched raw text, so a document that merely quoted
+    # "## Verification" satisfied the gate the real section proves -- the same
+    # blank-fences-first rule the appendix parser already applied, in the
+    # sibling function that did not.
+    ("final-rejects-a-fenced-verification-example", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + t[t.index("## What the 60 imply"):]
+     + "\n```markdown\n## Verification\n\nFirst answer paragraph here.\n\n"
+     + "Second answer paragraph here.\n\nThird answer paragraph here.\n\n"
+     + "Fourth answer paragraph here.\n\nFifth answer paragraph here.\n```\n",
+     "no Verification section"),
+    # Outer pipes are optional in Markdown. Requiring them meant a valid table
+    # of five answers was seen as one block and the document rejected -- a false
+    # failure, the defect class this checker exists not to produce.
+    ("final-accepts-a-table-without-outer-pipes", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nQuestion | Answer\n---|---\n"
+     + "Generic items | Items 4 and 11 apply to any subject in this category.\n"
+     + "Indistinct personas | P2 and P5 cannot be told apart by their asks.\n"
+     + "Inferred marks | The marks on items 7 and 19 read as inferred.\n"
+     + "Missing decisions | Items 22 and 30 restate their asks.\n"
+     + "Practitioner check | The frequency column's basis would be questioned.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     None),
+    # The same heading-level defect as the appendix parser, in the sibling
+    # function: "### Verification" matched, but the body ended only at the next
+    # H2, so an empty section absorbed its sibling headings and their paragraphs
+    # were counted as the answers it did not contain. Fixing one boundary and
+    # not sweeping for the other is why this survived a round longer.
+    ("final-rejects-an-h3-verification-absorbing-siblings", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Review\n\n### Verification\n\n### Other notes\n\n"
+     + "The roster was approved without changes on the first pass.\n\n"
+     + "The budget was set at sixty before any item existed.\n\n"
+     + "The archetype was chosen from the table in Phase 0.\n\n"
+     + "The inventory was built after the items were written.\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "substantive block"),
+    # A table's header row names the columns. Counting it let a header plus four
+    # data rows read as five answers with one question unanswered.
+    ("final-rejects-a-table-header-counted-as-an-answer", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\n| Question | Answer |\n|---|---|\n"
+     + "| Generic items | Items 4 and 11 apply to any subject in this category. |\n"
+     + "| Indistinct personas | P2 and P5 cannot be told apart by their asks. |\n"
+     + "| Inferred marks | The marks on items 7 and 19 read as inferred. |\n"
+     + "| Missing decisions | Items 22 and 30 restate their asks. |\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "4 substantive block"),
+    # Appendices written as H3 siblings under an H2. The search accepts an H3
+    # appendix heading, so terminating the section only at the next H2 let an
+    # empty inventory absorb the appendices after it, and their lane rows then
+    # proved the missing inventory existed.
+    ("final-rejects-an-h3-inventory-absorbing-later-appendices", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "## Appendices\n\n### Appendix B - Current coverage\n\n"
+     + "### Appendix C - Run comparison\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A - Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
+    # A lane-shaped row in the wrong appendix is not an inventory either.
+    # Documents carry several appendices -- this repo's own dogfood run has a
+    # movement appendix beside its inventory -- so selecting the first one that
+    # contains a lane row accepts an analysis table as proof the inventory
+    # survived. The heading says which appendix it is.
+    ("final-rejects-lanes-in-a-non-inventory-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n## Appendix B — Run comparison\n\n| Lane | Note |\n|---|---|\n"
+     + "| **A — Added in pass two** | analysis only |\n",
+     "no inventory lanes can be read"),
+    # Lane-shaped text is not an inventory. The guard searched the whole
+    # document, so a fenced example -- or the Verification section quoting the
+    # expected row syntax -- stood in for the appendix it was meant to prove.
+    ("final-rejects-lane-shaped-text-outside-the-appendix", "d_ok.md",
+     lambda t: t[:t.index("## Appendix A")]
+     + "\n```markdown\n| **A — Not an inventory** | example |\n```\n",
+     "no inventory lanes can be read"),
+    # Five lines cleared the old non-empty count while recording nothing. The
+    # gate exists to require five recorded answers, so the bar is substance --
+    # a claim satisfied by a non-claim is the failure this whole suite is for.
+    ("final-rejects-five-placeholder-lines", "d_ok.md",
+     lambda t: t[:t.index("## Verification (Phase 7)")]
+     + "## Verification (Phase 7)\n\nx\n\ny\n\nz\n\na\n\nb\n\n"
+     + t[t.index("## What the 60 imply"):],
+     "from 5 non-empty placeholder block(s)"),
 ]
 
 

@@ -174,6 +174,10 @@ full writeup if you filed one.>
   A column that silently mixes verified and best-effort marks is worse than one that admits it.
 - **Bold the item numbers you cite** in the primitives section only if the document is long enough
   that readers will jump; otherwise plain is fine.
+- **The inventory appendix heading has to name coverage or inventory.** `scripts/verify.py` finds it by heading
+  — `Appendix <letter> — Current coverage …` — not by looking for lane-shaped rows, because a
+  document may carry several appendices and a movement or comparison table full of lanes is not an
+  inventory. The letter is free; the word `coverage` (or `inventory`) is what identifies it.
 - **Keep the appendix genuinely demoted.** If it grows past about a quarter of the document, it's
   competing with the brainstorm — move detail into the linked issue writeups.
 - **Link filed issues inline** so the caveats stay actionable after the document ages.
