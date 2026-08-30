@@ -597,6 +597,29 @@ ENRICHED_MUTATIONS = [
     ("enriched-frontier-mark-added",
      lambda t: swap(t, no_bolt(t), foot_sub(no_bolt(t), "` · ", "` · ⚡ · ")),
      "frontier mark disagrees with the core document"),
+    # A tilde fence is what a document quoting a backtick fence has to use.
+    ("enriched-everything-tilde-fenced",
+     lambda t: "~~~markdown\n" + t + "\n~~~\n", "no enriched entries found"),
+    ("enriched-two-footers",
+     lambda t: swap(t, _first(t, "○"),
+                    _first(t, "○").rstrip() + "\n\n`onboarding` · ✅ · topics: `other`\n"),
+     "more than one footer"),
+    # Negation ahead of the noun, which the phrase-window match let through.
+    ("enriched-disclosure-negated-early",
+     lambda t: edit_line(t, "**The scenes are invented.**",
+                         "**No scenes are invented.** Every one was witnessed."),
+     "no affirmative statement that the scenes are invented"),
+    ("enriched-two-coverage-keys",
+     lambda t: swap(t, line_starting(t, "**Coverage key:**"),
+                    line_starting(t, "**Coverage key:**")
+                    + "\n\n**Coverage key:** ✅ never · ◐ sometimes · ○ always."),
+     "**Coverage key:** lines in the enriched header"),
+    # An apostrophe is not a quote delimiter: treating one as an opener let an
+    # unquoted ask containing a contraction read as quoted.
+    ("enriched-heading-ask-only-apostrophes",
+     lambda t: re.sub(r"^(####\s+\d+\s+—).*$", r"\1 they don't know it's answerable",
+                      t, count=1, flags=re.M),
+     "carry no quoted ask"),
 ]
 
 # A no-coverage core takes the third heading form, and must not be given ○.

@@ -940,13 +940,17 @@ def blank_fences(text: str) -> str:
     reported offset once a document contains one example.
     """
     out = []
-    in_fence = False
+    fence = None
     for line in text.split("\n"):
-        if line.strip().startswith("```"):
-            in_fence = not in_fence
+        m = re.match(r"\s*(`{3,}|~{3,})", line)
+        # Tilde fences are as valid as backtick ones and are what a document
+        # containing a backtick fence has to use to quote it. Closing requires
+        # the same character, so a ``` inside a ~~~ block does not end it.
+        if m and (fence is None or m.group(1)[0] == fence):
+            fence = m.group(1)[0] if fence is None else None
             out.append(" " * len(line))
             continue
-        out.append(" " * len(line) if in_fence else line)
+        out.append(" " * len(line) if fence else line)
     return "\n".join(out)
 
 
@@ -1017,6 +1021,7 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
     item_frontier = {it.n: it.frontier for it in items}
     askless: list[int] = []
     mismatched_ask: list[int] = []
+    two_footers: list[int] = []
     freq_off: list[str] = []
     frontier_off: list[str] = []
     wrong: list[str] = []
@@ -1058,7 +1063,11 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         # an enriched heading may shorten a long ask — but a heading carrying
         # someone else's ask, or none, is not a shortening.
         head = heads.get(n, "")
-        quoted = re.search(r"[\"“'‘«](.+)[\"”'’»]", head, re.S)
+        # Double quotes only, and non-greedy. An apostrophe is not a delimiter:
+        # treating one as an opener let "don't" match from the apostrophe to
+        # whatever quote-like character came next, so an unquoted ask containing
+        # a contraction read as quoted.
+        quoted = re.search(r"[\"“](.+?)[\"”]", head, re.S)
         if not quoted:
             askless.append(n)
         elif SequenceMatcher(
@@ -1069,7 +1078,10 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         # The prescribed footer, not any line mentioning topics: a prose
         # sentence containing the word satisfied the loose form while the
         # frequency and frontier mark it is supposed to copy were gone.
-        foot = re.search(r"^`([^`]+)`\s*·.*\btopics:.*$", body, re.M)
+        foots = list(re.finditer(r"^`([^`]+)`\s*·.*\btopics:.*$", body, re.M))
+        if len(foots) > 1:
+            two_footers.append(n)
+        foot = foots[0] if foots else None
         # Ordered, not the COVERAGE_MARKS set: set iteration order varies with
         # the interpreter's hash seed, so a footer carrying two marks would
         # report a different one run to run -- and pass or fail by luck.
@@ -1140,6 +1152,12 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
         rep.fail(
             f"frontier mark disagrees with the core document: {f}. ⚡ is the class of ask this "
             "subject makes hard and valuable; adding or dropping one here re-grades the item."
+        )
+    if two_footers:
+        rep.fail(
+            f"entr(y/ies) {two_footers} carry more than one footer. Two versions of the fourth "
+            "part leave a reader with two frequencies and two coverage marks for one ask, and "
+            "neither line says which is stale."
         )
     if no_footer:
         shown =", ".join(str(n) for n in no_footer[:12])
@@ -1254,7 +1272,22 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
             "stronger claim than the document is making."
         )
 
-    if not re.search(r"\bscenes\b[^.]{0,40}\bare invented\b", header, re.I):
+    # Sentence by sentence, and negation-free. Matching a window between two
+    # phrases keeps admitting the opposite claim by a route the window does not
+    # cover: "are not invented" was rejected, then "no scenes are invented"
+    # walked straight through it.
+    def affirms(sentence: str) -> bool:
+        m = re.search(r"\bare invented\b", sentence, re.I)
+        if not m or not re.search(r"\bscenes\b", sentence[: m.start()], re.I):
+            return False
+        # Only the clause making the claim. What follows it is free to say what
+        # the scenes are *not* — "not an observed incident" is the template's
+        # own next words, and a whole-sentence negation test rejects it.
+        return not re.search(r"\b(no|not|never|nothing|none)\b",
+                             sentence[: m.end()], re.I)
+
+    affirmed = any(affirms(s) for s in re.split(r"(?<=[.!?])\s+", header))
+    if not affirmed:
         rep.fail(
             "the enriched header carries no affirmative statement that the scenes are invented "
             "— expected a sentence of the form 'The scenes are invented.' The word appearing "
@@ -1278,6 +1311,12 @@ def check_enriched(items: list[Item], claims: dict, text: str, rep: Report) -> N
             "entry as wishful thinking."
         )
 
+    keys = re.findall(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)
+    if len(keys) > 1:
+        rep.fail(
+            f"{len(keys)} **Coverage key:** lines in the enriched header. Two keys give a "
+            "standalone reader two incompatible readings of the same marks."
+        )
     key = re.search(r"^\*{0,2}Coverage key\*{0,2}:\*{0,2}(.*)", header, re.M)
     unassessed = re.search(r"^\*{0,2}Coverage\*{0,2}:\*{0,2}\s*not assessed", header, re.M | re.I)
     if graded and not key:
