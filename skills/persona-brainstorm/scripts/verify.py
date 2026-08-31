@@ -489,9 +489,17 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                          and not region[:found[0].start()].strip() else None)
                 # Any further mark in the declaration contradicts the first --
                 # adjacent to it or beyond the description, both count.
-                # Inline code is stripped so a quoted example is not counted --
-                # the same distinction anchoring makes for the first mark.
-                rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
+                #
+                # Passed raw. This line used to pre-strip inline code with a
+                # single-backtick regex so a quoted example could not count as a
+                # second mark, and that was the last place the code-span rule
+                # still lived outside find_mark_shapes(). Once the helper
+                # learned code spans, the leftover strip stopped merely
+                # duplicating it and started fighting it: on ``*(invented)*`` it
+                # deleted each adjacent fence pair and *exposed* the example it
+                # existed to hide, failing a valid primitive for carrying two
+                # marks. The consolidation was not finished until this went.
+                rest = region[first.end():] if first else ""
                 marks = ([(first.group("kind"), first.group("source") or "")]
                          if first else [])
                 # Shapes, not marks: a stale annotation beside its replacement

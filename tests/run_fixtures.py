@@ -1134,6 +1134,30 @@ ADVERSARIAL_POSITIVES = [
      mark_behind_an_escaped_backslash),
 ]
 
+def primitive_quoting_notation_in_a_multi_backtick_span(t):
+    """A primitive that carries its mark and then quotes the notation.
+
+    The description legitimately shows what the annotation looks like, in a
+    multi-backtick span because the example contains no backtick but the
+    surrounding prose might. Only the real mark counts; the quote is an example.
+
+    The primitive path used to pre-strip inline code with a single-backtick
+    regex before looking for a second mark. On a multi-backtick span that
+    deleted each adjacent fence pair and left the example exposed, so a valid
+    primitive failed for carrying two evidence marks -- the strip re-creating
+    the exact bug it had been added to prevent, once the shared helper had
+    learned to handle code spans properly.
+    """
+    return swap(t, "`cross-run-aggregation` *(invented)*",
+                "`cross-run-aggregation` *(invented)* — accepts "
+                "``_(invented)_`` as input")
+
+
+CORE_POSITIVES = [
+    ("primitive-may-quote-the-notation-in-a-multi-backtick-span",
+     "d_ok.md", primitive_quoting_notation_in_a_multi_backtick_span),
+]
+
 # ---------------------------------------------------------------------------
 # Statics: defects a mutation cannot express, because they are damage to the
 # body of the document rather than to one declaration.
@@ -1409,6 +1433,21 @@ def main():
                 report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
             else:
                 report(True, name)
+
+        print("\ngenerated positives (valid shapes that must still pass):")
+        for name, base, mutate in CORE_POSITIVES:
+            try:
+                text = mutate(load(base))
+            except (BrokenFixture, ValueError) as exc:
+                report(False, name, f"mutation no longer applies to {base}: {exc}")
+                continue
+            path = os.path.join(tmp, name + ".md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            rc, out = run(path)
+            fails = failures_in(out)
+            report(rc == 0, name,
+                   "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
 
         print("\nenrichment (--enriched):")
         for core_name, cases in (("d_ok.md", ENRICHED_MUTATIONS),
