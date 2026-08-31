@@ -95,7 +95,18 @@ EVIDENCE = ("observed", "inferred", "invented")
 # delimiter alone. Change the delimiter set here and everything follows.
 MARK_DELIM = r"[*_]"
 
-MARK_SOURCE = r"(?:[^)]|\)(?!" + MARK_DELIM + r"))*"
+
+def _mark_source(close):
+    """A source that runs to the mark's own closing fence, not the first ')'.
+
+    Parameterised by that fence so both patterns below can require the closing
+    delimiter to match the opening one. An earlier version treated the two ends
+    as independent, and that was not the harmless laxity it was documented to
+    be: in `*(observed: result(foo)_bar "x" in README.md)*` the source stopped
+    at `)_`, the strip removed only that prefix, and the quote and filename left
+    behind answered a citation check the author never wrote.
+    """
+    return r"(?:[^)]|\)(?!" + close + r"))*"
 
 # The annotation, anchored: leading space, then *(kind)* or *(kind: source)* --
 # or the same thing spelled with underscores.
@@ -108,31 +119,39 @@ MARK_SOURCE = r"(?:[^)]|\)(?!" + MARK_DELIM + r"))*"
 # author had run this checker and watched it pass, which is the worst moment for
 # a check to change its mind.
 #
-# Deliberately NOT a backreference tying the closing delimiter to the opening
-# one: callers read group(1) and group(2) by number, and re.findall() unpacks
-# them positionally, so a group for the delimiter would silently shift every
-# consumer. The cost is that a mismatched *(invented)_ is accepted. That spelling
-# renders as literal text rather than emphasis, so it is a narrow false pass --
-# and strictly better than the false failure it replaces, which hit every mark in
-# three documents at once.
-MARK_RE = (r"\s*" + MARK_DELIM + r"\(\s*([A-Za-z-]+)\s*(?::\s*("
-           + MARK_SOURCE + r"))?\)" + MARK_DELIM)
+# The closing fence is a backreference to the opening one, and the groups are
+# named so that adding it could not silently shift a caller. An earlier version
+# left the two ends independent, justified in this comment as a narrow false
+# pass on a mismatched *(invented)_ . That justification was wrong, and worth
+# leaving here as a record of how: independent fences do not merely accept an
+# odd spelling, they let a *well-formed* mark terminate early on an inner ")_",
+# which strands the rest of its source in the prose for a citation rule to read
+# as the author's own. A laxity argued to be cosmetic was a bypass.
+MARK_RE = (r"\s*(?P<d>" + MARK_DELIM + r")\(\s*(?P<kind>[A-Za-z-]+)\s*"
+           r"(?::\s*(?P<source>" + _mark_source(r"(?P=d)") + r"))?\)(?P=d)")
 
-# The redaction form, deliberately looser than MARK_RE in one dimension only:
-# it does not require a well-formed kind, so a malformed mark cannot survive the
-# strip and leave its source behind to satisfy a citation the author never
-# wrote. Parsing wants precision; redacting wants reach.
+# The redaction form. It removes a mark before a rule reads the prose around it,
+# and it has to sit between two failures that pull in opposite directions.
 #
-# The invariant, and it is the one this pattern broke on its first outing:
-# **whatever MARK_RE can read, this must be able to remove.** It shipped with
-# [^)]*, which stops at the first ')' -- while MARK_SOURCE has accepted a ')'
-# inside a source ever since a mark quoting this checker's own output vanished
-# for containing "primitive(s)". Parser and redactor therefore disagreed about
-# what a mark *is*, and in that gap an expectation gap could cite nothing of its
-# own while its unremoved annotation answered the citation search for it.
-# Sharing MARK_SOURCE is what makes the two agree by construction instead of by
-# remembering to edit both.
-MARK_STRIP_RE = MARK_DELIM + r"\(" + MARK_SOURCE + r"\)" + MARK_DELIM
+# Too narrow and it under-removes: shipped with [^)]*, it stopped at the first
+# ')' while the parser had accepted a ')' inside a source ever since a mark
+# quoting this checker's own output vanished for containing "primitive(s)".
+# Parser and redactor disagreed about what a mark *is*, and in that gap an
+# expectation gap could cite nothing of its own while its unremoved annotation
+# answered the citation search for it. Hence the invariant: **whatever MARK_RE
+# can read, this must be able to remove**, which sharing _mark_source() and the
+# matched fence now guarantee by construction.
+#
+# Too wide and it over-removes: the fix for that under-removal accepted any
+# emphasised parenthetical, which deleted a citation the author had legitimately
+# written as _("answers anything" in README.md)_ and failed a valid entry for
+# citing nothing. That is a false failure, and worse than the bypass it
+# replaced. Requiring a kind word after the paren is what separates a mark from
+# an ordinary emphasised aside; it stays looser than MARK_RE only in not
+# requiring that kind to be well formed, so a malformed mark still cannot
+# survive the strip.
+MARK_STRIP_RE = (r"(?P<sd>" + MARK_DELIM + r")\(\s*[A-Za-z-]+"
+                 + _mark_source(r"(?P=sd)") + r"\)(?P=sd)")
 
 # An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
 # apart from "your mark did not parse": the first sends the author to write one,
@@ -367,7 +386,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 # Inline code is stripped so a quoted example is not counted --
                 # the same distinction anchoring makes for the first mark.
                 rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
-                marks = ([(first.group(1), first.group(2) or "")] if first else [])
+                marks = ([(first.group("kind"), first.group("source") or "")]
+                         if first else [])
                 if first and re.search(MARK_RE, rest):
                     marks.append(("", ""))
                 if len(marks) > 1:
@@ -1834,7 +1854,11 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         # One definition, one home: this was a second copy of the mark pattern
         # and it drifted from MARK_RE the moment MARK_RE was fixed, so a mark
         # that parsed for a primitive still vanished for a grievance.
-        marks = re.findall(MARK_RE, about_block)
+        # finditer, not findall: findall unpacks groups positionally, so naming
+        # the delimiter group would have silently shifted what marks[0][0] meant
+        # rather than failing. Reading the groups by name cannot drift.
+        marks = [(m.group("kind"), m.group("source") or "")
+                 for m in re.finditer(MARK_RE, about_block)]
         if not marks:
             if re.search(MARK_ATTEMPT_RE, about_block):
                 malformed_mark.append(key)

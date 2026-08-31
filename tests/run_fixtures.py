@@ -768,6 +768,38 @@ def expectation_gap_cited_only_inside_a_mark_with_parentheses(text):
         '_(observed: "answers anything" in `README.md` (line 2))_')
 
 
+def expectation_gap_cited_only_inside_a_mixed_fence_mark(text):
+    """The same bypass again, reached by terminating a mark on the wrong fence.
+
+    While the opening and closing delimiters were independent, a source
+    containing ")_" ended a star-delimited mark early. The parser read only
+    through "result(foo", the strip removed only that much, and everything after
+    it -- the quote and the filename -- was left in the prose for the citation
+    rule to read as the author's own.
+
+    This was written off once as a cosmetic laxity affecting only odd spellings
+    like *(invented)_ . It was not: it stranded part of a well-formed mark.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. '
+        '*(observed: result(foo)_bar "answers anything" in README.md)*')
+
+
+def expectation_gap_citing_inside_an_emphasised_aside(text):
+    """A real citation the author wrote inside an ordinary emphasised aside.
+
+    Not a mark -- no kind word after the paren -- so the redaction must leave it
+    alone. Widening the strip to every emphasised parenthetical deleted this
+    entry's promise along with its mark and failed it for citing nothing, which
+    is a false failure and worse than the bypass that widening was meant to fix.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the docs promise _("answers anything" in `README.md`)_. '
+        '*(invented)*')
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -863,6 +895,8 @@ ADVERSARIAL_MUTATIONS = [
      expectation_gap_cited_only_inside_an_underscore_mark, "cite no promise"),
     ("adversarial-expectation-gap-cited-only-inside-a-mark-with-parentheses",
      expectation_gap_cited_only_inside_a_mark_with_parentheses, "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-a-mixed-fence-mark",
+     expectation_gap_cited_only_inside_a_mixed_fence_mark, "cite no promise"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -967,6 +1001,8 @@ ADVERSARIAL_POSITIVES = [
     ("adversarial-mark-source-may-contain-a-parenthesis", mark_source_with_a_parenthesis),
     ("adversarial-mark-may-be-written-with-underscores", mark_written_with_underscores),
     ("adversarial-mark-source-may-contain-an-asterisk", mark_source_may_contain_an_asterisk),
+    ("adversarial-expectation-gap-may-cite-inside-an-emphasised-aside",
+     expectation_gap_citing_inside_an_emphasised_aside),
 ]
 
 # ---------------------------------------------------------------------------
