@@ -89,7 +89,14 @@ MARK_DELIM = r"[*_]"
 # -- _(see "answers anything" in README.md)_ is a citation an author wrote, not
 # an annotation this checker added, and redacting it failed valid entries for
 # citing nothing.
-MARK_KIND = r"(?:" + "|".join(EVIDENCE) + r")"
+#
+# Case-insensitive, because narrowing from [A-Za-z-]+ to a literal alternation
+# quietly took a capability with it: both consumers lower() the kind before
+# using it, so *(Observed: issue #1)* had always been accepted, and a
+# case-sensitive alternation reclassified those documents as carrying an
+# unreadable mark. Narrowing a pattern is never only a narrowing -- whatever the
+# broad version incidentally allowed leaves with it.
+MARK_KIND = r"(?i:" + "|".join(EVIDENCE) + r")"
 
 # The source runs to the mark's own closing fence, not to the first closing
 # parenthesis. A plain [^)]* ended the capture at any ')' inside the source and
@@ -111,8 +118,25 @@ MARK_SOURCE = r"(?:[^)]|\)(?!(?P=d)))*"
 # independent fences let a *well-formed* mark end early on an inner ")_" and
 # strand the rest of its source in the prose, for a citation rule to read as the
 # author's own.
-MARK_RE = (r"(?P<d>" + MARK_DELIM + r")\(\s*(?P<kind>" + MARK_KIND + r")\s*"
-           r"(?::\s*(?P<source>" + MARK_SOURCE + r"))?\)(?P=d)")
+def _mark_re(kind: str) -> str:
+    """The mark pattern, parameterised by what may stand where the kind goes."""
+    return (r"(?P<d>" + MARK_DELIM + r")\(\s*(?P<kind>" + kind + r")\s*"
+            r"(?::\s*(?P<source>" + MARK_SOURCE + r"))?\)(?P=d)")
+
+
+# A mark: the annotation this checker reads a kind and a source from.
+MARK_RE = _mark_re(MARK_KIND)
+
+# Anything *shaped* like one, whatever word stands where the kind belongs.
+#
+# The distinction is not pedantry, and collapsing it cost a rule. The two-marks
+# rule exists so a stale annotation cannot sit beside its replacement and report
+# the document as consistent -- but once "a mark" meant "a mark with a valid
+# kind", `*(invented)* *(probable)*` counted as one mark and passed. The broad
+# pattern had been carrying that rule, silently, and narrowing it dropped the
+# load. Counting annotations and reading them are different questions and now
+# ask different patterns.
+MARK_SHAPE_RE = _mark_re(r"[A-Za-z-]+")
 
 # An attempt at a mark: any word where a kind belongs. Used to tell three cases
 # apart -- no mark, a mark naming a kind outside the closed set, and a real kind
@@ -149,14 +173,28 @@ def find_marks(text: str) -> list:
     return [m for m in re.finditer(MARK_RE, text) if _emphasis_ok(text, m)]
 
 
+def find_mark_shapes(text: str) -> list:
+    """Every annotation *shaped* like a mark, valid kind or not.
+
+    Use this to count annotations and to classify a bad one; use find_marks()
+    to read a kind and a source. An ordinary aside is not a shape -- `see` is a
+    word but `_(see "x" in README.md)_` has no colon and no closing paren where
+    one would need to be -- so the redaction can safely work from shapes without
+    eating citations authors wrote.
+    """
+    return [m for m in re.finditer(MARK_SHAPE_RE, text) if _emphasis_ok(text, m)]
+
+
 def strip_marks(text: str) -> str:
-    """`text` with every mark find_marks() reports removed, by span.
+    """`text` with every annotation find_mark_shapes() reports removed, by span.
 
     Removing spans rather than re-matching a second pattern is the whole point:
     a redaction pattern cannot drift from a parse pattern it does not have.
+    Shapes rather than marks, so a mark whose kind is misspelled cannot leave
+    its source behind for a citation rule to read as the author's own.
     """
     out, last = [], 0
-    for m in find_marks(text):
+    for m in find_mark_shapes(text):
         out.append(text[last:m.start()])
         last = m.end()
     out.append(text[last:])
@@ -395,7 +433,10 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
                 marks = ([(first.group("kind"), first.group("source") or "")]
                          if first else [])
-                if first and find_marks(rest):
+                # Shapes, not marks: a stale annotation beside its replacement
+                # is what this rule exists to catch, and a stale one is exactly
+                # the one whose kind may no longer be valid.
+                if first and find_mark_shapes(rest):
                     marks.append(("", ""))
                 if len(marks) > 1:
                     # Keeping only the first would let a stale mark sit beside
@@ -409,10 +450,12 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     # parse failure -- the author chose a word and needs to be
                     # told which words exist -- so it goes through the normal
                     # vocabulary check rather than being called malformed.
-                    attempt = re.match(r"\s*" + MARK_ATTEMPT_RE, region)
-                    if attempt and attempt.group("kind").lower() not in EVIDENCE:
-                        evidence[name] = (attempt.group("kind").lower(), "")
-                    elif attempt:
+                    shapes = find_mark_shapes(region)
+                    shape = (shapes[0] if shapes
+                             and not region[:shapes[0].start()].strip() else None)
+                    if shape:
+                        evidence[name] = (shape.group("kind").lower(), "")
+                    elif re.match(r"\s*" + MARK_ATTEMPT_RE, region):
                         # A real kind whose mark did not parse. Reporting that
                         # as "no mark" sends the author to add one, and the
                         # two-marks rule then refuses the result.
@@ -1871,18 +1914,22 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         # goes through find_marks() like every other consumer.
         marks = [(m.group("kind"), m.group("source") or "")
                  for m in find_marks(about_block)]
-        if not marks:
-            attempt = re.search(MARK_ATTEMPT_RE, about_block)
-            if attempt and attempt.group("kind").lower() not in EVIDENCE:
-                # Not a parse failure: a kind outside the closed set. Naming the
-                # word the author chose is what tells them which words exist.
-                off_vocab.append(f"{key} is marked {attempt.group('kind').lower()!r}")
-            elif attempt:
+        # Counted from shapes, not marks. A stale annotation sitting beside its
+        # replacement is the thing this rule exists to refuse, and a stale one
+        # is exactly the one whose kind may since have stopped being valid.
+        shapes = find_mark_shapes(about_block)
+        if len(shapes) > 1:
+            multi_mark.append(key)
+        elif not marks:
+            if shapes:
+                # Mark-shaped, kind outside the closed set. Not a parse failure:
+                # the author chose a word and needs to be told which exist.
+                off_vocab.append(
+                    f"{key} is marked {shapes[0].group('kind').lower()!r}")
+            elif re.search(MARK_ATTEMPT_RE, about_block):
                 malformed_mark.append(key)
             else:
                 no_mark.append(key)
-        elif len(marks) > 1:
-            multi_mark.append(key)
         else:
             kindname, source = marks[0][0].lower(), (marks[0][1] or "").strip()
             if kindname not in EVIDENCE:

@@ -834,6 +834,34 @@ def intraword_underscores_are_not_a_mark(t):
                 first.replace("*(invented)*", "foo_(invented)_bar", 1))
 
 
+def mark_kind_capitalised(t):
+    """A kind spelled with a capital, which has always been accepted.
+
+    Both consumers lower() the kind before using it, so *(Observed: ...)* was
+    valid for as long as the kind was matched by [A-Za-z-]+. Narrowing that to a
+    literal alternation took the tolerance with it and reclassified those
+    documents as carrying an unreadable mark -- a capability lost as a side
+    effect of a fix aimed at something else entirely.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "*(Invented)*", 1))
+
+
+def second_mark_off_vocabulary(t):
+    """A stale annotation beside its replacement, the stale one now invalid.
+
+    The two-marks rule exists so a superseded mark cannot sit next to the mark
+    that replaced it and have the document read as consistent. While "a mark"
+    meant "a mark with a valid kind", `*(invented)* *(probable)*` counted as
+    one and passed -- the broad pattern had been carrying this rule silently,
+    and narrowing it dropped the load without anything failing.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "*(invented)* *(probable)*", 1))
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -933,6 +961,8 @@ ADVERSARIAL_MUTATIONS = [
      expectation_gap_cited_only_inside_a_mixed_fence_mark, "cite no promise"),
     ("adversarial-intraword-underscores-are-not-a-mark",
      intraword_underscores_are_not_a_mark, "could not be read"),
+    ("adversarial-second-mark-off-vocabulary",
+     second_mark_off_vocabulary, "more than one evidence mark"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -1041,6 +1071,7 @@ ADVERSARIAL_POSITIVES = [
      expectation_gap_citing_inside_an_emphasised_aside),
     ("adversarial-expectation-gap-may-cite-inside-a-word-led-aside",
      expectation_gap_citing_inside_a_word_led_aside),
+    ("adversarial-mark-kind-may-be-capitalised", mark_kind_capitalised),
 ]
 
 # ---------------------------------------------------------------------------
