@@ -732,6 +732,24 @@ def expectation_gap_without_promise(text):
     return _as_expectation_gap(text, "**About:** the thing generally. *(invented)*")
 
 
+def expectation_gap_cited_only_inside_an_underscore_mark(text):
+    """An expectation gap whose only citation lives inside its evidence mark.
+
+    The About block cites nothing of its own. The quoted promise and the file
+    naming where it is made both sit inside the mark, which is the checker's own
+    annotation rather than the author's citation -- so the entry is exactly the
+    one the "cite no promise" rule exists to refuse.
+
+    The mark is stripped before that search, and the strip was a third
+    hard-coded copy of the mark pattern that accepted asterisks only. So the
+    moment underscores became a legal spelling, this document passed or failed
+    on its delimiter alone: identical content, opposite verdicts.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. _(observed: "answers anything" in `README.md`)_')
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -823,6 +841,8 @@ ADVERSARIAL_MUTATIONS = [
      "no vocabulary in common"),
     ("adversarial-expectation-gap-cites-nothing", expectation_gap_without_promise,
      "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-an-underscore-mark",
+     expectation_gap_cited_only_inside_an_underscore_mark, "cite no promise"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",

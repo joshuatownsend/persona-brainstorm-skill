@@ -85,7 +85,17 @@ EVIDENCE = ("observed", "inferred", "invented")
 # because those messages contain "primitive(s)", so quoting what the checker
 # reported -- the most auditable source an observed mark can name -- was the
 # thing the rule punished. Accept a ')' that is not the delimiter.
-MARK_SOURCE = r"(?:[^)]|\)(?![*_]))*"
+# One home for the delimiter itself. Four patterns need to agree on which
+# characters may fence a mark, and they have now drifted apart twice: first the
+# grievance parser kept its own copy and missed a MARK_RE fix, then the
+# expectation-gap redaction below kept a hard-coded '*' after MARK_RE learned
+# underscores. The second drift was the worse one, because it did not make a
+# mark vanish -- it let an entry satisfy its citation rule with text that lived
+# inside its own evidence mark, so the same document passed or failed on its
+# delimiter alone. Change the delimiter set here and everything follows.
+MARK_DELIM = r"[*_]"
+
+MARK_SOURCE = r"(?:[^)]|\)(?!" + MARK_DELIM + r"))*"
 
 # The annotation, anchored: leading space, then *(kind)* or *(kind: source)* --
 # or the same thing spelled with underscores.
@@ -105,14 +115,22 @@ MARK_SOURCE = r"(?:[^)]|\)(?![*_]))*"
 # renders as literal text rather than emphasis, so it is a narrow false pass --
 # and strictly better than the false failure it replaces, which hit every mark in
 # three documents at once.
-MARK_RE = r"\s*[*_]\(\s*([A-Za-z-]+)\s*(?::\s*(" + MARK_SOURCE + r"))?\)[*_]"
+MARK_RE = (r"\s*" + MARK_DELIM + r"\(\s*([A-Za-z-]+)\s*(?::\s*("
+           + MARK_SOURCE + r"))?\)" + MARK_DELIM)
+
+# The redaction form, deliberately looser than MARK_RE: it removes anything
+# shaped like a mark before a rule reads the prose around it. Looser on purpose
+# -- a malformed mark must not survive the strip and leave its source behind to
+# satisfy a citation the author never wrote. Parsing wants precision; redacting
+# wants reach.
+MARK_STRIP_RE = MARK_DELIM + r"\([^)]*\)" + MARK_DELIM
 
 # An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
 # apart from "your mark did not parse": the first sends the author to write one,
 # and telling them that when a correct mark is present sends them to add a
 # second, which the two-marks rule then refuses. A diagnostic that names the
 # wrong cause is worse than a silent failure, because it steers the fix.
-MARK_ATTEMPT_RE = r"[*_]\(\s*[A-Za-z-]+\s*[:)]"
+MARK_ATTEMPT_RE = MARK_DELIM + r"\(\s*[A-Za-z-]+\s*[:)]"
 
 
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
@@ -1830,7 +1848,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             # The one laneless kind, and it is not exempt from citing anything:
             # it names the promise and where it is made. An expectation traced
             # to nothing is a preference, and belongs in the core document.
-            stripped = re.sub(r"\*\([^)]*\)\*", "", about)
+            stripped = re.sub(MARK_STRIP_RE, "", about)
             # Both halves, not either: the promise *and* where it is made. An
             # alternation accepted a quotation with no location and a filename
             # with no promise, and each of those is half a citation.
