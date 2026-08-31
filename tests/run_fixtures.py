@@ -732,6 +732,188 @@ def expectation_gap_without_promise(text):
     return _as_expectation_gap(text, "**About:** the thing generally. *(invented)*")
 
 
+def expectation_gap_cited_only_inside_an_underscore_mark(text):
+    """An expectation gap whose only citation lives inside its evidence mark.
+
+    The About block cites nothing of its own. The quoted promise and the file
+    naming where it is made both sit inside the mark, which is the checker's own
+    annotation rather than the author's citation -- so the entry is exactly the
+    one the "cite no promise" rule exists to refuse.
+
+    The mark is stripped before that search, and the strip was a third
+    hard-coded copy of the mark pattern that accepted asterisks only. So the
+    moment underscores became a legal spelling, this document passed or failed
+    on its delimiter alone: identical content, opposite verdicts.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. _(observed: "answers anything" in `README.md`)_')
+
+
+def expectation_gap_cited_only_inside_a_mark_with_parentheses(text):
+    """The same bypass, reached through a source that contains a parenthesis.
+
+    The parser has accepted a ')' inside a source since the day a mark quoting
+    this checker's own output vanished for containing "primitive(s)". The strip
+    did not: it used [^)]*, stopped at the first ')', matched nothing, and left
+    the whole mark standing for the citation search to read.
+
+    So the parser and the redactor disagreed about what a mark *is*, and the
+    gap between them was a bypass. Whatever MARK_RE can read, MARK_STRIP_RE has
+    to be able to remove -- that is the invariant this fixture pins.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. '
+        '_(observed: "answers anything" in `README.md` (line 2))_')
+
+
+def expectation_gap_cited_only_inside_a_mixed_fence_mark(text):
+    """The same bypass again, reached by terminating a mark on the wrong fence.
+
+    While the opening and closing delimiters were independent, a source
+    containing ")_" ended a star-delimited mark early. The parser read only
+    through "result(foo", the strip removed only that much, and everything after
+    it -- the quote and the filename -- was left in the prose for the citation
+    rule to read as the author's own.
+
+    This was written off once as a cosmetic laxity affecting only odd spellings
+    like *(invented)_ . It was not: it stranded part of a well-formed mark.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. '
+        '*(observed: result(foo)_bar "answers anything" in README.md)*')
+
+
+def expectation_gap_citing_inside_an_emphasised_aside(text):
+    """A real citation the author wrote inside an ordinary emphasised aside.
+
+    Not a mark -- no kind word after the paren -- so the redaction must leave it
+    alone. Widening the strip to every emphasised parenthetical deleted this
+    entry's promise along with its mark and failed it for citing nothing, which
+    is a false failure and worse than the bypass that widening was meant to fix.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the docs promise _("answers anything" in `README.md`)_. '
+        '*(invented)*')
+
+
+def expectation_gap_citing_inside_a_word_led_aside(text):
+    """The same aside, beginning with a word rather than a quote.
+
+    Requiring a kind word after the paren was meant to separate a mark from an
+    ordinary aside, and could not: asides start with words too. "see" is a word
+    and not an evidence kind, so the redaction ate a citation the author wrote
+    and failed the entry for citing nothing. Only the closed vocabulary tells
+    the two apart.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the docs promise _(see "answers anything" in `README.md`)_. '
+        '*(invented)*')
+
+
+def intraword_underscores_are_not_a_mark(t):
+    """Markdown does not render `_emphasis_` inside a word, and nor may we.
+
+    foo_(invented)_bar is literal text to every reader of the document and was
+    a valid evidence mark to this checker, so a grievance carrying no visible
+    annotation anywhere passed. Introduced by accepting underscores at all --
+    before that it was correctly reported as unmarked.
+
+    It is asserted as *malformed* rather than *absent*, which is the more useful
+    of the two: the author did write a mark and it is not working. Telling them
+    no mark is present would send them to add a second one, and the two-marks
+    rule would then refuse the result -- the precise fix-steering failure the
+    malformed/absent distinction exists to prevent.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "foo_(invented)_bar", 1))
+
+
+def mark_only_inside_a_code_span(t):
+    """The notation quoted while explaining it, standing in for a real mark.
+
+    A document that writes `*(invented)*` in inline code carries no rendered
+    annotation at all, and a checker reading characters instead of rendering
+    accepted it. The primitive path had stripped code spans for exactly this
+    reason since a quoted example first stood in for a missing mark; the
+    grievance path never did -- one rule, two homes, a fifth time.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "the notation is `*(invented)*`", 1))
+
+
+def mark_delimiter_escaped(t):
+    """A backslash-escaped fence, which renders as a literal character.
+
+    Codex reported this for underscores; it is true of asterisks too, and the
+    fix covers both rather than the spelling that happened to be reported.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", r"written \_(invented)_ here", 1))
+
+
+def mark_only_inside_a_double_backtick_span(t):
+    """The notation quoted in a multi-backtick span, which is still a quote.
+
+    A code span is a run of backticks closed by a run of the same length -- how
+    an author quotes notation containing a backtick. Matching a single pair read
+    ``*(invented)*`` as two empty spans with the example exposed between them,
+    so the more carefully the author quoted, the more likely the quote counted
+    as a real mark.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "the notation is ``*(invented)*``", 1))
+
+
+def mark_behind_an_escaped_backslash(t):
+    """A literal backslash followed by a real mark, which is a visible mark.
+
+    Escaping is parity, not presence: only an odd number of backslashes escapes
+    the delimiter. Treating any backslash as an escape hid a mark the reader can
+    see -- a false failure introduced by the fix for a false pass one commit
+    earlier, which is this branch's most persistent habit.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", r"a literal \\*(invented)*", 1))
+
+
+def mark_kind_capitalised(t):
+    """A kind spelled with a capital, which has always been accepted.
+
+    Both consumers lower() the kind before using it, so *(Observed: ...)* was
+    valid for as long as the kind was matched by [A-Za-z-]+. Narrowing that to a
+    literal alternation took the tolerance with it and reclassified those
+    documents as carrying an unreadable mark -- a capability lost as a side
+    effect of a fix aimed at something else entirely.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "*(Invented)*", 1))
+
+
+def second_mark_off_vocabulary(t):
+    """A stale annotation beside its replacement, the stale one now invalid.
+
+    The two-marks rule exists so a superseded mark cannot sit next to the mark
+    that replaced it and have the document read as consistent. While "a mark"
+    meant "a mark with a valid kind", `*(invented)* *(probable)*` counted as
+    one and passed -- the broad pattern had been carrying this rule silently,
+    and narrowing it dropped the load without anything failing.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "*(invented)* *(probable)*", 1))
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -823,6 +1005,22 @@ ADVERSARIAL_MUTATIONS = [
      "no vocabulary in common"),
     ("adversarial-expectation-gap-cites-nothing", expectation_gap_without_promise,
      "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-an-underscore-mark",
+     expectation_gap_cited_only_inside_an_underscore_mark, "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-a-mark-with-parentheses",
+     expectation_gap_cited_only_inside_a_mark_with_parentheses, "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-a-mixed-fence-mark",
+     expectation_gap_cited_only_inside_a_mixed_fence_mark, "cite no promise"),
+    ("adversarial-intraword-underscores-are-not-a-mark",
+     intraword_underscores_are_not_a_mark, "could not be read"),
+    ("adversarial-second-mark-off-vocabulary",
+     second_mark_off_vocabulary, "more than one evidence mark"),
+    ("adversarial-mark-only-inside-a-code-span",
+     mark_only_inside_a_code_span, "carry no evidence mark"),
+    ("adversarial-mark-delimiter-escaped",
+     mark_delimiter_escaped, "carry no evidence mark"),
+    ("adversarial-mark-only-inside-a-double-backtick-span",
+     mark_only_inside_a_double_backtick_span, "carry no evidence mark"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -892,10 +1090,72 @@ def mark_source_with_a_parenthesis(t):
     return swap(t, first, first.replace("*(invented)*", quoted, 1))
 
 
+def mark_written_with_underscores(t):
+    """The same mark spelled with underscores instead of asterisks.
+
+    Markdown spells emphasis two ways and formatters rewrite one into the other:
+    prettier normalises *(invented)* to _(invented)_. That is the same document
+    to every human reader and an absent mark to a checker that accepts only
+    asterisks -- so a repository with prettier in a pre-commit hook broke every
+    evidence mark in the act of committing them, *after* the author had run the
+    checker and watched it pass.
+
+    MARK_RE has one home and two call sites -- primitives and grievances -- so
+    exercising it here covers the primitive path too.
+    """
+    first = _adv_first(t)
+    return swap(t, first, first.replace("*(invented)*", "_(invented)_", 1))
+
+
+def mark_source_may_contain_an_asterisk(t):
+    """A source naming a wildcard, e.g. a column prefix written remixSource*.
+
+    Distinct from the underscore case and worth its own row: a literal '*'
+    inside the span is what makes a formatter mis-read where the emphasis ends,
+    and the checker should still read the mark whichever delimiter survives.
+    """
+    first = _adv_first(t)
+    quoted = "_(observed: the remixSource* columns in schema.ts)_"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
 ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
     ("adversarial-about-block-may-soft-wrap", about_soft_wrapped),
     ("adversarial-mark-source-may-contain-a-parenthesis", mark_source_with_a_parenthesis),
+    ("adversarial-mark-may-be-written-with-underscores", mark_written_with_underscores),
+    ("adversarial-mark-source-may-contain-an-asterisk", mark_source_may_contain_an_asterisk),
+    ("adversarial-expectation-gap-may-cite-inside-an-emphasised-aside",
+     expectation_gap_citing_inside_an_emphasised_aside),
+    ("adversarial-expectation-gap-may-cite-inside-a-word-led-aside",
+     expectation_gap_citing_inside_a_word_led_aside),
+    ("adversarial-mark-kind-may-be-capitalised", mark_kind_capitalised),
+    ("adversarial-mark-may-follow-an-escaped-backslash",
+     mark_behind_an_escaped_backslash),
+]
+
+def primitive_quoting_notation_in_a_multi_backtick_span(t):
+    """A primitive that carries its mark and then quotes the notation.
+
+    The description legitimately shows what the annotation looks like, in a
+    multi-backtick span because the example contains no backtick but the
+    surrounding prose might. Only the real mark counts; the quote is an example.
+
+    The primitive path used to pre-strip inline code with a single-backtick
+    regex before looking for a second mark. On a multi-backtick span that
+    deleted each adjacent fence pair and left the example exposed, so a valid
+    primitive failed for carrying two evidence marks -- the strip re-creating
+    the exact bug it had been added to prevent, once the shared helper had
+    learned to handle code spans properly.
+    """
+    return swap(t, "`cross-run-aggregation` *(invented)*",
+                "`cross-run-aggregation` *(invented)* — accepts "
+                "``_(invented)_`` as input")
+
+
+CORE_POSITIVES = [
+    ("primitive-may-quote-the-notation-in-a-multi-backtick-span",
+     "d_ok.md", primitive_quoting_notation_in_a_multi_backtick_span),
 ]
 
 # ---------------------------------------------------------------------------
@@ -1173,6 +1433,21 @@ def main():
                 report(False, name, f"wrong reason: wanted {needle!r}, got {first.strip()[:70]!r}")
             else:
                 report(True, name)
+
+        print("\ngenerated positives (valid shapes that must still pass):")
+        for name, base, mutate in CORE_POSITIVES:
+            try:
+                text = mutate(load(base))
+            except (BrokenFixture, ValueError) as exc:
+                report(False, name, f"mutation no longer applies to {base}: {exc}")
+                continue
+            path = os.path.join(tmp, name + ".md")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            rc, out = run(path)
+            fails = failures_in(out)
+            report(rc == 0, name,
+                   "" if rc == 0 else (fails.splitlines() or [""])[0].strip()[:90])
 
         print("\nenrichment (--enriched):")
         for core_name, cases in (("d_ok.md", ENRICHED_MUTATIONS),

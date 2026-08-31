@@ -78,24 +78,188 @@ class Report:
 # failure the frequency vocabulary already exists to prevent.
 EVIDENCE = ("observed", "inferred", "invented")
 
-# The source runs to the mark's own closing delimiter, not to the first closing
-# parenthesis. A plain [^)]* ended the capture at any ')' inside the source, the
-# trailing \)\* then failed, and the mark vanished -- reported as *absent* by
-# every caller. The text most likely to trip it was this checker's own output,
-# because those messages contain "primitive(s)", so quoting what the checker
-# reported -- the most auditable source an observed mark can name -- was the
-# thing the rule punished. Accept a ')' that is not the delimiter.
-MARK_SOURCE = r"(?:[^)]|\)(?!\*))*"
+# One home for the delimiter, the kind, and how far a source reaches. Each of
+# these rules was written in more than one place at some point, and every one of
+# those rounds produced either a bypass or a false failure. They are written
+# once here, and every consumer goes through find_marks() below.
+MARK_DELIM = r"[*_]"
 
-# The annotation, anchored: leading space, then *(kind)* or *(kind: source)*.
-MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*(" + MARK_SOURCE + r"))?\)\*"
+# The kind is the closed set, not any word. Requiring merely a word could not
+# tell a mark from an ordinary emphasised aside that happens to start with one
+# -- _(see "answers anything" in README.md)_ is a citation an author wrote, not
+# an annotation this checker added, and redacting it failed valid entries for
+# citing nothing.
+#
+# Case-insensitive, because narrowing from [A-Za-z-]+ to a literal alternation
+# quietly took a capability with it: both consumers lower() the kind before
+# using it, so *(Observed: issue #1)* had always been accepted, and a
+# case-sensitive alternation reclassified those documents as carrying an
+# unreadable mark. Narrowing a pattern is never only a narrowing -- whatever the
+# broad version incidentally allowed leaves with it.
+MARK_KIND = r"(?i:" + "|".join(EVIDENCE) + r")"
 
-# An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
-# apart from "your mark did not parse": the first sends the author to write one,
-# and telling them that when a correct mark is present sends them to add a
-# second, which the two-marks rule then refuses. A diagnostic that names the
-# wrong cause is worse than a silent failure, because it steers the fix.
-MARK_ATTEMPT_RE = r"\*\(\s*[A-Za-z-]+\s*[:)]"
+# The source runs to the mark's own closing fence, not to the first closing
+# parenthesis. A plain [^)]* ended the capture at any ')' inside the source and
+# the mark vanished -- reported as *absent* by every caller. The text most
+# likely to trip it was this checker's own output, because those messages
+# contain "primitive(s)", so quoting what the checker reported -- the most
+# auditable source an observed mark can name -- was the thing the rule punished.
+MARK_SOURCE = r"(?:[^)]|\)(?!(?P=d)))*"
+
+# The annotation: *(kind)* or *(kind: source)*, or the same spelled with
+# underscores. Markdown spells emphasis two ways and formatters rewrite one into
+# the other, so a repository with prettier in a pre-commit hook broke every mark
+# in three documents at once -- after the author had run this checker and
+# watched it pass, which is the worst moment for a check to change its mind.
+#
+# The closing fence backreferences the opening one. Leaving the two ends
+# independent was once justified in this comment as a narrow false pass on a
+# mismatched *(invented)_ . That was wrong, and the record is worth keeping:
+# independent fences let a *well-formed* mark end early on an inner ")_" and
+# strand the rest of its source in the prose, for a citation rule to read as the
+# author's own.
+def _mark_re(kind: str) -> str:
+    """The mark pattern, parameterised by what may stand where the kind goes."""
+    return (r"(?P<d>" + MARK_DELIM + r")\(\s*(?P<kind>" + kind + r")\s*"
+            r"(?::\s*(?P<source>" + MARK_SOURCE + r"))?\)(?P=d)")
+
+
+# A mark: the annotation this checker reads a kind and a source from.
+MARK_RE = _mark_re(MARK_KIND)
+
+# Anything *shaped* like one, whatever word stands where the kind belongs.
+#
+# The distinction is not pedantry, and collapsing it cost a rule. The two-marks
+# rule exists so a stale annotation cannot sit beside its replacement and report
+# the document as consistent -- but once "a mark" meant "a mark with a valid
+# kind", `*(invented)* *(probable)*` counted as one mark and passed. The broad
+# pattern had been carrying that rule, silently, and narrowing it dropped the
+# load. Counting annotations and reading them are different questions and now
+# ask different patterns.
+MARK_SHAPE_RE = _mark_re(r"[A-Za-z-]+")
+
+# An attempt at a mark: any word where a kind belongs. Used to tell three cases
+# apart -- no mark, a mark naming a kind outside the closed set, and a real kind
+# whose mark did not parse. Reporting any of those as another sends the author
+# to the wrong fix, and "add a mark" when one is present sends them into the
+# two-marks rule, which then refuses the result.
+MARK_ATTEMPT_RE = MARK_DELIM + r"\(\s*(?P<kind>[A-Za-z-]+)\s*[:)]"
+
+
+def _code_spans(text: str) -> list:
+    """Ranges of inline code in `text`. Nothing inside one is emphasis.
+
+    A code span is a run of backticks closed by a run of the same length, which
+    is how a document quotes notation that itself contains a backtick. Matching
+    a single pair instead read ``_(invented)_`` as two *empty* spans with the
+    example exposed between them -- so the more careful the author was about
+    quoting, the more likely the quote counted as a real mark.
+    """
+    return [(m.start(), m.end()) for m in re.finditer(r"(`+)[\s\S]*?\1", text)]
+
+
+def _is_escaped(text: str, i: int) -> bool:
+    """True when the character at `i` is backslash-escaped in Markdown.
+
+    Parity, not presence: a delimiter is escaped only behind an *odd* number of
+    backslashes. `\\\\*(invented)*` is a literal backslash followed by a real
+    mark, and treating any backslash as an escape hid it -- a false failure
+    introduced by the fix for a false pass one commit earlier.
+    """
+    n = 0
+    while i - n - 1 >= 0 and text[i - n - 1] == "\\":
+        n += 1
+    return n % 2 == 1
+
+
+def _is_emphasis(text: str, m: re.Match, code: list) -> bool:
+    """True when this match renders as emphasis rather than as literal text.
+
+    Three ways a delimiter pair fails to be emphasis, and a document whose only
+    annotation is one of them carries no visible mark at all while satisfying a
+    checker that reads the characters instead of the rendering.
+
+    Inline code is the one that actually happens: a document explaining the
+    notation quotes `*(invented)*`, and that example then stands in for a mark
+    the entry never carried. The primitive path already stripped code spans for
+    exactly this reason and the grievance path never did -- the same rule in two
+    homes again, which is the defect this whole branch keeps re-finding.
+    """
+    if any(a <= m.start() < b for a, b in code):
+        return False
+    # A backslash-escaped fence renders as a literal character. True of both
+    # delimiters, not just the underscore Codex reported.
+    if _is_escaped(text, m.start()):
+        return False
+    # Markdown's intraword rule, which only underscores have: `*emphasis*`
+    # renders inside a word and `_emphasis_` does not, so foo_(invented)_bar is
+    # literal text to every reader and was a valid mark to this checker.
+    if m.group("d") != "_":
+        return True
+    before = text[m.start() - 1] if m.start() else ""
+    after = text[m.end()] if m.end() < len(text) else ""
+    return not (before.isalnum() or after.isalnum())
+
+
+def find_marks(text: str) -> list:
+    """Every evidence mark in `text`, as match objects, in document order.
+
+    The single definition of "a mark". Both the parsers and the redactor go
+    through here, which is what makes the invariant -- whatever is read is what
+    is removed -- true by construction rather than by editing two patterns in
+    step. Four review rounds found defects in the gap between two such patterns;
+    there is no longer a gap for a fifth to live in.
+    """
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_RE, text) if _is_emphasis(text, m, code)]
+
+
+def find_mark_shapes(text: str) -> list:
+    """Every annotation *shaped* like a mark, valid kind or not.
+
+    Use this to count annotations and to classify a bad one; use find_marks()
+    to read a kind and a source. An ordinary aside is not a shape -- `see` is a
+    word but `_(see "x" in README.md)_` has no colon and no closing paren where
+    one would need to be -- so the redaction can safely work from shapes without
+    eating citations authors wrote.
+    """
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_SHAPE_RE, text)
+            if _is_emphasis(text, m, code)]
+
+
+def find_mark_attempts(text: str) -> list:
+    """Mark-shaped openings a reader would actually see.
+
+    Deliberately does *not* apply the intraword rule, and the asymmetry is the
+    point. Text in a code span or behind a backslash is literal on purpose: its
+    author quoted the notation and carries no mark, so "you have no mark" sends
+    them to write one. foo_(invented)_bar is the opposite -- a mark the
+    rendering betrayed -- and telling that author they have none sends them to
+    add a second, which the two-marks rule then refuses.
+
+    Same evidence, opposite fixes, so the diagnostic has to tell them apart.
+    """
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_ATTEMPT_RE, text)
+            if not any(a <= m.start() < b for a, b in code)
+            and not _is_escaped(text, m.start())]
+
+
+def strip_marks(text: str) -> str:
+    """`text` with every annotation find_mark_shapes() reports removed, by span.
+
+    Removing spans rather than re-matching a second pattern is the whole point:
+    a redaction pattern cannot drift from a parse pattern it does not have.
+    Shapes rather than marks, so a mark whose kind is misspelled cannot leave
+    its source behind for a citation rule to read as the author's own.
+    """
+    out, last = [], 0
+    for m in find_mark_shapes(text):
+        out.append(text[last:m.start()])
+        last = m.end()
+    out.append(text[last:])
+    return "".join(out)
 
 
 def parse_prediction(text: str, mode: str = "prereg") -> dict:
@@ -317,14 +481,31 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                 # broke sources that legitimately contain one, such as
                 # "RFC 9110 - HTTP Semantics". Anchoring needs neither.
                 region = entry[m.end():]
-                first = re.match(MARK_RE, region)
+                # Anchored: the template puts the mark immediately after the
+                # slug, so only a mark with nothing but whitespace before it is
+                # this primitive's own.
+                found = find_marks(region)
+                first = (found[0] if found
+                         and not region[:found[0].start()].strip() else None)
                 # Any further mark in the declaration contradicts the first --
                 # adjacent to it or beyond the description, both count.
-                # Inline code is stripped so a quoted example is not counted --
-                # the same distinction anchoring makes for the first mark.
-                rest = re.sub(r"`[^`]*`", "", region[first.end():]) if first else ""
-                marks = ([(first.group(1), first.group(2) or "")] if first else [])
-                if first and re.search(MARK_RE, rest):
+                #
+                # Passed raw. This line used to pre-strip inline code with a
+                # single-backtick regex so a quoted example could not count as a
+                # second mark, and that was the last place the code-span rule
+                # still lived outside find_mark_shapes(). Once the helper
+                # learned code spans, the leftover strip stopped merely
+                # duplicating it and started fighting it: on ``*(invented)*`` it
+                # deleted each adjacent fence pair and *exposed* the example it
+                # existed to hide, failing a valid primitive for carrying two
+                # marks. The consolidation was not finished until this went.
+                rest = region[first.end():] if first else ""
+                marks = ([(first.group("kind"), first.group("source") or "")]
+                         if first else [])
+                # Shapes, not marks: a stale annotation beside its replacement
+                # is what this rule exists to catch, and a stale one is exactly
+                # the one whose kind may no longer be valid.
+                if first and find_mark_shapes(rest):
                     marks.append(("", ""))
                 if len(marks) > 1:
                     # Keeping only the first would let a stale mark sit beside
@@ -332,13 +513,23 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                     multi_marked.append(name)
                 elif marks:
                     evidence[name] = (marks[0][0].lower(), marks[0][1].strip())
-                elif re.match(r"\s*" + MARK_ATTEMPT_RE, region):
-                    # A mark was written and did not parse. Reporting that as
-                    # "no mark" sends the author to add one, and the two-marks
-                    # rule then refuses the result -- so the diagnostic has to
-                    # name the real cause or it steers the fix into a second
-                    # error.
-                    malformed_marks.append(name)
+                else:
+                    # Three cases, and reporting any of them as another steers
+                    # the fix wrong. A kind outside the closed set is not a
+                    # parse failure -- the author chose a word and needs to be
+                    # told which words exist -- so it goes through the normal
+                    # vocabulary check rather than being called malformed.
+                    shapes = find_mark_shapes(region)
+                    shape = (shapes[0] if shapes
+                             and not region[:shapes[0].start()].strip() else None)
+                    if shape:
+                        evidence[name] = (shape.group("kind").lower(), "")
+                    elif any(not region[:a.start()].strip()
+                             for a in find_mark_attempts(region)):
+                        # A real kind whose mark did not parse. Reporting that
+                        # as "no mark" sends the author to add one, and the
+                        # two-marks rule then refuses the result.
+                        malformed_marks.append(name)
                 continue
             # Claims are read ONLY from the canonical tally line, never from free
             # prose. A document legitimately discusses numbers — quoting a figure
@@ -1781,23 +1972,38 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         if "kind" in labels and kind not in {normalise(k) for k in ADVERSARIAL_KINDS}:
             bad_kind.append(f"{key} says {labels['kind'].strip() or '(nothing)'!r}")
 
-        about = blocks.get("about", "")
         # The mark is read from the About block, anchored at the label's own
         # position rather than found by searching for its text: the About text
         # can occur earlier in the entry — quoted in the complaint, say — and a
         # find() then slices from the wrong place and reports a missing mark.
-        about_block = blocks.get("about", "")
+        #
+        # One name, one value. This was two variables bound to the same
+        # expression, which is this file's recurring defect in its smallest
+        # form: nothing was wrong with either, and the next edit to one of them
+        # would have been.
+        about = blocks.get("about", "")
         # One definition, one home: this was a second copy of the mark pattern
         # and it drifted from MARK_RE the moment MARK_RE was fixed, so a mark
-        # that parsed for a primitive still vanished for a grievance.
-        marks = re.findall(MARK_RE, about_block)
-        if not marks:
-            if re.search(MARK_ATTEMPT_RE, about_block):
+        # that parsed for a primitive still vanished for a grievance. It now
+        # goes through find_marks() like every other consumer.
+        marks = [(m.group("kind"), m.group("source") or "")
+                 for m in find_marks(about)]
+        # Counted from shapes, not marks. A stale annotation sitting beside its
+        # replacement is the thing this rule exists to refuse, and a stale one
+        # is exactly the one whose kind may since have stopped being valid.
+        shapes = find_mark_shapes(about)
+        if len(shapes) > 1:
+            multi_mark.append(key)
+        elif not marks:
+            if shapes:
+                # Mark-shaped, kind outside the closed set. Not a parse failure:
+                # the author chose a word and needs to be told which exist.
+                off_vocab.append(
+                    f"{key} is marked {shapes[0].group('kind').lower()!r}")
+            elif find_mark_attempts(about):
                 malformed_mark.append(key)
             else:
                 no_mark.append(key)
-        elif len(marks) > 1:
-            multi_mark.append(key)
         else:
             kindname, source = marks[0][0].lower(), (marks[0][1] or "").strip()
             if kindname not in EVIDENCE:
@@ -1813,7 +2019,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
             # The one laneless kind, and it is not exempt from citing anything:
             # it names the promise and where it is made. An expectation traced
             # to nothing is a preference, and belongs in the core document.
-            stripped = re.sub(r"\*\([^)]*\)\*", "", about)
+            stripped = strip_marks(about)
             # Both halves, not either: the promise *and* where it is made. An
             # alternation accepted a quotation with no location and a filename
             # with no promise, and each of those is half a citation.
