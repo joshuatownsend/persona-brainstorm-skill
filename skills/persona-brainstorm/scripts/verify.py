@@ -1972,22 +1972,26 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
         if "kind" in labels and kind not in {normalise(k) for k in ADVERSARIAL_KINDS}:
             bad_kind.append(f"{key} says {labels['kind'].strip() or '(nothing)'!r}")
 
-        about = blocks.get("about", "")
         # The mark is read from the About block, anchored at the label's own
         # position rather than found by searching for its text: the About text
         # can occur earlier in the entry — quoted in the complaint, say — and a
         # find() then slices from the wrong place and reports a missing mark.
-        about_block = blocks.get("about", "")
+        #
+        # One name, one value. This was two variables bound to the same
+        # expression, which is this file's recurring defect in its smallest
+        # form: nothing was wrong with either, and the next edit to one of them
+        # would have been.
+        about = blocks.get("about", "")
         # One definition, one home: this was a second copy of the mark pattern
         # and it drifted from MARK_RE the moment MARK_RE was fixed, so a mark
         # that parsed for a primitive still vanished for a grievance. It now
         # goes through find_marks() like every other consumer.
         marks = [(m.group("kind"), m.group("source") or "")
-                 for m in find_marks(about_block)]
+                 for m in find_marks(about)]
         # Counted from shapes, not marks. A stale annotation sitting beside its
         # replacement is the thing this rule exists to refuse, and a stale one
         # is exactly the one whose kind may since have stopped being valid.
-        shapes = find_mark_shapes(about_block)
+        shapes = find_mark_shapes(about)
         if len(shapes) > 1:
             multi_mark.append(key)
         elif not marks:
@@ -1996,7 +2000,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
                 # the author chose a word and needs to be told which exist.
                 off_vocab.append(
                     f"{key} is marked {shapes[0].group('kind').lower()!r}")
-            elif find_mark_attempts(about_block):
+            elif find_mark_attempts(about):
                 malformed_mark.append(key)
             else:
                 no_mark.append(key)
