@@ -914,6 +914,53 @@ def second_mark_off_vocabulary(t):
                 first.replace("*(invented)*", "*(invented)* *(probable)*", 1))
 
 
+def mark_hidden_by_a_maximal_backtick_run(t):
+    """A quoted example whose code span contains a longer run of backticks.
+
+    A code span opens on a run of backticks and closes on a run of the *same*
+    length, so `` `a ``` b` `` is one span and the triple inside it is content.
+    Matching ``(`+)[\\s\\S]*?\\1`` paired the opening single backtick with a
+    *piece* of that inner run, ended the span early, and left the quoted
+    example standing outside it as this entry's only annotation. The more
+    carefully the author quoted, the more likely the quote became the mark.
+    """
+    first = _adv_first(t)
+    quoted = "`the literal " + "`" * 3 + " *(invented)* still code`"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
+def mark_closer_inside_a_code_span(t):
+    """A mark opening in prose and closing inside inline code.
+
+    Only the *opening* position used to be tested against the code spans, so a
+    match that began outside one and ended inside it was accepted. Markdown
+    consumes that closing delimiter as code and emphasises nothing, so the
+    entry carried no visible annotation while the checker read one.
+
+    Asserted as malformed rather than absent: the author did write a mark and
+    it is not working, and "no mark" would send them to add a second one.
+    """
+    first = _adv_first(t)
+    quoted = "*(observed: a`x)* y` tail"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
+def mark_flush_against_a_word(t):
+    """An asterisk mark written against a word, which renders as literal text.
+
+    The intraword rule was applied to underscores alone, on the belief that
+    `*emphasis*` always renders inside a word. It does not when the delimiter
+    sits against punctuation, and a mark's delimiter always does -- `*(` and
+    `)*`. So `unseen*(invented)*` is literal text to every renderer and was a
+    valid mark to this checker: the defect already fixed for underscores, still
+    live in the delimiter these documents are actually written with, and found
+    only by comparing against a reference implementation instead of reasoning
+    about which delimiter the rule was supposed to be about.
+    """
+    first = _adv_first(t)
+    return swap(t, first, first.replace("*(invented)*", "unseen*(invented)*", 1))
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -1021,6 +1068,12 @@ ADVERSARIAL_MUTATIONS = [
      mark_delimiter_escaped, "carry no evidence mark"),
     ("adversarial-mark-only-inside-a-double-backtick-span",
      mark_only_inside_a_double_backtick_span, "carry no evidence mark"),
+    ("adversarial-mark-hidden-by-a-maximal-backtick-run",
+     mark_hidden_by_a_maximal_backtick_run, "carry no evidence mark"),
+    ("adversarial-mark-closer-inside-a-code-span",
+     mark_closer_inside_a_code_span, "could not be read"),
+    ("adversarial-mark-flush-against-a-word",
+     mark_flush_against_a_word, "could not be read"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -1119,6 +1172,75 @@ def mark_source_may_contain_an_asterisk(t):
     return swap(t, first, first.replace("*(invented)*", quoted, 1))
 
 
+def mark_between_escaped_backticks(t):
+    """A mark quoted between two backslash-escaped backticks, which are text.
+
+    An escaped backtick renders as a literal character and opens nothing, so
+    the delimiters between them are ordinary prose and the mark is visible.
+    Pairing those backticks as a code span discarded the entry's only mark and
+    rejected a valid grievance -- a false failure, which this project treats as
+    the worse class: a checker that refuses real work teaches authors to ignore
+    it.
+    """
+    first = _adv_first(t)
+    quoted = "\\`*(invented)*\\`"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
+def mark_after_a_span_closed_by_an_escaped_backtick(t):
+    """A code span whose closing fence is escaped, which still closes it.
+
+    Backslash escapes do not work *inside* code spans: `` `a\\` `` is a
+    complete span, and what follows it is prose. The rule that stops an escaped
+    backtick from opening a span must therefore not also stop one from closing
+    one -- filtering both ends pairs this span with the trailing backtick
+    instead, swallows the mark between them, and turns the fix for a false
+    failure into a false failure of its own.
+
+    Green before this change as well as after. It is here because the shape it
+    guards is a plausible way to write the fix rather than a defect that
+    shipped, and because over-correcting one direction into the other is how
+    three regressions arrived on the change that introduced this file's last
+    nine fixtures.
+    """
+    first = _adv_first(t)
+    quoted = "`a\\`*(invented)*`"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
+def mark_flush_against_a_code_span(t):
+    """A mark written hard against a closing code fence, with no space.
+
+    A backtick is Unicode category Sk -- a symbol, not a letter -- and
+    Markdown's flanking rule counts symbols as punctuation, so the mark opens
+    and renders. Implementing that rule with Unicode category P alone would
+    reject every mark written this way, which is the most natural thing to
+    write after a backticked filename.
+
+    Green before this change as well as after: the old rule exempted asterisks
+    from flanking entirely. It exists to hold the *new* rule's punctuation
+    class in place, since narrowing it is the obvious-looking simplification.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "`store.ts`*(invented)*", 1))
+
+
+def mark_source_may_be_a_code_span(t):
+    """An observed source that is nothing but a backticked path.
+
+    The patterns now run against a copy with code-span interiors blanked, so
+    that quoted notation cannot form mark syntax. A match's own groups would
+    then hand back that blanking, and this source would reach `is_source()` as
+    a run of filler with no alphanumeric character in it -- reported as an
+    observed mark naming no source, which is the most ordinary source a mark
+    can name.
+    """
+    first = _adv_first(t)
+    quoted = "*(observed: `docs/03_User_Personas_and_Journeys.md`)*"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
 ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
     ("adversarial-about-block-may-soft-wrap", about_soft_wrapped),
@@ -1132,6 +1254,14 @@ ADVERSARIAL_POSITIVES = [
     ("adversarial-mark-kind-may-be-capitalised", mark_kind_capitalised),
     ("adversarial-mark-may-follow-an-escaped-backslash",
      mark_behind_an_escaped_backslash),
+    ("adversarial-mark-may-sit-between-escaped-backticks",
+     mark_between_escaped_backticks),
+    ("adversarial-mark-may-follow-a-span-closed-by-an-escaped-backtick",
+     mark_after_a_span_closed_by_an_escaped_backtick),
+    ("adversarial-mark-may-sit-flush-against-a-code-span",
+     mark_flush_against_a_code_span),
+    ("adversarial-mark-source-may-be-a-code-span",
+     mark_source_may_be_a_code_span),
 ]
 
 def primitive_quoting_notation_in_a_multi_backtick_span(t):

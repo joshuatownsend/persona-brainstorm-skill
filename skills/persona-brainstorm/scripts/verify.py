@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
@@ -146,16 +147,10 @@ MARK_SHAPE_RE = _mark_re(r"[A-Za-z-]+")
 MARK_ATTEMPT_RE = MARK_DELIM + r"\(\s*(?P<kind>[A-Za-z-]+)\s*[:)]"
 
 
-def _code_spans(text: str) -> list:
-    """Ranges of inline code in `text`. Nothing inside one is emphasis.
-
-    A code span is a run of backticks closed by a run of the same length, which
-    is how a document quotes notation that itself contains a backtick. Matching
-    a single pair instead read ``_(invented)_`` as two *empty* spans with the
-    example exposed between them -- so the more careful the author was about
-    quoting, the more likely the quote counted as a real mark.
-    """
-    return [(m.start(), m.end()) for m in re.finditer(r"(`+)[\s\S]*?\1", text)]
+# Blanked stand-in for a character inside a code span. Any character that
+# cannot appear in mark syntax would do; a NUL can appear in no document, so a
+# mask character is never mistaken for one the author wrote.
+CODE_MASK = "\x00"
 
 
 def _is_escaped(text: str, i: int) -> bool:
@@ -172,37 +167,161 @@ def _is_escaped(text: str, i: int) -> bool:
     return n % 2 == 1
 
 
-def _is_emphasis(text: str, m: re.Match, code: list) -> bool:
+def _code_spans(text: str) -> list:
+    """Inline code in `text`, as (start, end, fence) with both fences included.
+
+    A code span opens on a run of backticks and closes on the next run of the
+    *same* length. Three properties of that rule each cost a review round:
+
+    Runs are maximal. Matching ``(`+)[\\s\\S]*?\\1`` pairs a single backtick
+    with a piece of a longer run inside the span, so ``​`literal ``` x` `` --
+    one code span to every reader -- came apart into two, exposing whatever sat
+    between them. Scanning runs first makes a partial run unavailable to pair.
+
+    A run is skipped as an opener when its first backtick is escaped, because a
+    backslash-escaped backtick is literal text. \\`x\\` was read as a code span
+    and the mark inside it discarded -- a valid entry rejected for annotating
+    itself in the one notation that renders.
+
+    But escapes are *not* honoured when looking for the closer: backslash
+    escapes do not work inside code spans, so ``​`foo\\`bar` `` closes at the
+    escaped-looking backtick. Filtering closers the same way as openers would
+    unpair that span and turn its contents visible -- the strictness of one fix
+    becoming the looseness of the next, which is how three regressions arrived.
+    """
+    runs = [(m.start(), m.end()) for m in re.finditer(r"`+", text)]
+    spans, i = [], 0
+    while i < len(runs):
+        start, end = runs[i]
+        if _is_escaped(text, start):
+            # The escape consumes one backtick. The rest of the run still opens.
+            start += 1
+            if start == end:
+                i += 1
+                continue
+        fence = end - start
+        closer = next((k for k in range(i + 1, len(runs))
+                       if runs[k][1] - runs[k][0] == fence), None)
+        if closer is None:
+            # An opener with no closer is literal text, and the next run gets
+            # its turn as an opener.
+            i += 1
+            continue
+        spans.append((start, runs[closer][1], fence))
+        i = closer + 1
+    return spans
+
+
+def mask_code(text: str) -> str:
+    """`text` with the inside of every code span blanked, offsets preserved.
+
+    The patterns below run against this rather than against the document, so
+    characters inside inline code cannot take part in mark syntax at all. That
+    replaces three separate "is this position in a code span?" tests -- one of
+    which checked the opening fence and not the closing one, so a mark whose
+    apparent closer sat inside code was accepted while Markdown rendered
+    nothing. It is the same consolidation that ended the earlier rounds: a rule
+    applied once to the input cannot be applied inconsistently by its readers.
+
+    Fences stay. They are punctuation, and the character beside a mark decides
+    whether the mark renders, so blanking them would change that answer.
+    """
+    out = list(text)
+    for start, end, fence in _code_spans(text):
+        for i in range(start + fence, end - fence):
+            out[i] = CODE_MASK
+    return "".join(out)
+
+
+def _is_punctuation(ch: str) -> bool:
+    """CommonMark's punctuation class for flanking: categories P and S.
+
+    Symbols count, which is not an approximation but the spec: a backtick is
+    category Sk, and excluding symbols would refuse every mark written flush
+    against a code span. Checked against a reference implementation rather than
+    reasoned about, because the earlier guess here -- `isalnum()` -- looked
+    right for the ASCII cases anyone thinks to try.
+    """
+    return unicodedata.category(ch)[0] in "PS"
+
+
+def _is_emphasis(text: str, m: re.Match) -> bool:
     """True when this match renders as emphasis rather than as literal text.
 
-    Three ways a delimiter pair fails to be emphasis, and a document whose only
-    annotation is one of them carries no visible mark at all while satisfying a
-    checker that reads the characters instead of the rendering.
+    A mark that does not render is not a mark: it satisfies a checker reading
+    characters while the reader it was written for sees nothing.
 
-    Inline code is the one that actually happens: a document explaining the
-    notation quotes `*(invented)*`, and that example then stands in for a mark
-    the entry never carried. The primitive path already stripped code spans for
-    exactly this reason and the grievance path never did -- the same rule in two
-    homes again, which is the defect this whole branch keeps re-finding.
+    Markdown's flanking rule decides it, and the mark's own shape collapses
+    that rule to one test. The delimiter always sits against a parenthesis --
+    `*(` opening, `)*` closing -- and a delimiter next to punctuation may only
+    open when what precedes it is whitespace or punctuation, and may only close
+    when what follows it is. Both delimiters, identically: the underscore's
+    extra intraword condition is already implied once the parenthesis is there.
+
+    The rule this replaces was `isalnum()` and applied to underscores only,
+    which made `a*(invented)*` -- an asterisk mark flush against a word, in the
+    delimiter these documents actually use -- a mark to this checker and
+    literal text to every renderer.
     """
-    if any(a <= m.start() < b for a, b in code):
-        return False
-    # A backslash-escaped fence renders as a literal character. True of both
-    # delimiters, not just the underscore Codex reported.
     if _is_escaped(text, m.start()):
         return False
-    # Markdown's intraword rule, which only underscores have: `*emphasis*`
-    # renders inside a word and `_emphasis_` does not, so foo_(invented)_bar is
-    # literal text to every reader and was a valid mark to this checker.
-    if m.group("d") != "_":
-        return True
     before = text[m.start() - 1] if m.start() else ""
     after = text[m.end()] if m.end() < len(text) else ""
-    return not (before.isalnum() or after.isalnum())
+    return _flanking(before) and _flanking(after)
+
+
+def _flanking(ch: str) -> bool:
+    """True when `ch` lets a delimiter beside a parenthesis do its job."""
+    return ch == "" or ch.isspace() or _is_punctuation(ch)
+
+
+# What this still gets wrong, measured rather than guessed.
+#
+# tests/commonmark_differential.py compares find_marks() against a reference
+# CommonMark implementation over every neighbouring character that can decide
+# flanking, crossed with the code-span and escape structures. It reports no
+# case where a mark a reader can see is refused, and one class where an
+# invisible one is accepted: a mark written flush against another copy of its
+# own delimiter, where the two runs are of different lengths and the far side
+# is punctuation -- `**(invented)*.` and its mirrors. Markdown's rule of three
+# decides those, and implementing it means tracking full delimiter runs and
+# their open/close capability at both ends.
+#
+# Left alone deliberately. It is a false pass, the lesser class, on a shape no
+# document contains; and the rule of three is precisely where an over-correction
+# would land as a false failure, which is how three regressions arrived on the
+# change that made all of this necessary. The measurement is the point: it is
+# the difference between a known limit and an unexamined one.
+
+
+class Mark:
+    """One annotation, read out of the document the author wrote.
+
+    Answers the three questions a `re.Match` was asked for, and answers them
+    from the original text. The patterns run against the masked copy, so a
+    match's own groups would hand back mask characters -- a source citing
+    `README.md` would come out blank. Offsets survive masking by construction,
+    so reading through them cannot drift from what was matched.
+    """
+
+    __slots__ = ("_text", "_match")
+
+    def __init__(self, text: str, match: re.Match):
+        self._text, self._match = text, match
+
+    def start(self) -> int:
+        return self._match.start()
+
+    def end(self) -> int:
+        return self._match.end()
+
+    def group(self, name):
+        a, b = self._match.span(name)
+        return None if a < 0 else self._text[a:b]
 
 
 def find_marks(text: str) -> list:
-    """Every evidence mark in `text`, as match objects, in document order.
+    """Every evidence mark in `text`, in document order.
 
     The single definition of "a mark". Both the parsers and the redactor go
     through here, which is what makes the invariant -- whatever is read is what
@@ -210,8 +329,9 @@ def find_marks(text: str) -> list:
     step. Four review rounds found defects in the gap between two such patterns;
     there is no longer a gap for a fifth to live in.
     """
-    code = _code_spans(text)
-    return [m for m in re.finditer(MARK_RE, text) if _is_emphasis(text, m, code)]
+    masked = mask_code(text)
+    return [Mark(text, m) for m in re.finditer(MARK_RE, masked)
+            if _is_emphasis(text, m)]
 
 
 def find_mark_shapes(text: str) -> list:
@@ -223,27 +343,26 @@ def find_mark_shapes(text: str) -> list:
     one would need to be -- so the redaction can safely work from shapes without
     eating citations authors wrote.
     """
-    code = _code_spans(text)
-    return [m for m in re.finditer(MARK_SHAPE_RE, text)
-            if _is_emphasis(text, m, code)]
+    masked = mask_code(text)
+    return [Mark(text, m) for m in re.finditer(MARK_SHAPE_RE, masked)
+            if _is_emphasis(text, m)]
 
 
 def find_mark_attempts(text: str) -> list:
     """Mark-shaped openings a reader would actually see.
 
-    Deliberately does *not* apply the intraword rule, and the asymmetry is the
+    Deliberately does *not* apply the flanking rule, and the asymmetry is the
     point. Text in a code span or behind a backslash is literal on purpose: its
     author quoted the notation and carries no mark, so "you have no mark" sends
-    them to write one. foo_(invented)_bar is the opposite -- a mark the
+    them to write one. `foo_(invented)_bar` is the opposite -- a mark the
     rendering betrayed -- and telling that author they have none sends them to
     add a second, which the two-marks rule then refuses.
 
     Same evidence, opposite fixes, so the diagnostic has to tell them apart.
     """
-    code = _code_spans(text)
-    return [m for m in re.finditer(MARK_ATTEMPT_RE, text)
-            if not any(a <= m.start() < b for a, b in code)
-            and not _is_escaped(text, m.start())]
+    masked = mask_code(text)
+    return [Mark(text, m) for m in re.finditer(MARK_ATTEMPT_RE, masked)
+            if not _is_escaped(text, m.start())]
 
 
 def strip_marks(text: str) -> str:
