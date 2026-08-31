@@ -85,17 +85,34 @@ EVIDENCE = ("observed", "inferred", "invented")
 # because those messages contain "primitive(s)", so quoting what the checker
 # reported -- the most auditable source an observed mark can name -- was the
 # thing the rule punished. Accept a ')' that is not the delimiter.
-MARK_SOURCE = r"(?:[^)]|\)(?!\*))*"
+MARK_SOURCE = r"(?:[^)]|\)(?![*_]))*"
 
-# The annotation, anchored: leading space, then *(kind)* or *(kind: source)*.
-MARK_RE = r"\s*\*\(\s*([A-Za-z-]+)\s*(?::\s*(" + MARK_SOURCE + r"))?\)\*"
+# The annotation, anchored: leading space, then *(kind)* or *(kind: source)* --
+# or the same thing spelled with underscores.
+#
+# Markdown spells emphasis two ways and formatters rewrite one into the other.
+# Prettier normalises *(inferred: ...)* to _(inferred: ...)_, which is the same
+# document to every human reader and an absent mark to a checker that accepts
+# only asterisks. So a repository with prettier in a pre-commit hook broke every
+# evidence mark in the act of committing them -- and broke them *after* the
+# author had run this checker and watched it pass, which is the worst moment for
+# a check to change its mind.
+#
+# Deliberately NOT a backreference tying the closing delimiter to the opening
+# one: callers read group(1) and group(2) by number, and re.findall() unpacks
+# them positionally, so a group for the delimiter would silently shift every
+# consumer. The cost is that a mismatched *(invented)_ is accepted. That spelling
+# renders as literal text rather than emphasis, so it is a narrow false pass --
+# and strictly better than the false failure it replaces, which hit every mark in
+# three documents at once.
+MARK_RE = r"\s*[*_]\(\s*([A-Za-z-]+)\s*(?::\s*(" + MARK_SOURCE + r"))?\)[*_]"
 
 # An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
 # apart from "your mark did not parse": the first sends the author to write one,
 # and telling them that when a correct mark is present sends them to add a
 # second, which the two-marks rule then refuses. A diagnostic that names the
 # wrong cause is worse than a silent failure, because it steers the fix.
-MARK_ATTEMPT_RE = r"\*\(\s*[A-Za-z-]+\s*[:)]"
+MARK_ATTEMPT_RE = r"[*_]\(\s*[A-Za-z-]+\s*[:)]"
 
 
 def parse_prediction(text: str, mode: str = "prereg") -> dict:

@@ -892,10 +892,41 @@ def mark_source_with_a_parenthesis(t):
     return swap(t, first, first.replace("*(invented)*", quoted, 1))
 
 
+def mark_written_with_underscores(t):
+    """The same mark spelled with underscores instead of asterisks.
+
+    Markdown spells emphasis two ways and formatters rewrite one into the other:
+    prettier normalises *(invented)* to _(invented)_. That is the same document
+    to every human reader and an absent mark to a checker that accepts only
+    asterisks -- so a repository with prettier in a pre-commit hook broke every
+    evidence mark in the act of committing them, *after* the author had run the
+    checker and watched it pass.
+
+    MARK_RE has one home and two call sites -- primitives and grievances -- so
+    exercising it here covers the primitive path too.
+    """
+    first = _adv_first(t)
+    return swap(t, first, first.replace("*(invented)*", "_(invented)_", 1))
+
+
+def mark_source_may_contain_an_asterisk(t):
+    """A source naming a wildcard, e.g. a column prefix written remixSource*.
+
+    Distinct from the underscore case and worth its own row: a literal '*'
+    inside the span is what makes a formatter mis-read where the emphasis ends,
+    and the checker should still read the mark whichever delimiter survives.
+    """
+    first = _adv_first(t)
+    quoted = "_(observed: the remixSource* columns in schema.ts)_"
+    return swap(t, first, first.replace("*(invented)*", quoted, 1))
+
+
 ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-needs-no-lane", expectation_gap_with_promise),
     ("adversarial-about-block-may-soft-wrap", about_soft_wrapped),
     ("adversarial-mark-source-may-contain-a-parenthesis", mark_source_with_a_parenthesis),
+    ("adversarial-mark-may-be-written-with-underscores", mark_written_with_underscores),
+    ("adversarial-mark-source-may-contain-an-asterisk", mark_source_may_contain_an_asterisk),
 ]
 
 # ---------------------------------------------------------------------------
