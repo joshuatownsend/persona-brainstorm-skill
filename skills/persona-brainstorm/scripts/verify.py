@@ -146,14 +146,33 @@ MARK_SHAPE_RE = _mark_re(r"[A-Za-z-]+")
 MARK_ATTEMPT_RE = MARK_DELIM + r"\(\s*(?P<kind>[A-Za-z-]+)\s*[:)]"
 
 
-def _emphasis_ok(text: str, m: re.Match) -> bool:
-    """Markdown's intraword rule, which only underscores have.
+def _code_spans(text: str) -> list:
+    """Ranges of inline code in `text`. Nothing inside one is emphasis."""
+    return [(m.start(), m.end()) for m in re.finditer(r"`[^`]*`", text)]
 
-    `*emphasis*` renders inside a word and `_emphasis_` does not, so
-    foo_(invented)_bar is literal text to every reader and was a valid mark to
-    this checker -- a document with no visible annotation anywhere passed.
-    Asterisks are exempt here because Markdown exempts them.
+
+def _is_emphasis(text: str, m: re.Match, code: list) -> bool:
+    """True when this match renders as emphasis rather than as literal text.
+
+    Three ways a delimiter pair fails to be emphasis, and a document whose only
+    annotation is one of them carries no visible mark at all while satisfying a
+    checker that reads the characters instead of the rendering.
+
+    Inline code is the one that actually happens: a document explaining the
+    notation quotes `*(invented)*`, and that example then stands in for a mark
+    the entry never carried. The primitive path already stripped code spans for
+    exactly this reason and the grievance path never did -- the same rule in two
+    homes again, which is the defect this whole branch keeps re-finding.
     """
+    if any(a <= m.start() < b for a, b in code):
+        return False
+    # A backslash-escaped fence renders as a literal character. True of both
+    # delimiters, not just the underscore Codex reported.
+    if m.start() and text[m.start() - 1] == "\\":
+        return False
+    # Markdown's intraword rule, which only underscores have: `*emphasis*`
+    # renders inside a word and `_emphasis_` does not, so foo_(invented)_bar is
+    # literal text to every reader and was a valid mark to this checker.
     if m.group("d") != "_":
         return True
     before = text[m.start() - 1] if m.start() else ""
@@ -170,7 +189,8 @@ def find_marks(text: str) -> list:
     step. Four review rounds found defects in the gap between two such patterns;
     there is no longer a gap for a fifth to live in.
     """
-    return [m for m in re.finditer(MARK_RE, text) if _emphasis_ok(text, m)]
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_RE, text) if _is_emphasis(text, m, code)]
 
 
 def find_mark_shapes(text: str) -> list:
@@ -182,7 +202,27 @@ def find_mark_shapes(text: str) -> list:
     one would need to be -- so the redaction can safely work from shapes without
     eating citations authors wrote.
     """
-    return [m for m in re.finditer(MARK_SHAPE_RE, text) if _emphasis_ok(text, m)]
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_SHAPE_RE, text)
+            if _is_emphasis(text, m, code)]
+
+
+def find_mark_attempts(text: str) -> list:
+    """Mark-shaped openings a reader would actually see.
+
+    Deliberately does *not* apply the intraword rule, and the asymmetry is the
+    point. Text in a code span or behind a backslash is literal on purpose: its
+    author quoted the notation and carries no mark, so "you have no mark" sends
+    them to write one. foo_(invented)_bar is the opposite -- a mark the
+    rendering betrayed -- and telling that author they have none sends them to
+    add a second, which the two-marks rule then refuses.
+
+    Same evidence, opposite fixes, so the diagnostic has to tell them apart.
+    """
+    code = _code_spans(text)
+    return [m for m in re.finditer(MARK_ATTEMPT_RE, text)
+            if not any(a <= m.start() < b for a, b in code)
+            and not (m.start() and text[m.start() - 1] == "\\")]
 
 
 def strip_marks(text: str) -> str:
@@ -455,7 +495,8 @@ def parse(text: str) -> tuple[dict[str, int], list[Item], dict[str, list[int]], 
                              and not region[:shapes[0].start()].strip() else None)
                     if shape:
                         evidence[name] = (shape.group("kind").lower(), "")
-                    elif re.match(r"\s*" + MARK_ATTEMPT_RE, region):
+                    elif any(not region[:a.start()].strip()
+                             for a in find_mark_attempts(region)):
                         # A real kind whose mark did not parse. Reporting that
                         # as "no mark" sends the author to add one, and the
                         # two-marks rule then refuses the result.
@@ -1926,7 +1967,7 @@ def check_adversarial(roster: dict, items: list[Item], core_text: str,
                 # the author chose a word and needs to be told which exist.
                 off_vocab.append(
                     f"{key} is marked {shapes[0].group('kind').lower()!r}")
-            elif re.search(MARK_ATTEMPT_RE, about_block):
+            elif find_mark_attempts(about_block):
                 malformed_mark.append(key)
             else:
                 no_mark.append(key)

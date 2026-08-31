@@ -834,6 +834,31 @@ def intraword_underscores_are_not_a_mark(t):
                 first.replace("*(invented)*", "foo_(invented)_bar", 1))
 
 
+def mark_only_inside_a_code_span(t):
+    """The notation quoted while explaining it, standing in for a real mark.
+
+    A document that writes `*(invented)*` in inline code carries no rendered
+    annotation at all, and a checker reading characters instead of rendering
+    accepted it. The primitive path had stripped code spans for exactly this
+    reason since a quoted example first stood in for a missing mark; the
+    grievance path never did -- one rule, two homes, a fifth time.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "the notation is `*(invented)*`", 1))
+
+
+def mark_delimiter_escaped(t):
+    """A backslash-escaped fence, which renders as a literal character.
+
+    Codex reported this for underscores; it is true of asterisks too, and the
+    fix covers both rather than the spelling that happened to be reported.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", r"written \_(invented)_ here", 1))
+
+
 def mark_kind_capitalised(t):
     """A kind spelled with a capital, which has always been accepted.
 
@@ -963,6 +988,10 @@ ADVERSARIAL_MUTATIONS = [
      intraword_underscores_are_not_a_mark, "could not be read"),
     ("adversarial-second-mark-off-vocabulary",
      second_mark_off_vocabulary, "more than one evidence mark"),
+    ("adversarial-mark-only-inside-a-code-span",
+     mark_only_inside_a_code_span, "carry no evidence mark"),
+    ("adversarial-mark-delimiter-escaped",
+     mark_delimiter_escaped, "carry no evidence mark"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
