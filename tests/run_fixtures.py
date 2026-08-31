@@ -859,6 +859,33 @@ def mark_delimiter_escaped(t):
                 first.replace("*(invented)*", r"written \_(invented)_ here", 1))
 
 
+def mark_only_inside_a_double_backtick_span(t):
+    """The notation quoted in a multi-backtick span, which is still a quote.
+
+    A code span is a run of backticks closed by a run of the same length -- how
+    an author quotes notation containing a backtick. Matching a single pair read
+    ``*(invented)*`` as two empty spans with the example exposed between them,
+    so the more carefully the author quoted, the more likely the quote counted
+    as a real mark.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "the notation is ``*(invented)*``", 1))
+
+
+def mark_behind_an_escaped_backslash(t):
+    """A literal backslash followed by a real mark, which is a visible mark.
+
+    Escaping is parity, not presence: only an odd number of backslashes escapes
+    the delimiter. Treating any backslash as an escape hid a mark the reader can
+    see -- a false failure introduced by the fix for a false pass one commit
+    earlier, which is this branch's most persistent habit.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", r"a literal \\*(invented)*", 1))
+
+
 def mark_kind_capitalised(t):
     """A kind spelled with a capital, which has always been accepted.
 
@@ -992,6 +1019,8 @@ ADVERSARIAL_MUTATIONS = [
      mark_only_inside_a_code_span, "carry no evidence mark"),
     ("adversarial-mark-delimiter-escaped",
      mark_delimiter_escaped, "carry no evidence mark"),
+    ("adversarial-mark-only-inside-a-double-backtick-span",
+     mark_only_inside_a_double_backtick_span, "carry no evidence mark"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -1101,6 +1130,8 @@ ADVERSARIAL_POSITIVES = [
     ("adversarial-expectation-gap-may-cite-inside-a-word-led-aside",
      expectation_gap_citing_inside_a_word_led_aside),
     ("adversarial-mark-kind-may-be-capitalised", mark_kind_capitalised),
+    ("adversarial-mark-may-follow-an-escaped-backslash",
+     mark_behind_an_escaped_backslash),
 ]
 
 # ---------------------------------------------------------------------------

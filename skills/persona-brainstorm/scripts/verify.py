@@ -147,8 +147,29 @@ MARK_ATTEMPT_RE = MARK_DELIM + r"\(\s*(?P<kind>[A-Za-z-]+)\s*[:)]"
 
 
 def _code_spans(text: str) -> list:
-    """Ranges of inline code in `text`. Nothing inside one is emphasis."""
-    return [(m.start(), m.end()) for m in re.finditer(r"`[^`]*`", text)]
+    """Ranges of inline code in `text`. Nothing inside one is emphasis.
+
+    A code span is a run of backticks closed by a run of the same length, which
+    is how a document quotes notation that itself contains a backtick. Matching
+    a single pair instead read ``_(invented)_`` as two *empty* spans with the
+    example exposed between them -- so the more careful the author was about
+    quoting, the more likely the quote counted as a real mark.
+    """
+    return [(m.start(), m.end()) for m in re.finditer(r"(`+)[\s\S]*?\1", text)]
+
+
+def _is_escaped(text: str, i: int) -> bool:
+    """True when the character at `i` is backslash-escaped in Markdown.
+
+    Parity, not presence: a delimiter is escaped only behind an *odd* number of
+    backslashes. `\\\\*(invented)*` is a literal backslash followed by a real
+    mark, and treating any backslash as an escape hid it -- a false failure
+    introduced by the fix for a false pass one commit earlier.
+    """
+    n = 0
+    while i - n - 1 >= 0 and text[i - n - 1] == "\\":
+        n += 1
+    return n % 2 == 1
 
 
 def _is_emphasis(text: str, m: re.Match, code: list) -> bool:
@@ -168,7 +189,7 @@ def _is_emphasis(text: str, m: re.Match, code: list) -> bool:
         return False
     # A backslash-escaped fence renders as a literal character. True of both
     # delimiters, not just the underscore Codex reported.
-    if m.start() and text[m.start() - 1] == "\\":
+    if _is_escaped(text, m.start()):
         return False
     # Markdown's intraword rule, which only underscores have: `*emphasis*`
     # renders inside a word and `_emphasis_` does not, so foo_(invented)_bar is
@@ -222,7 +243,7 @@ def find_mark_attempts(text: str) -> list:
     code = _code_spans(text)
     return [m for m in re.finditer(MARK_ATTEMPT_RE, text)
             if not any(a <= m.start() < b for a, b in code)
-            and not (m.start() and text[m.start() - 1] == "\\")]
+            and not _is_escaped(text, m.start())]
 
 
 def strip_marks(text: str) -> str:
