@@ -118,12 +118,21 @@ MARK_SOURCE = r"(?:[^)]|\)(?!" + MARK_DELIM + r"))*"
 MARK_RE = (r"\s*" + MARK_DELIM + r"\(\s*([A-Za-z-]+)\s*(?::\s*("
            + MARK_SOURCE + r"))?\)" + MARK_DELIM)
 
-# The redaction form, deliberately looser than MARK_RE: it removes anything
-# shaped like a mark before a rule reads the prose around it. Looser on purpose
-# -- a malformed mark must not survive the strip and leave its source behind to
-# satisfy a citation the author never wrote. Parsing wants precision; redacting
-# wants reach.
-MARK_STRIP_RE = MARK_DELIM + r"\([^)]*\)" + MARK_DELIM
+# The redaction form, deliberately looser than MARK_RE in one dimension only:
+# it does not require a well-formed kind, so a malformed mark cannot survive the
+# strip and leave its source behind to satisfy a citation the author never
+# wrote. Parsing wants precision; redacting wants reach.
+#
+# The invariant, and it is the one this pattern broke on its first outing:
+# **whatever MARK_RE can read, this must be able to remove.** It shipped with
+# [^)]*, which stops at the first ')' -- while MARK_SOURCE has accepted a ')'
+# inside a source ever since a mark quoting this checker's own output vanished
+# for containing "primitive(s)". Parser and redactor therefore disagreed about
+# what a mark *is*, and in that gap an expectation gap could cite nothing of its
+# own while its unremoved annotation answered the citation search for it.
+# Sharing MARK_SOURCE is what makes the two agree by construction instead of by
+# remembering to edit both.
+MARK_STRIP_RE = MARK_DELIM + r"\(" + MARK_SOURCE + r"\)" + MARK_DELIM
 
 # An attempt at a mark, however malformed. Used only to tell "you wrote no mark"
 # apart from "your mark did not parse": the first sends the author to write one,

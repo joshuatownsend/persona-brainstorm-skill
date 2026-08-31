@@ -750,6 +750,24 @@ def expectation_gap_cited_only_inside_an_underscore_mark(text):
         '**About:** the thing generally. _(observed: "answers anything" in `README.md`)_')
 
 
+def expectation_gap_cited_only_inside_a_mark_with_parentheses(text):
+    """The same bypass, reached through a source that contains a parenthesis.
+
+    MARK_SOURCE has accepted a ')' inside a source since the day a mark quoting
+    this checker's own output vanished for containing "primitive(s)". The strip
+    did not: it used [^)]*, stopped at the first ')', matched nothing, and left
+    the whole mark standing for the citation search to read.
+
+    So the parser and the redactor disagreed about what a mark *is*, and the
+    gap between them was a bypass. Whatever MARK_RE can read, MARK_STRIP_RE has
+    to be able to remove -- that is the invariant this fixture pins.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the thing generally. '
+        '_(observed: "answers anything" in `README.md` (line 2))_')
+
+
 ADVERSARIAL_MUTATIONS = [
     ("adversarial-no-entries", lambda t: re.sub(r"^####.*$", "", t, flags=re.M),
      "no grievance entries found"),
@@ -843,6 +861,8 @@ ADVERSARIAL_MUTATIONS = [
      "cite no promise"),
     ("adversarial-expectation-gap-cited-only-inside-an-underscore-mark",
      expectation_gap_cited_only_inside_an_underscore_mark, "cite no promise"),
+    ("adversarial-expectation-gap-cited-only-inside-a-mark-with-parentheses",
+     expectation_gap_cited_only_inside_a_mark_with_parentheses, "cite no promise"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
