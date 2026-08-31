@@ -95,3 +95,25 @@ that has never been red has not been shown to test anything.
 The inventory check at the end of the run asserts that every `.md` in
 `fixtures/` is either asserted or explicitly retired, so a case cannot be
 orphaned by a rename without the suite saying so.
+
+## The differential check
+
+`commonmark_differential.py` is separate, optional, and not run by
+`run_fixtures.py`. It needs `markdown-it-py`; the suite and the checker have no
+dependencies and keep none.
+
+It exists because reasoning about Markdown kept producing confident, wrong
+answers. Nine rounds of review argued about underscores while `a*(invented)*` —
+literal text to every renderer, in the delimiter these documents are actually
+written with — was accepted the whole time. Nobody found it by reading the
+rule; a reference implementation found it in one run.
+
+Run it after any change to the mark patterns, and read the false failures
+first. A mark wrongly refused is worse than a mark wrongly accepted: a checker
+that rejects real work teaches its authors to ignore it, and four of the last
+five defects here were that direction.
+
+Its divergences feed this file. When it reports one, the fix lands with a
+mutation asserting the defect **and** a positive asserting the opposite case
+still works — the too-strict and too-loose shapes alternated across nine
+rounds, and three regressions came from over-correcting one into the other.
