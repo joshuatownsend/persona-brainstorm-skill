@@ -753,7 +753,7 @@ def expectation_gap_cited_only_inside_an_underscore_mark(text):
 def expectation_gap_cited_only_inside_a_mark_with_parentheses(text):
     """The same bypass, reached through a source that contains a parenthesis.
 
-    MARK_SOURCE has accepted a ')' inside a source since the day a mark quoting
+    The parser has accepted a ')' inside a source since the day a mark quoting
     this checker's own output vanished for containing "primitive(s)". The strip
     did not: it used [^)]*, stopped at the first ')', matched nothing, and left
     the whole mark standing for the citation search to read.
@@ -798,6 +798,40 @@ def expectation_gap_citing_inside_an_emphasised_aside(text):
         text,
         '**About:** the docs promise _("answers anything" in `README.md`)_. '
         '*(invented)*')
+
+
+def expectation_gap_citing_inside_a_word_led_aside(text):
+    """The same aside, beginning with a word rather than a quote.
+
+    Requiring a kind word after the paren was meant to separate a mark from an
+    ordinary aside, and could not: asides start with words too. "see" is a word
+    and not an evidence kind, so the redaction ate a citation the author wrote
+    and failed the entry for citing nothing. Only the closed vocabulary tells
+    the two apart.
+    """
+    return _as_expectation_gap(
+        text,
+        '**About:** the docs promise _(see "answers anything" in `README.md`)_. '
+        '*(invented)*')
+
+
+def intraword_underscores_are_not_a_mark(t):
+    """Markdown does not render `_emphasis_` inside a word, and nor may we.
+
+    foo_(invented)_bar is literal text to every reader of the document and was
+    a valid evidence mark to this checker, so a grievance carrying no visible
+    annotation anywhere passed. Introduced by accepting underscores at all --
+    before that it was correctly reported as unmarked.
+
+    It is asserted as *malformed* rather than *absent*, which is the more useful
+    of the two: the author did write a mark and it is not working. Telling them
+    no mark is present would send them to add a second one, and the two-marks
+    rule would then refuse the result -- the precise fix-steering failure the
+    malformed/absent distinction exists to prevent.
+    """
+    first = _adv_first(t)
+    return swap(t, first,
+                first.replace("*(invented)*", "foo_(invented)_bar", 1))
 
 
 ADVERSARIAL_MUTATIONS = [
@@ -897,6 +931,8 @@ ADVERSARIAL_MUTATIONS = [
      expectation_gap_cited_only_inside_a_mark_with_parentheses, "cite no promise"),
     ("adversarial-expectation-gap-cited-only-inside-a-mixed-fence-mark",
      expectation_gap_cited_only_inside_a_mixed_fence_mark, "cite no promise"),
+    ("adversarial-intraword-underscores-are-not-a-mark",
+     intraword_underscores_are_not_a_mark, "could not be read"),
     # setdefault kept the first and ignored the rest, so a stale block sat
     # beside its replacement and the entry read as consistent.
     ("adversarial-lane-without-status",
@@ -1003,6 +1039,8 @@ ADVERSARIAL_POSITIVES = [
     ("adversarial-mark-source-may-contain-an-asterisk", mark_source_may_contain_an_asterisk),
     ("adversarial-expectation-gap-may-cite-inside-an-emphasised-aside",
      expectation_gap_citing_inside_an_emphasised_aside),
+    ("adversarial-expectation-gap-may-cite-inside-a-word-led-aside",
+     expectation_gap_citing_inside_a_word_led_aside),
 ]
 
 # ---------------------------------------------------------------------------
